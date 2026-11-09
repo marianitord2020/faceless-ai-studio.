@@ -75,10 +75,11 @@ async function leonardoCheck(id, env) {
     return { pending: true, provider: 'Leonardo', generationId: id };
   }
   const url = job.generated_images[0].url;
-  if (!/^https:\/\/(?:[a-z0-9-]+\.)*leonardo\.ai\//i.test(url) &&
-      !/^https:\/\/(?:[a-z0-9-]+\.)*leonardo\.cdn\./i.test(url)) {
-    // No aceptar destinos HTTP; evitar solicitudes a localhost por URLs devueltas de proveedores.
-    if (!/^https:\/\//i.test(url)) reject('Leonardo devolvió URL insegura');
+  // Restringir la descarga al CDN oficial de Leonardo, nunca a hosts arbitrarios.
+  const parsedUrl = new URL(url);
+  if (parsedUrl.protocol !== 'https:' ||
+      !(parsedUrl.hostname === 'cdn.leonardo.ai' || parsedUrl.hostname.endsWith('.leonardo.ai'))) {
+    reject('Leonardo devolvió un dominio de imagen no autorizado');
   }
   const image = await fetch(url);
   if (!image.ok) reject('Error descargando el resultado de Leonardo');
@@ -163,8 +164,8 @@ export default {
         if (env.ENABLE_PAID_IMAGES !== 'true' || !env.LEONARDO_API_KEY) {
           return reply({ error: 'Leonardo no está activado.' }, 400, cors);
         }
-        try { result = await leonardoCheck(String(data.generationId), env); }
-        catch (_) { result = await generate(prompt, format, env, true); }
+        // Una vez aceptado el trabajo no iniciar otra generación de pago por un fallo de consulta.
+        result = await leonardoCheck(String(data.generationId), env);
       } else {
         result = await generate(prompt, format, env);
       }
