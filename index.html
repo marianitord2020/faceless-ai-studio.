@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Faceless AI Studio</title><style>
+:root{font-family:system-ui,sans-serif;color:#f5f3ff;background:#10111d}body{margin:0;padding:18px;max-width:760px;margin:auto}h1{color:#c4b5fd}p,small{color:#b7b5c8}section{background:#1d2033;border-radius:16px;padding:16px;margin:16px 0}label{display:block;margin:12px 0 5px}input,textarea,select,button{box-sizing:border-box;width:100%;padding:12px;border-radius:9px;border:1px solid #4c4c67;background:#111426;color:white;font:inherit}button{background:#7547e9;border:0;margin-top:12px;font-weight:700}button:disabled{opacity:.5}canvas{width:180px;max-width:100%;display:block;margin:10px auto;background:#000}video{width:100%;max-height:360px}a{color:#c4b5fd}#status{white-space:pre-wrap}</style></head><body>
+<h1>🎬 Faceless AI Studio</h1><p>Editor gratuito local. Tus imágenes y audios no se envían a ningún servidor.</p>
+<section><h2>1. Prepara tu video</h2><label>Título</label><input id="title" value="Misterios del océano"><label>Guion (una escena por línea)</label><textarea id="script" rows="5">En el fondo del océano hay secretos increíbles.
+Algunas criaturas brillan en la oscuridad.
+Todavía queda mucho por descubrir.</textarea><label>Imágenes (selecciona una o varias)</label><input id="images" type="file" accept="image/*" multiple><label>Audio de narración (opcional, MP3, WAV, etc.)</label><input id="audio" type="file" accept="audio/*"><label>Segundos por escena</label><input id="seconds" type="number" min="2" max="30" value="5"></section>
+<section><h2>2. Vista previa</h2><canvas id="canvas" width="540" height="960"></canvas><button id="preview">Ver primera escena</button></section>
+<section><h2>3. Exportar video</h2><p id="format"></p><button id="render">Crear video</button><p id="status" role="status"></p><video id="result" controls playsinline></video><a id="download" hidden>Descargar video</a><small>La exportación MP4 depende de la compatibilidad de tu navegador. Si no está disponible, se exporta WebM. El audio se incluye cuando el navegador permite capturarlo; comprueba el resultado antes de compartirlo.</small></section>
+<script>
+const $=id=>document.getElementById(id),canvas=$('canvas'),ctx=canvas.getContext('2d');
+const mp4='video/mp4;codecs=avc1.42E01E,mp4a.40.2',webm='video/webm;codecs=vp8,opus';
+const mime=[mp4,'video/mp4',webm,'video/webm'].find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported(t));
+$('format').textContent=mime?('Formato disponible: '+(mime.startsWith('video/mp4')?'MP4':'WebM')):'Tu navegador no permite exportar con MediaRecorder.';
+let imgs=[],oldURL=null;
+function lines(){return $('script').value.split('\n').map(s=>s.trim()).filter(Boolean)}
+function draw(i){const w=canvas.width,h=canvas.height;ctx.fillStyle='#080b1b';ctx.fillRect(0,0,w,h);let im=imgs[i%imgs.length];if(im){let s=Math.max(w/im.width,h/im.height),sw=im.width*s,sh=im.height*s;ctx.drawImage(im,(w-sw)/2,(h-sh)/2,sw,sh)}ctx.fillStyle='rgba(0,0,0,.65)';ctx.fillRect(0,h*.69,w,h*.31);ctx.textAlign='center';ctx.fillStyle='white';ctx.font='bold 34px sans-serif';wrap($('title').value,65,60);ctx.font='29px sans-serif';wrap(lines()[i]||'',h*.76,45)}
+function wrap(str,y,step){let words=str.split(/\s+/),line='',out=[];for(const word of words){let t=line?line+' '+word:word;if(ctx.measureText(t).width>canvas.width-56&&line){out.push(line);line=word}else line=t}if(line)out.push(line);out.slice(0,5).forEach((l,j)=>ctx.fillText(l,canvas.width/2,y+j*step))}
+$('images').onchange=async e=>{imgs=[];for(const file of e.target.files){const url=URL.createObjectURL(file),im=new Image();try{await new Promise((ok,fail)=>{im.onload=ok;im.onerror=fail;im.src=url});imgs.push(im)}catch{} }draw(0)};
+$('preview').onclick=()=>draw(0);draw(0);
+$('render').onclick=async()=>{
+ const status=$('status'),btn=$('render');if(!mime){status.textContent='Exportación no compatible con este navegador.';return}
+ const scenes=lines(),duration=Math.max(2,Math.min(30,Number($('seconds').value)||5));if(!scenes.length||!imgs.length){status.textContent='Escribe un guion y selecciona al menos una imagen.';return}
+ btn.disabled=true;status.textContent='Preparando...';
+ let stream,rec,audioCtx,source,audioEl,videoURL;
+ try{
+ stream=canvas.captureStream(24);
+ const file=$('audio').files[0];
+ if(file){audioCtx=new (window.AudioContext||window.webkitAudioContext)();await audioCtx.resume();audioEl=new Audio();audioEl.src=URL.createObjectURL(file);audioEl.preload='auto';await new Promise((ok,fail)=>{audioEl.oncanplay=ok;audioEl.onerror=fail;audioEl.load()});source=audioCtx.createMediaElementSource(audioEl);const dest=audioCtx.createMediaStreamDestination();source.connect(dest);source.connect(audioCtx.destination);dest.stream.getAudioTracks().forEach(t=>stream.addTrack(t))}
+ const chunks=[];rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:1800000});rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
+ const stopped=new Promise((ok,fail)=>{rec.onstop=ok;rec.onerror=fail});rec.start(1000);if(audioEl)await audioEl.play();
+ const total=scenes.length*duration*1000,start=performance.now();
+ await new Promise(resolve=>{function frame(now){const elapsed=now-start;draw(Math.min(scenes.length-1,Math.floor(elapsed/(duration*1000))));status.textContent='Creando video: '+Math.min(100,Math.round(elapsed/total*100))+'%';if(elapsed<total)requestAnimationFrame(frame);else resolve()}requestAnimationFrame(frame)});
+ rec.stop();await stopped;
+ if(oldURL)URL.revokeObjectURL(oldURL);
+ const ext=mime.startsWith('video/mp4')?'mp4':'webm';oldURL=URL.createObjectURL(new Blob(chunks,{type:mime}));$('result').src=oldURL;$('download').href=oldURL;$('download').download='faceless-video.'+ext;$('download').hidden=false;$('download').textContent='Descargar '+ext.toUpperCase();status.textContent='Video listo. Revisa la reproducción y el audio.';
+ }catch(e){status.textContent='Error: '+e.message}finally{if(audioEl){audioEl.pause();URL.revokeObjectURL(audioEl.src)}if(audioCtx)audioCtx.close();if(stream)stream.getTracks().forEach(t=>t.stop());btn.disabled=false}
+};
+</script></body></html>
