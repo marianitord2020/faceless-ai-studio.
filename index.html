@@ -77,7 +77,7 @@ function drawFrame(index,seconds=0){
  const p=current();if(!p)return;
  const wide=p.format==='16:9';
  if(canvas.width!==(wide?960:540)||canvas.height!==(wide?540:960)){canvas.width=wide?960:540;canvas.height=wide?540:960}
- const w=canvas.width,h=canvas.height,im=imgs.length?imgs[index%imgs.length]:null;
+ const w=canvas.width,h=canvas.height,im=(window.facelessSceneImages?.get(p.id)?.get(index))||(imgs.length?imgs[index%imgs.length]:null);
  ctx.clearRect(0,0,w,h);
  if(im){const scale=Math.max(w/im.width,h/im.height),sw=im.width*scale,sh=im.height*scale;ctx.drawImage(im,(w-sw)/2,(h-sh)/2,sw,sh)}
  else{
@@ -115,7 +115,8 @@ function renderVideoTab(p){
  <div class="media-controls"><button class="btn small" id="previewVideo">▶ Vista previa</button><button class="btn primary" id="renderVideo" ${mime?'':'disabled'}>⬇ Crear y descargar video</button></div><p id="renderStatus" class="status" aria-live="polite"></p><div class="media-controls" id="downloadArea"></div></div>
  <div class="media-frame"><canvas id="previewCanvas" width="${p.format==='16:9'?960:540}" height="${p.format==='16:9'?540:960}" class="${p.format==='16:9'?'wide':''}"></canvas><video id="videoResult" controls playsinline class="hidden ${p.format==='16:9'?'wide':''}"></video><p class="smalltext" style="text-align:center;margin:8px 0 0">Vista previa ${p.format} · ${p.duration} segundos</p></div></div></div>`;
  const view=$('previewCanvas'),updateView=()=>{drawFrame(0);view.getContext('2d').drawImage(canvas,0,0)};
- $('images').addEventListener('change',async ev=>{imgs=[];const selected=[...ev.target.files];for(const file of selected){const im=new Image();const url=URL.createObjectURL(file);try{await new Promise((resolve,reject)=>{im.onload=resolve;im.onerror=reject;im.src=url});imgs.push(im)}catch{toast('No se pudo abrir una imagen.')}finally{URL.revokeObjectURL(url)}}$('imageCount').textContent=imgs.length?`${imgs.length} imágenes cargadas`:'Fondos animados listos';updateView()});
+ mountAIPhotoControls(p,updateView);
+  $('images').addEventListener('change',async ev=>{imgs=[];const selected=[...ev.target.files];for(const file of selected){const im=new Image();const url=URL.createObjectURL(file);try{await new Promise((resolve,reject)=>{im.onload=resolve;im.onerror=reject;im.src=url});imgs.push(im)}catch{toast('No se pudo abrir una imagen.')}finally{URL.revokeObjectURL(url)}}$('imageCount').textContent=imgs.length?`${imgs.length} imágenes cargadas`:'Fondos animados listos';updateView()});
  $('audio').addEventListener('change',ev=>{audioFile=ev.target.files[0]||null;$('audioCount').textContent=audioFile?`Audio seleccionado: ${audioFile.name}`:'Sin audio seleccionado.';if(audioFile){$('micPlayback').classList.add('hidden')}});
  $('startMic').onclick=startMicrophoneRecording;$('stopMic').onclick=stopMicrophoneRecording;
  updateView();
@@ -191,4 +192,4 @@ route('home');
   };
 })();
  
-</script></body></html>
+</script><script src="scripts/ai-photos.js?v=1"></script></body></html>
