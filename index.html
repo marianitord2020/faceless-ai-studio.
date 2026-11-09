@@ -139,5 +139,56 @@ function stopMicTracks(){if(micStream){micStream.getTracks().forEach(t=>t.stop()
 function stopMicrophoneRecording(){if(micRecorder?.state==='recording'){micRecorder.stop();$('micStatus').textContent='Procesando grabación...';}else stopMicTracks()}
 function stopPreview(){if(previewTimer)cancelAnimationFrame(previewTimer);previewTimer=null}
 async function renderVideo(){if(rendering)return;const p=current(),mime=safeMime(),status=$('renderStatus'),btn=$('renderVideo');if(!mime){status.textContent='Este navegador no admite la exportación con MediaRecorder.';return}stopPreview();rendering=true;btn.disabled=true;status.textContent='Preparando el video…';let stream,rec,audioCtx,audioEl=null,audioURL=null,raf=null;try{stream=canvas.captureStream(24);let chunks=[];if(audioFile){audioCtx=new (window.AudioContext||window.webkitAudioContext)();await audioCtx.resume();audioEl=new Audio();audioURL=URL.createObjectURL(audioFile);audioEl.src=audioURL;audioEl.preload='auto';await new Promise((resolve,reject)=>{audioEl.oncanplay=resolve;audioEl.onerror=()=>reject(new Error('No se pudo leer el audio.'));audioEl.load()});const source=audioCtx.createMediaElementSource(audioEl),dest=audioCtx.createMediaStreamDestination();source.connect(dest);source.connect(audioCtx.destination);dest.stream.getAudioTracks().forEach(track=>stream.addTrack(track))}rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:1650000});rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};const completion=new Promise((resolve,reject)=>{rec.onstop=resolve;rec.onerror=()=>reject(new Error('Falló la grabación.'))});rec.start(1000);if(audioEl)await audioEl.play();const duration=p.duration*1000,start=performance.now();await new Promise(resolve=>{const next=(now)=>{const elapsed=Math.min(duration,now-start),sec=Math.min(p.duration-.01,elapsed/1000),idx=p.scenes.findIndex(s=>sec>=s.time&&sec<s.time+s.duration);drawFrame(Math.max(0,idx),sec);status.textContent='Procesando: '+Math.floor(elapsed/duration*100)+'%';if(elapsed<duration){raf=requestAnimationFrame(next)}else resolve()};raf=requestAnimationFrame(next)});rec.stop();await completion;const type=mime.startsWith('video/mp4')?'video/mp4':'video/webm',extension=type==='video/mp4'?'mp4':'webm',blob=new Blob(chunks,{type});if(blob.size<1000)throw Error('El archivo de video generado parece estar vacío.');if(previewURL)URL.revokeObjectURL(previewURL);previewURL=URL.createObjectURL(blob);$('videoResult').src=previewURL;$('videoResult').classList.remove('hidden');$('previewCanvas').classList.add('hidden');$('downloadArea').innerHTML='';const a=document.createElement('a');a.className='btn primary download';a.download='faceless-'+p.id+'.'+extension;a.href=previewURL;a.textContent='↓ Descargar '+extension.toUpperCase();$('downloadArea').appendChild(a);status.textContent='Video listo. Reprodúcelo y comprueba imagen, sonido y subtítulos.'}catch(e){status.textContent='No se pudo crear el video: '+(e?.message||'error desconocido')+'\nPrueba con menos imágenes, sin audio o con una duración más corta.';if(rec&&rec.state!=='inactive')try{rec.stop()}catch{}}finally{if(raf)cancelAnimationFrame(raf);if(audioEl)audioEl.pause();if(audioURL)URL.revokeObjectURL(audioURL);if(stream)stream.getTracks().forEach(t=>t.stop());if(audioCtx)await audioCtx.close().catch(()=>{});btn.disabled=false;rendering=false}}
-route('home'); 45694683
+route('home'); 
+(() => {
+  const original = document.getElementById('generate');
+  if (!original || document.getElementById('geminiButton')) return;
+  const panel = document.createElement('div');
+  panel.className = 'notice';
+  panel.style.marginTop = '18px';
+  panel.innerHTML = '<h3>🤖 Generación con Gemini</h3><p>Usa el código privado de Cloudflare, no tu API Key.</p><input id="geminiPass" type="password" autocomplete="off" placeholder="APP_PASSCODE privado" style="width:100%;padding:12px;margin:8px 0;background:#101527;color:white;border:1px solid #544477;border-radius:8px"><button id="geminiButton" class="btn primary full generate">✧ Generar con Gemini</button><p id="geminiStatus" role="status"></p>';
+  original.insertAdjacentElement('afterend', panel);
+  document.getElementById('geminiButton').onclick = async () => {
+    const status = document.getElementById('geminiStatus');
+    const button = document.getElementById('geminiButton');
+    const topic = document.getElementById('topic').value.trim();
+    const pass = document.getElementById('geminiPass').value;
+    if (topic.length < 5) { status.textContent = 'Escribe primero un tema.'; return; }
+    if (pass.length < 16) { status.textContent = 'Escribe tu APP_PASSCODE de Cloudflare.'; return; }
+    button.disabled = true; status.textContent = 'Consultando Gemini…';
+    try {
+      const response = await fetch('https://faceless-gemini.marianitord2020.workers.dev', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-app-token': pass },
+        body: JSON.stringify({ topic, duration: choice.duration, style: choice.style, platform: choice.platform })
+      });
+      const data = await response.json();
+      if (!response.ok) throw Error(data.error || 'Error del servidor');
+      if (!Array.isArray(data.scenes) || data.scenes.length < 2) throw Error('Respuesta sin escenas');
+      const source = data.scenes.filter(s => String(s.text || '').trim()).slice(0, 12);
+      if (source.length < 2) throw Error('Escenas vacías');
+      generate();
+      const project = current();
+      if (!project) throw Error('No se pudo crear el proyecto');
+      const base = Math.floor(project.duration / source.length);
+      const extra = project.duration % source.length;
+      let time = 0;
+      project.scenes = source.map((s, i) => {
+        const duration = base + (i < extra ? 1 : 0);
+        const scene = { time, duration, text: String(s.text), prompt: String(s.prompt || '') };
+        time += duration;
+        return scene;
+      });
+      project.title = String(data.title || topic).slice(0, 120);
+      project.narration = project.scenes.map(s => s.text).join('\n');
+      project.hook = project.scenes[0].text;
+      project.aiProvider = 'Gemini';
+      persist(); renderEditor();
+      toast('¡Guion creado con Gemini! Revisa las escenas.');
+    } catch (error) {
+      status.textContent = 'Error: ' + error.message;
+    } finally { button.disabled = false; }
+  };
+})();
+ 
 </script></body></html>
