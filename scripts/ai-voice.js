@@ -1,0 +1,171 @@
+/* Voces IA en español para Faceless AI Studio — integración con el video. */
+'use strict';
+const FACELESS_VOICE_API = 'https://faceless-images.marianitord2020.workers.dev/voice';
+let facelessVoicePassword = '';
+let facelessVoiceBusy = false;
+let facelessVoiceCancel = false;
+let facelessVoiceURL = null;
+
+function facelessDecodeURI(dataURI) {
+  const match = /^data:(audio\/[\w+.-]+(?:;[^,]+)?);base64,([A-Za-z0-9+/=\r\n]+)$/.exec(dataURI || '');
+  if (!match) throw new Error('El servidor no devolvió audio válido.');
+  const raw = atob(match[2]);
+  const bytes = new Uint8Array(raw.length);
+  for (let k = 0; k < raw.length; k++) bytes[k] = raw.charCodeAt(k);
+  return bytes.buffer;
+}
+async function facelessRequestVoice(text, voice, passcode) {
+  let response;
+  try {
+    response = await fetch(FACELESS_VOICE_API, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-app-token': passcode },
+      body: JSON.stringify({ text, voice })
+    });
+  } catch (_) { throw new Error('No se pudo conectar con Cloudflare para generar la voz.'); }
+  let json;
+  try { json = await response.json(); }
+  catch (_) { throw new Error('La API de voz no devolvió una respuesta válida.'); }
+  if (!response.ok) {
+    if (response.status === 401) facelessVoicePassword = '';
+    throw new Error(String(json.error || 'Error ' + response.status).slice(0, 330));
+  }
+  if (!json.dataURI) throw new Error('El servidor no devolvió voz.');
+  return json;
+}
+function facelessAudioToWAV(rendered) {
+  const samples = rendered.getChannelData(0);
+  const rate = rendered.sampleRate;
+  const result = new ArrayBuffer(44 + samples.length * 2);
+  const view = new DataView(result);
+  const word = (index, text) => { for (let k = 0; k < text.length; k++) view.setUint8(index + k, text.charCodeAt(k)); };
+  word(0, 'RIFF'); view.setUint32(4, result.byteLength - 8, true);
+  word(8, 'WAVE'); word(12, 'fmt '); view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+  view.setUint32(24, rate, true); view.setUint32(28, rate * 2, true);
+  view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+  word(36, 'data'); view.setUint32(40, samples.length * 2, true);
+  for (let i = 0; i < samples.length; i++) {
+    const v = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(44 + i * 2, v < 0 ? Math.round(v * 32768) : Math.round(v * 32767), true);
+  }
+  return new Blob([result], { type: 'audio/wav' });
+}
+function mountAIVoiceControls(project) {
+  const root = document.querySelector('#tabBody .video-workspace > div');
+  if (!root) return;
+  const panel = document.createElement('section');
+  panel.className = 'notice';
+  panel.style.marginTop = '12px';
+  panel.innerHTML =
+    '<h3 style="margin:0 0 8px">🎙 Narración automática en español</h3>' +
+    '<p>Convierte el guion en voz IA, une las escenas y añade el audio al video. Sin grabar con micrófono.</p>' +
+    '<label class="group-label" for="aiVoiceOption">Voz para narración</label>' +
+    '<select id="aiVoiceOption" style="margin-bottom:12px"><option value="Fola">Fola (Google, si está conectado)</option>' +
+    '<option value="Kore">Kore (Google, si está conectado)</option>' +
+    '<option value="Aoede">Aoede (Google, si está conectado)</option>' +
+    '<option value="female">Español: Celeste (Cloudflare)</option>' +
+    '<option value="male">Español: Álvaro (Cloudflare)</option></select>' +
+    '<label for="aiVoicePasscode" class="group-label">Código privado de Cloudflare</label>' +
+    '<input type="password" id="aiVoicePasscode" autocomplete="new-password" placeholder="El mismo APP_PASSCODE que usas para las fotos" style="width:100%;margin-bottom:12px">' +
+    '<button type="button" class="btn primary full" id="aiVoiceGenerate">🎙 Generar voz automáticamente</button>' +
+    '<button type="button" class="btn small" id="aiVoiceCancel" style="display:none;margin-top:8px">Detener después de esta escena</button>' +
+    '<p id="aiVoiceStatus" class="status" role="status" aria-live="polite"></p>' +
+    '<div id="aiVoiceAudioArea"></div>' +
+    '<p class="smalltext">Los audios solo se conservan mientras la página esté abierta. La voz de Google usa su cuota gratuita cuando tengas una API Key habilitada; Cloudflare es la alternativa. Ninguna suscripción se activa automáticamente.</p>';
+  const photosPanel = root.querySelector('#aiPhotosStart');
+  if (photosPanel) photosPanel.closest('section').insertAdjacentElement('afterend', panel);
+  else root.insertAdjacentElement('afterbegin', panel);
+  const passwordInput = panel.querySelector('#aiVoicePasscode');
+  const status = panel.querySelector('#aiVoiceStatus');
+  const start = panel.querySelector('#aiVoiceGenerate');
+  const cancel = panel.querySelector('#aiVoiceCancel');
+  const audioArea = panel.querySelector('#aiVoiceAudioArea');
+  if (audioFile && /^faceless-voz-/.test(audioFile.name)) {
+    status.textContent = 'La voz IA ya está cargada en este proyecto. Puedes descargarla o crear el video.';
+  }
+  cancel.onclick = () => { facelessVoiceCancel = true; status.textContent = 'Deteniendo después de la escena actual…'; };
+  start.onclick = async () => {
+    if (facelessVoiceBusy) return;
+    const pass = passwordInput.value.trim();
+    if (pass) facelessVoicePassword = pass;
+    if (!facelessVoicePassword || facelessVoicePassword.length < 16) {
+      status.textContent = 'Introduce el código APP_PASSCODE de mínimo 16 caracteres, el mismo que utilizaste para las fotos.';
+      passwordInput.focus();
+      return;
+    }
+    const voice = panel.querySelector('#aiVoiceOption').value;
+    if (!project.scenes?.length) { status.textContent = 'Este proyecto no tiene escenas.'; return; }
+    facelessVoiceBusy = true;
+    facelessVoiceCancel = false;
+    start.disabled = true;
+    cancel.style.display = '';
+    let audioCtx;
+    let completed = 0;
+    try {
+      const segments = [];
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      await audioCtx.resume();
+      for (const [index, scene] of project.scenes.entries()) {
+        if (facelessVoiceCancel) throw new Error('Generación cancelada, sin modificar el audio anterior.');
+        const text = String(scene.text || '').trim();
+        if (!text) continue;
+        if (text.length > 650) throw new Error('La escena ' + (index + 1) + ' supera 650 caracteres. Acorta su texto antes de generar voz.');
+        status.textContent = 'Generando voz IA: escena ' + (index + 1) + ' de ' + project.scenes.length + '…';
+        const result = await facelessRequestVoice(text, voice, facelessVoicePassword);
+        let decoded;
+        try { decoded = await audioCtx.decodeAudioData(facelessDecodeURI(result.dataURI)); }
+        catch (_) { throw new Error('No se pudo interpretar el audio de la escena ' + (index + 1) + '.'); }
+        segments.push({time:Number(scene.time)||0, duration:Number(scene.duration)||0, audio:decoded, provider:result.provider});
+        completed++;
+      }
+      if (!segments.length) throw new Error('No hay escenas con texto para narrar.');
+      status.textContent = 'Uniendo ' + segments.length + ' escenas de voz y preparando el video…';
+      const duration = Number(project.duration) || 30;
+      const sampleRate = 24000;
+      const offline = new OfflineAudioContext(1, Math.ceil(duration * sampleRate), sampleRate);
+      let clipped = 0;
+      for (const segment of segments) {
+        const source = offline.createBufferSource();
+        source.buffer = segment.audio;
+        source.connect(offline.destination);
+        const available = Math.max(0, Math.min(segment.duration, duration - segment.time));
+        if (segment.audio.duration > available + 0.12) clipped++;
+        if (available > 0) source.start(segment.time, 0, Math.min(available, segment.audio.duration));
+      }
+      const mixed = await offline.startRendering();
+      const blob = facelessAudioToWAV(mixed);
+      audioFile = new File([blob], 'faceless-voz-' + project.id + '.wav', {type:'audio/wav'});
+      const oldCount = document.getElementById('audioCount');
+      if (oldCount) oldCount.textContent = 'Voz IA lista: ' + audioFile.name;
+      if (facelessVoiceURL) URL.revokeObjectURL(facelessVoiceURL);
+      facelessVoiceURL = URL.createObjectURL(blob);
+      audioArea.replaceChildren();
+      const player = document.createElement('audio');
+      player.controls = true;
+      player.src = facelessVoiceURL;
+      player.style.cssText = 'display:block;width:100%;margin:10px 0';
+      const link = document.createElement('a');
+      link.href = facelessVoiceURL;
+      link.download = audioFile.name;
+      link.textContent = '↓ Descargar narración WAV';
+      link.className = 'btn small';
+      audioArea.append(player, link);
+      status.textContent = '¡Voz lista! Ya está añadida al montaje. ' +
+        (clipped ? 'Aviso: ' + clipped + ' escenas tenían voz más larga que su tiempo asignado y se recortaron. Ajusta el guion para sincronizar.' : 'Las escenas respetan sus tiempos.') +
+        ' Fuente: ' + [...new Set(segments.map(s=>s.provider))].join(', ');
+    } catch (error) {
+      const msg = String(error?.message || error);
+      if (/código privado incorrecto/i.test(msg)) {
+        passwordInput.value = '';
+        facelessVoicePassword = '';
+        status.textContent = 'Código privado incorrecto. Usa el APP_PASSCODE de las fotos, no tu API Key.';
+      } else status.textContent = 'Voz no generada: ' + msg;
+    } finally {
+      if (audioCtx) await audioCtx.close().catch(()=>{});
+      start.disabled = false;
+      cancel.style.display = 'none';
+      facelessVoiceBusy = false;
+    }
+  };
+}
