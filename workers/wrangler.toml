@@ -1,0 +1,12 @@
+name = "faceless-images"
+main = "ai-images-worker.js"
+compatibility_date = "2026-11-01"
+workers_dev = true
+
+[ai]
+binding = "AI"
+
+[vars]
+ALLOWED_ORIGIN = "https://marianitord2020.github.io"
+ENABLE_PAID_IMAGES = "false"
+GEMINI_IMAGE_MODEL = "gemini-3.1-flash-image"
