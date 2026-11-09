@@ -71,6 +71,9 @@ function mountAIPhotoControls(project, updatePreview) {
   panel.innerHTML =
     '<h3 style="margin:0 0 8px">🖼 Fotografías automáticas con IA</h3>' +
     '<p>Una fotografía por escena a partir del guion. Las imágenes se utilizan en el video sin tener que subirlas manualmente.</p>' +
+    '<label for="aiPhotosPasscode" class="group-label" style="margin-top:14px">Código privado para las fotos</label>' +
+    '<input id="aiPhotosPasscode" type="password" autocomplete="new-password" spellcheck="false" placeholder="APP_PASSCODE (el secreto de GitHub)" style="width:100%;margin-bottom:10px">' +
+    '<p class="smalltext">Usa el mismo valor que guardaste como <b>APP_PASSCODE</b> en los secretos de GitHub. No es el token API de Cloudflare ni el código del Gemini de guiones.</p>' +
     '<button type="button" class="btn primary full" id="aiPhotosStart">✦ Generar fotos automáticamente</button>' +
     '<button type="button" class="btn small" id="aiPhotosStop" style="margin-top:8px;display:none">Detener después de esta foto</button>' +
     '<p id="aiPhotosStatus" class="status" role="status" aria-live="polite"></p>' +
@@ -112,18 +115,20 @@ function mountAIPhotoControls(project, updatePreview) {
   };
   start.onclick = async function () {
     if (facelessImageRunning) return;
-    const passFromForm = document.getElementById('geminiPass')?.value?.trim();
+    // IMPORTANTE: el Worker de guiones y el de fotos tienen códigos distintos.
+    // Nunca reutilizar geminiPass ni una clave API de otro servicio.
+    const passInput = panel.querySelector('#aiPhotosPasscode');
+    const newPass = passInput.value.trim();
+    if (newPass) facelessImagePasscode = newPass;
     if (!facelessImagePasscode) {
-      facelessImagePasscode = passFromForm ||
-        (window.prompt('Introduce el APP_PASSCODE privado de Cloudflare (no una API Key):') || '').trim();
-    }
-    if (!facelessImagePasscode) {
-      status.textContent = 'Hace falta el código privado de Cloudflare.';
+      status.textContent = 'Introduce aquí el valor exacto del secreto APP_PASSCODE que guardaste en GitHub.';
+      passInput.focus();
       return;
     }
     if (facelessImagePasscode.length < 16) {
       facelessImagePasscode = '';
-      status.textContent = 'El APP_PASSCODE debe tener al menos 16 caracteres.';
+      status.textContent = 'El código privado de fotos debe tener al menos 16 caracteres. No es una API Key.';
+      passInput.focus();
       return;
     }
     const remaining = project.scenes.map((scene, index) => index).filter(index => !photoMap.has(index));
@@ -164,7 +169,16 @@ function mountAIPhotoControls(project, updatePreview) {
         status.textContent = '¡Fotografías listas! ' + photoMap.size + ' escenas con fotos IA. Ya están en el montaje del video.';
       }
     } catch (error) {
-      status.textContent = 'Se guardaron ' + done + ' foto(s) nuevas. Error: ' + String(error.message || error);
+      const message = String(error.message || error);
+      if (/código privado incorrecto|incorrecto|Error 401/i.test(message)) {
+        facelessImagePasscode = '';
+        const input = panel.querySelector('#aiPhotosPasscode');
+        input.value = '';
+        status.textContent = 'Código privado incorrecto. Escribe el valor de APP_PASSCODE guardado en GitHub (no el de Gemini ni el token de Cloudflare). Si no lo recuerdas, reemplázalo en GitHub y ejecuta nuevamente el despliegue.';
+        input.focus();
+      } else {
+        status.textContent = 'Se guardaron ' + done + ' foto(s) nuevas. Error: ' + message;
+      }
     } finally {
       facelessImageRunning = false;
       start.disabled = false;
