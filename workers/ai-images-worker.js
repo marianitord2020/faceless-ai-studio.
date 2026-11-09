@@ -130,6 +130,59 @@ async function generate(prompt, format, env, skipLeonardo = false) {
   }
   reject('Ninguna IA disponible: ' + failures.join(' | '), 503);
 }
+
+/** Narración por escena. Google TTS opcional; Cloudflare Aura-2-es como respaldo. */
+function voiceDataURI(mime,base64) {
+  if(!/^[A-Za-z0-9+/=\r\n]+$/.test(base64)||base64.length<1000) reject('El proveedor no devolvió audio válido');
+  return { mime, dataURI: 'data:'+mime+';base64,'+base64 };
+}
+async function geminiVoice(text,voice,env){
+  if(!env.GEMINI_TTS_API_KEY) reject('Falta GEMINI_TTS_API_KEY',503);
+  const model='gemini-3.8-flash-lite-tts';
+  const safeVoice = ['Fola','Kore','Aoede','Puck','Charon','Leda','Zephyr'].includes(voice)?voice:'Fola';
+  const response=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent',{
+    method:'POST',
+    headers:{'content-type':'application/json','x-goog-api-key':env.GEMINI_TTS_API_KEY},
+    body:JSON.stringify({
+      contents:[{parts:[{text:'Lee el siguiente texto exactamente en español claro y natural, con ritmo de narrador: '+text}]}],
+      generationConfig:{responseModalities:['AUDIO'],speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:safeVoice}}}}
+    })
+  });
+  const result=await parsed(response,'Google AI Studio TTS');
+  const part=result?.candidates?.[0]?.content?.parts?.find(p=>p.inlineData?.data||p.inline_data?.data);
+  const audio=part?.inlineData||part?.inline_data;
+  if(!audio?.data)reject('Google TTS no devolvió audio');
+  const mime=audio.mimeType||audio.mime_type||'audio/wav';
+  if(!/^audio\/(wav|x-wav|l16|pcm)(;.*)?$/i.test(mime))reject('Google devolvió un formato de audio inesperado');
+  return {provider:'Gemini TTS'+(safeVoice==='Fola'?' / Fola':' / '+safeVoice),...voiceDataURI(mime.startsWith('audio/l16')?'audio/l16':'audio/wav',audio.data)};
+}
+async function cloudflareVoice(text,voice,env){
+  if(!env.AI)reject('Binding AI de Cloudflare no disponible',503);
+  // Deepgram Aura 2 ES es Cloudflare-hosted; no utiliza claves de terceros.
+  const speaker=voice==='male'?'alvaro':'celeste';
+  const result=await env.AI.run('@cf/deepgram/aura-2-es',{text,speaker,encoding:'mp3'});
+  let buffer;
+  if(result instanceof ReadableStream)buffer=await new Response(result).arrayBuffer();
+  else if(result instanceof ArrayBuffer)buffer=result;
+  else if(ArrayBuffer.isView(result))buffer=result.buffer.slice(result.byteOffset,result.byteOffset+result.byteLength);
+  else if(result?.audio&&typeof result.audio==='string')return {provider:'Cloudflare Aura-2 español',...voiceDataURI('audio/mpeg',result.audio)};
+  else reject('Cloudflare Aura-2-es no devolvió audio reconocible');
+  const bytes=new Uint8Array(buffer);
+  if(bytes.length<400)reject('Audio demasiado pequeño');
+  if(bytes.length>6_000_000)reject('Audio por escena demasiado grande',413);
+  return {provider:'Cloudflare Aura-2 español',...voiceDataURI('audio/mpeg',encode64(bytes))};
+}
+async function makeVoice(text,voice,env){
+  const issues=[];
+  // Gemini 3.8 Flash-Lite TTS tiene nivel API gratuito sujeto a cuotas.
+  if(env.GEMINI_TTS_API_KEY){
+    try{return await geminiVoice(text,voice,env)}catch(e){issues.push(readableError(e));}
+  }
+  try{return await cloudflareVoice(text,voice,env);}
+  catch(e){issues.push(readableError(e));}
+  reject('No se pudo producir la voz: '+issues.join(' | '),503);
+}
+
 export default {
   async fetch(request, env) {
     const origin = request.headers.get('origin') || '';
@@ -142,7 +195,8 @@ export default {
       'vary': 'Origin'
     };
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
-    if (request.method !== 'POST' || new URL(request.url).pathname !== '/images') {
+    const path = new URL(request.url).pathname;
+    if (request.method !== 'POST' || !['/images','/voice'].includes(path)) {
       return reply({ error: 'Ruta no encontrada' }, 404, cors);
     }
     if (!env.APP_PASSCODE || env.APP_PASSCODE.length < 16) {
@@ -156,6 +210,15 @@ export default {
         return reply({ error: 'Solicitud demasiado larga.' }, 413, cors);
       }
       const data = await request.json();
+      if(path==='/voice'){
+        const spoken=String(data?.text||'').trim();
+        if(spoken.length<2||spoken.length>650){
+          return reply({error:'Cada fragmento de voz debe tener entre 2 y 650 caracteres.'},400,cors);
+        }
+        const voice=String(data?.voice||'Fola');
+        const result=await makeVoice(spoken,voice,env);
+        return reply(result,200,cors);
+      }
       const prompt = String(data?.prompt || '').trim().slice(0, 1800);
       if (prompt.length < 10) return reply({ error: 'Escribe un prompt de al menos 10 caracteres.' }, 400, cors);
       const format = data?.format === '16:9' ? '16:9' : '9:16';
