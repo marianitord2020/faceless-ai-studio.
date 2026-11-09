@@ -37,3 +37,27 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: workers
           command: deploy
+
+      - name: Comprobar que el servidor exige un código privado
+        run: |
+          set -euo pipefail
+          status=""
+          for attempt in 1 2 3 4 5; do
+            status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+              --request POST 'https://faceless-images.marianitord2020.workers.dev/images' \
+              --header 'Origin: https://marianitord2020.github.io' \
+              --header 'Content-Type: application/json' \
+              --header 'x-app-token: prueba-no-autorizada' \
+              --data '{"prompt":"fotografía cinematográfica de prueba de una montaña al atardecer"}') || status="error-de-red"
+            if [ "$status" = "401" ]; then
+              echo "Worker publicado y protegido por APP_PASSCODE."
+              exit 0
+            fi
+            sleep 3
+          done
+          if [ "$status" = "503" ]; then
+            echo "::error::Worker publicado, pero falta APP_PASSCODE como Secret de Cloudflare."
+          else
+            echo "::error::La protección del Worker no respondió como se esperaba (HTTP $status)."
+          fi
+          exit 1
