@@ -1,5 +1,18 @@
 # Faceless AI Studio — fotos automáticas
 
+## Despliegue automático desde GitHub (recomendado)
+Ya existe el workflow [Publicar fotos IA en Cloudflare](../.github/workflows/deploy-images.yml).
+El propietario del repositorio **solo** debe gestionar las credenciales. Nunca debe pegarlas en el chat, en código ni en un commit.
+
+1. En https://dash.cloudflare.com/profile/api-tokens crea un token restringido a la cuenta correspondiente y con permiso **Edit Cloudflare Workers**.
+2. En https://github.com/marianitord2020/faceless-ai-studio./settings/secrets/actions crea los secretos:
+   - \`CLOUDFLARE_API_TOKEN\`: el token privado.
+   - \`CLOUDFLARE_ACCOUNT_ID\`: el identificador de cuenta que aparece en Cloudflare.
+3. El secreto \`APP_PASSCODE\` se conserva **únicamente en el Worker de Cloudflare** y no debe copiarse en la web ni en GitHub.
+4. Después, ejecutar o reintentar [el workflow](https://github.com/marianitord2020/faceless-ai-studio./actions/workflows/deploy-images.yml). El proceso desplegará código, configuración y binding AI. Las siguientes actualizaciones del directorio \`workers/\` se publicarán automáticamente al cambiar el repositorio.
+
+Si faltan credenciales, el proceso da un error claro y **no** modifica Cloudflare. 
+
 ## Estado
 El frontend y este backend están versionados en GitHub. **GitHub Pages no ejecuta Cloudflare Workers.**
 Debes desplegar por separado el Worker, activar su binding AI y establecer un código de acceso.
