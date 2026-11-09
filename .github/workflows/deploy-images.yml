@@ -22,11 +22,16 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      APP_PASSCODE: ${{ secrets.APP_PASSCODE }}
     steps:
       - name: Verificar las credenciales de Cloudflare
         run: |
           if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
             echo "::error::Faltan CLOUDFLARE_API_TOKEN y/o CLOUDFLARE_ACCOUNT_ID en GitHub > Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          if [ -z "$APP_PASSCODE" ] || [ "${#APP_PASSCODE}" -lt 16 ]; then
+            echo "::error::Falta APP_PASSCODE (mínimo 16 caracteres) en los secretos de GitHub Actions."
             exit 1
           fi
       - uses: actions/checkout@v4
@@ -37,6 +42,10 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: workers
           command: deploy
+      - name: Guardar APP_PASSCODE privado en el Worker sin exponerlo
+        working-directory: workers
+        run: |
+          printf '%s' "$APP_PASSCODE" | npx --yes wrangler@4 secret put APP_PASSCODE --config wrangler.toml
 
       - name: Comprobar que el servidor exige un código privado
         run: |
