@@ -1,0 +1,53 @@
+name: Probar generación real de fotos IA
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/test-images.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  smoke-test:
+    name: Verificar una foto real
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    env:
+      APP_PASSCODE: ${{ secrets.APP_PASSCODE }}
+    steps:
+      - name: Verificar código privado
+        run: |
+          if [ -z "$APP_PASSCODE" ]; then
+            echo "::error::No existe APP_PASSCODE en los secretos del repositorio."
+            exit 1
+          fi
+      - name: Pedir una foto gratuita al Worker
+        run: |
+          set -euo pipefail
+          status=$(curl --silent --show-error --max-time 90 \
+            --output "$RUNNER_TEMP/photo.json" \
+            --write-out '%{http_code}' \
+            --request POST 'https://faceless-images.marianitord2020.workers.dev/images' \
+            --header 'Origin: https://marianitord2020.github.io' \
+            --header 'Content-Type: application/json' \
+            --header "x-app-token: $APP_PASSCODE" \
+            --data '{"prompt":"Fotografía cinematográfica de un paisaje tropical al amanecer, sin texto ni marcas de agua, composición 9:16","format":"9:16"}')
+          if [ "$status" != "200" ]; then
+            echo "::error::Cloudflare no pudo generar la foto (HTTP $status)."
+            jq -r '.error // "Sin detalles"' "$RUNNER_TEMP/photo.json" | head -c 450
+            exit 1
+          fi
+          python3 - "$RUNNER_TEMP/photo.json" <<'PY'
+          import json, base64, sys
+          data=json.load(open(sys.argv[1]))
+          uri=data.get('dataURI','')
+          assert uri.startswith(('data:image/jpeg;base64,','data:image/png;base64,','data:image/webp;base64,')), 'Respuesta sin imagen'
+          blob=base64.b64decode(uri.split(',',1)[1], validate=True)
+          assert len(blob)>1000, 'Imagen demasiado pequeña'
+          assert blob.startswith((bytes.fromhex('ffd8'),bytes.fromhex('89504e470d0a1a0a'),b'RIFF')), 'La imagen no tiene formato JPEG/PNG/WebP'
+          print('FOTO IA REAL GENERADA CORRECTAMENTE')
+          print('Proveedor:',data.get('provider'))
+          print('Tamaño de imagen (bytes):',len(blob))
+          PY
