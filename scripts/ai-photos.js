@@ -200,6 +200,7 @@ function mountAIPhotoControls(project, updatePreview) {
           photo.onerror = () => reject(new Error('La imagen generada no se pudo abrir.'));
           photo.src = data.dataURI;
         });
+        delete project.scenes[i].stockCredit;persist();window.facelessRefreshStockCredits?.();
         photo.facelessSignature=facelessImageSignature(project,i);
         photoMap.set(i, photo);
         if(!await facelessMediaPut(project.id+':image:'+i,{signature:photo.facelessSignature,dataURI:data.dataURI}))

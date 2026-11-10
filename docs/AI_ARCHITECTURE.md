@@ -93,3 +93,17 @@ Registro: https://aihorde.net/register y https://imagerouter.io/ (API Keys en su
 ### Resultado de activación real de ImageRouter — 10 de noviembre de 2026
 
 La clave se sincronizó en Cloudflare. La API respondió HTTP 403: los modelos gratuitos están disponibles en la web, pero el uso por API requiere un depósito inicial contra abuso. No se realizó ningún depósito. `ENABLE_IMAGEROUTER=false` conserva la política de no pagar. Cloudflare y AI Horde siguen habilitados. El adaptador y la clave se conservan preparados; su futura activación requiere una decisión explícita sobre ese depósito. La prueba real permanece como script manual y no bloquea despliegues posteriores.
+
+## Bancos de fotos existentes
+
+En Video → Fotografías → Personalizar → Buscar fotos gratuitas se pueden buscar Openverse, Pixabay y Pexels. Cada selección se asigna a una escena, descarga una copia a través del Worker y conserva autor, fuente y licencia en el proyecto e IndexedDB. El botón Copiar créditos permite preparar la atribución de las fotos utilizadas. Reemplazar una foto por una imagen propia o generada elimina el crédito anterior.
+
+- Openverse: búsqueda anónima; solo CC0, dominio público y CC BY. Importa la vista previa del proxy Openverse para evitar descargas arbitrarias. La calidad depende del tamaño servido por ese proxy. No se prometen imágenes de alta resolución ni disponibilidad continua. Si el servicio bloquea el acceso del servidor, se informa y queda el enlace al banco para uso manual.
+- Pixabay: clave gratuita `PIXABAY_API_KEY` en GitHub Actions Secrets. Las consultas se almacenan 24 horas con Cloudflare Cache API; no hay búsquedas masivas ni hotlinking permanente de fotos seleccionadas.
+- Pexels: clave gratuita `PEXELS_API_KEY` en GitHub Actions Secrets. Los resultados muestran autor, enlace a Pexels y licencia.
+
+Las rutas POST `/stock/search` y `/stock/import` exigen el mismo APP_PASSCODE del editor. Las claves de los bancos solo existen en el servidor. Cada resultado contiene una selección firmada de dos horas; el importador rechaza cambios de URL, redirecciones fuera de los hosts permitidos y archivos mayores de 8 MB. No se obtienen imágenes directamente de URLs que escribe un visitante.
+
+No se presentan fotos de archivo como prueba de que ocurrió una noticia. Verifica su contexto y licencia original antes de publicar.
+
+Crea las claves en https://pixabay.com/api/docs/ y https://www.pexels.com/api/ . Las pruebas de la interfaz y contratos usan respuestas simuladas; no demuestran acceso real a una cuenta sin su clave.

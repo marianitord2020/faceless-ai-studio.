@@ -37,7 +37,7 @@ window.facelessCompactVideoEditor = function (project) {
   ['aiVoiceOption','aiVoiceMood','aiVoiceSpeed'].forEach(id=>move(id,custom[2],true));
   ['aiPhotosPasscode','aiVoicePasscode'].forEach(id=>{document.querySelector(`label[for="${id}"]`)?.remove();byId(id).hidden=true;});
   custom[1].append(byId('images').closest('.media-upload-group'));
-  ['imageCount','manualPhotoSlots','aiPhotosResults'].forEach(id=>move(id,custom[1]));
+  ['imageCount','manualPhotoSlots','stockPhotos','aiPhotosResults'].forEach(id=>move(id,custom[1]));
   custom[2].append(byId('audio').closest('.media-upload-group'));
   ['audioCount','audioAttachment','syncAudio','audioSyncStatus','aiVoiceAudioArea'].forEach(id=>move(id,custom[2]));
   const recorder=byId('startMic').closest('.record-panel');

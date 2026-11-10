@@ -1,3 +1,4 @@
+import {searchStock,importStock} from './stock-photos.js';
 import {imageRouter,hordeStart,hordePoll} from './free-image-providers.js';
 import {hfEnabled,hfImage,hfSpeech,analyzeAudio,easyVoice,withFallback} from './media-providers.js';
 import { generateVerifiedScript } from './script-generator.js';
@@ -242,7 +243,7 @@ export default {
     };
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
     const path = new URL(request.url).pathname;
-    if (request.method !== 'POST' || !['/images','/voice','/script','/ideas','/transcribe','/analyze'].includes(path)) {
+    if (request.method !== 'POST' || !['/images','/voice','/script','/ideas','/transcribe','/analyze','/stock/search','/stock/import'].includes(path)) {
       return reply({ error: 'Ruta no encontrada' }, 404, cors);
     }
     if (!env.APP_PASSCODE || env.APP_PASSCODE.length < 16) {
@@ -279,10 +280,12 @@ export default {
         if(!words.length)reject('No se detectó voz con tiempos. Comprueba que la grabación contenga narración clara.',422);
         return reply({words,provider:'Cloudflare Whisper',duration},200,cors);
       }
-      if (Number(request.headers.get('content-length') || 0) > 9_000) {
+      if (Number(request.headers.get('content-length') || 0) > (path==='/stock/import'?16000:9000)) {
         return reply({ error: 'Solicitud demasiado larga.' }, 413, cors);
       }
       const data = await request.json();
+      if(path==='/stock/search')return reply(await searchStock(data,env),200,cors);
+      if(path==='/stock/import')return reply(await importStock(data,env),200,cors);
       if(path==='/ideas'){
         const result=await generateCoverIdeas(data,env);
         return reply(result,200,cors);

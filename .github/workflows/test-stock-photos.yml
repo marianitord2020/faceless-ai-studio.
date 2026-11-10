@@ -1,0 +1,33 @@
+name: Verificar bancos de fotos gratuitos
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/stock-photos.js'
+      - 'workers/stock-photos.js'
+      - 'styles/stock-photos.css'
+      - 'scripts/editor-layout.js'
+      - 'index.html'
+      - 'tests/stock-photos*'
+      - '.github/workflows/test-stock-photos.yml'
+permissions:
+  contents: read
+jobs:
+  stock:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verificar búsquedas, créditos, firmas y límites
+        run: node tests/stock-photos.mjs
+      - name: Preparar navegador
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install chromium
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/stock-http.log 2>&1 &
+      - name: Verificar interfaz móvil y aplicación por escena
+        run: node tests/stock-photos-ui.cjs

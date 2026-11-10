@@ -22,7 +22,7 @@
     const input=el('input');input.type='file';input.accept='image/*';input.hidden=true;input.setAttribute('aria-label','Foto para escena '+(i+1));input.onchange=()=>addPhotos([...input.files],i);
     const add=el('button',photo?'Reemplazar':'Añadir foto','btn small');add.type='button';add.onclick=()=>input.click();add.disabled=Boolean(window.facelessMediaBusy);
     card.append(input,add);
-    if(photo){const remove=el('button','Quitar foto','btn small outline');remove.type='button';remove.setAttribute('aria-label','Quitar foto de escena '+(i+1));remove.disabled=Boolean(window.facelessMediaBusy);remove.onclick=async()=>{if(facelessIsWorking())return;busy(true);try{await facelessRestoreMedia(p);photos.delete(i);await facelessMediaDelete(p.id+':image:'+i);invalidateVideo();photoRefresh(p.id);updatePreview()}finally{busy(false);photoRefresh(p.id)}};const download=el('a','Descargar','media-photo-download');download.href=photo.src;download.download=photo.facelessFilename||'faceless-escena-'+(i+1)+'.png';card.append(remove,download)}photoRoot.append(card);
+    if(photo){const remove=el('button','Quitar foto','btn small outline');remove.type='button';remove.setAttribute('aria-label','Quitar foto de escena '+(i+1));remove.disabled=Boolean(window.facelessMediaBusy);remove.onclick=async()=>{if(facelessIsWorking())return;busy(true);try{await facelessRestoreMedia(p);photos.delete(i);delete p.scenes[i].stockCredit;persist();window.facelessRefreshStockCredits?.();await facelessMediaDelete(p.id+':image:'+i);invalidateVideo();photoRefresh(p.id);updatePreview()}finally{busy(false);photoRefresh(p.id)}};const download=el('a','Descargar','media-photo-download');download.href=photo.src;download.download=photo.facelessFilename||'faceless-escena-'+(i+1)+'.png';card.append(remove,download)}photoRoot.append(card);
    });
    photoRoot.hidden=count===0;id('imageCount').hidden=count===0;
    id('imageCount').textContent=count+' de '+p.scenes.length+' escenas con foto. Las escenas vacías usan fondos animados.';
@@ -38,7 +38,7 @@
      if(!/^image\//.test(file.type)||file.size>12_000_000){toast('Elige una imagen válida de hasta 12 MB.');continue}
      const src=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file)});
      const photo=new Image();await new Promise((resolve,reject)=>{photo.onload=resolve;photo.onerror=()=>reject(Error('No se pudo abrir '+file.name));photo.src=src});
-     photo.facelessManual=true;photo.facelessFilename=file.name;photo.facelessSignature=facelessImageSignature(p,index);photos.set(index,photo);
+     delete p.scenes[index].stockCredit;persist();window.facelessRefreshStockCredits?.();photo.facelessManual=true;photo.facelessFilename=file.name;photo.facelessSignature=facelessImageSignature(p,index);photos.set(index,photo);
      if(!await facelessMediaPut(p.id+':image:'+index,{manual:true,name:file.name,signature:photo.facelessSignature,dataURI:src}))toast('La foto se añadió, pero no se pudo guardar para otra sesión.');
      if(start!=null)break;
     }
