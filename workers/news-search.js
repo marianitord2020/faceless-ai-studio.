@@ -33,10 +33,32 @@ export async function searchRealNews(topic,style,env){
  const window= todayRequested?'24h':/(?:esta semana|semana|últimos días)/i.test(t)?'7d':'3d';
  const params=new URLSearchParams({query:term,mode:'artlist',format:'json',maxrecords:'50',sort:'datedesc',timespan:window});
  const url='https://api.gdeltproject.org/api/v2/doc/doc?'+params.toString();
- let resp;
- try{resp=await fetch(url,{headers:{accept:'application/json'},cf:{cacheEverything:true,cacheTtl:120}})}
- catch{newsError('No se pudo consultar GDELT para encontrar noticias reales. Intenta nuevamente.',503)}
- if(!resp.ok)newsError('La fuente de noticias está temporalmente ocupada (HTTP '+resp.status+'). Intenta después.',503);
+ // Cache del Worker por 5 minutos: evita repetir búsquedas idénticas y respeta límites GDELT.
+ let cache=null,cacheKey=null,resp;
+ try{
+   if(typeof caches!=='undefined'&&caches.default){
+     cache=caches.default;
+     cacheKey=new Request('https://faceless-images.marianitord2020.workers.dev/_cache/news?'+params.toString());
+     resp=await cache.match(cacheKey);
+   }
+ }catch{cache=null}
+ if(!resp){
+   for(let attempt=0;attempt<2;attempt++){
+     try{resp=await fetch(url,{headers:{accept:'application/json'}})}
+     catch{newsError('No se pudo conectar al índice GDELT. Intenta nuevamente.',503)}
+     if(resp.status!==429||attempt===1)break;
+     await new Promise(resolve=>setTimeout(resolve,6000));
+   }
+   if(!resp.ok)newsError('El buscador de noticias alcanzó temporalmente su límite (HTTP '+resp.status+'). Intenta después.',503);
+   if(cache&&cacheKey){
+     try{
+       const headers=new Headers(resp.headers);
+       headers.set('cache-control','public, max-age=300');
+       const cachedResponse=new Response(resp.clone().body,{headers,status:200});
+       await cache.put(cacheKey,cachedResponse);
+     }catch{}
+   }
+ }
  let data;
  try{data=await resp.json()}catch{newsError('La fuente de noticias no devolvió datos legibles.',503)}
  const entries=Array.isArray(data?.articles)?data.articles:[];
