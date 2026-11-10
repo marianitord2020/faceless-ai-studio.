@@ -44,9 +44,28 @@
   for(let k=0;k<timed.length-1;k++)timed[k].end=Math.min(timed[k].end,timed[k+1].start);
   return timeline(p,timed,duration,'speech',Math.round(coverage*100));
  }
+ // TTS scene boundaries come from decoded audio, rather than template slots.
+ function fromSegments(p,durations,speed=1){
+  if(!Number.isFinite(speed)||speed<=0||durations.length!==p.scenes.length||durations.some(n=>!Number.isFinite(n)||n<=0))throw Error('Cada escena necesita un fragmento de voz válido.');
+  const duration=durations.reduce((sum,n)=>sum+n/speed,0);
+  if(duration>600)throw Error('La narración supera 10 minutos. Acorta el guion.');
+  let cursor=0;const words=[];
+  p.scenes.forEach((s,scene)=>{
+   const list=tokens({scenes:[s]}),length=durations[scene]/speed;
+   if(!list.length)throw Error('Cada escena necesita texto para sincronizarse.');
+   list.forEach((w,i)=>words.push({...w,scene,start:cursor+length*i/list.length,end:cursor+length*(i+1)/list.length}));
+   cursor+=length;
+  });
+  return timeline(p,words,duration,'tts-segments',null);
+ }
+ function sceneAt(p,seconds){
+  let index=0;
+  for(let i=1;i<p.scenes.length;i++){if(seconds<p.scenes[i].time)break;index=i;}
+  return index;
+ }
  function cues(p){
   if(p.subtitleTextSignature===signature(p)&&Array.isArray(p.subtitleCues))return p.subtitleCues;
   return p.scenes.flatMap(s=>{const words=String(s.text).split(/\s+/).filter(Boolean);return cuesFromWords(words.map((text,i)=>({text,scene:0,start:s.time+i*s.duration/words.length,end:s.time+(i+1)*s.duration/words.length})))})
  }
- const api={signature,estimated,align,cues};root.FacelessTiming=api;if(typeof module!=='undefined')module.exports=api;
+ const api={signature,estimated,align,fromSegments,sceneAt,cues};root.FacelessTiming=api;if(typeof module!=='undefined')module.exports=api;
 })(typeof window==='undefined'?globalThis:window);

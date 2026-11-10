@@ -88,7 +88,7 @@ function mountAIVoiceControls(project) {
   panel.style.marginTop = '12px';
   panel.innerHTML =
     '<h3 style="margin:0 0 8px">🎙 Narración automática en español</h3>' +
-    '<p>Convierte el guion en voz IA, une las escenas y añade el audio al video. Sin grabar con micrófono.</p>' +
+    '<p>Convierte el guion en voz IA y sincroniza las fotos con cada escena. La duración del video se adapta a la voz y a la velocidad elegida. Después alinea los subtítulos automáticamente; el primer análisis descarga un modelo y puede tardar varios minutos.</p>' +
     '<label class="group-label" for="aiVoiceOption">Voz para narración</label>' +
     '<select id="aiVoiceOption" style="margin-bottom:12px"><option value="automatic">✦ Automática según el relato</option>' +
     '<option value="Fola">Fola (Google, cálida y versátil)</option>' +
@@ -201,6 +201,7 @@ function mountAIVoiceControls(project) {
   cancel.onclick = () => { facelessVoiceCancel = true; status.textContent = 'Deteniendo después de esta escena…'; };
   start.onclick = async () => {
     if (window.facelessMediaBusy||facelessVoiceBusy) return;
+    cancel.onclick=()=>{facelessVoiceCancel=true;window.facelessCancelLocalSpeech?.();};
     const pass = passwordInput.value.trim();
     if (pass) facelessVoicePassword = pass;
     if (!facelessVoicePassword || facelessVoicePassword.length < 16) {
@@ -229,7 +230,7 @@ function mountAIVoiceControls(project) {
       for (const [index, scene] of project.scenes.entries()) {
         if (facelessVoiceCancel) throw new Error('Generación cancelada, sin modificar el audio anterior.');
         const text = String(scene.text || '').trim();
-        if (!text) continue;
+        if (!text) throw new Error('La escena ' + (index + 1) + ' necesita texto para sincronizar su foto.');
         if (text.length > 650) throw new Error('La escena ' + (index + 1) + ' supera 650 caracteres. Acorta su texto antes de generar voz.');
         status.textContent = 'Generando voz IA: escena ' + (index + 1) + ' de ' + project.scenes.length + '…';
         const segmentKey=project.id+':voice-segment:'+index;
@@ -249,30 +250,19 @@ function mountAIVoiceControls(project) {
       if (facelessVoiceCancel) throw new Error('Generación anterior cancelada. Selecciona la voz y pulsa Generar otra vez.');
       if (!segments.length) throw new Error('No hay escenas con texto para narrar.');
       status.textContent = 'Uniendo ' + segments.length + ' escenas de voz y preparando el video…';
-      const duration = Number(project.duration) || 30;
+      const timing=FacelessTiming.fromSegments(project,segments.map(s=>s.audio.duration),speed);
       const sampleRate = 24000;
-      const offline = new OfflineAudioContext(1, Math.ceil(duration * sampleRate), sampleRate);
-      let adjusted = 0;const voiceCues=[];
-      for (const segment of segments) {
+      const offline = new OfflineAudioContext(1, Math.ceil(timing.duration * sampleRate), sampleRate);
+      for (const [index,segment] of segments.entries()) {
         const source = offline.createBufferSource();
         source.buffer = segment.audio;
         source.connect(offline.destination);
-        const available = Math.max(0, Math.min(segment.duration, duration - segment.time));
-        if(available>0){
-          const rate=Math.max(speed,segment.audio.duration/available);
-          if(rate>speed+0.01)adjusted++;
-          source.playbackRate.value=rate;
-          source.start(segment.time,0,segment.audio.duration);
-          // Captions stop when this spoken segment ends, including any fitted playback rate.
-          const scene=project.scenes.find(s=>Math.abs(s.time-segment.time)<.001);
-          if(scene){const timing=FacelessTiming.estimated({scenes:[{...scene,time:0}]},Math.min(available,segment.audio.duration/rate));
-            voiceCues.push(...timing.subtitleCues.map(c=>({...c,start:c.start+segment.time,end:c.end+segment.time,words:c.words.map(w=>({...w,start:w.start+segment.time,end:w.end+segment.time}))})));}
-
-        }
+        source.playbackRate.value=speed;
+        source.start(timing.scenes[index].time);
       }
       const mixed = await offline.startRendering();
       const blob = facelessAudioToWAV(mixed);
-      project.subtitleCues=voiceCues;project.subtitleTextSignature=FacelessTiming.signature(project);project.audioAlignment={method:'tts-segments',coverage:null};delete project.audioBaseTimeline;persist();
+      Object.assign(project,timing);delete project.audioBaseTimeline;persist();
       audioFile = new File([blob], 'faceless-voz-' + project.id + '.wav', {type:'audio/wav'});
       audioFileProjectId = project.id;
       generatedVoiceByProject.set(project.id, audioFile);
@@ -301,9 +291,16 @@ function mountAIVoiceControls(project) {
       link.textContent = '↓ Descargar narración WAV';
       link.className = 'btn small';
       audioArea.append(player, link);
-      status.textContent = '✓ Voz lista e incorporada al proyecto. Pulsa «Crear y descargar video CON VOZ» para exportar el video narrado. ' +
-        (adjusted ? 'Se ajustó la velocidad de ' + adjusted + ' escenas para incluir la narración completa sin cortarla.' : 'Las escenas respetan sus tiempos.') +
-        ' Voz: '+voice+'. Estilo: '+mood+'. Velocidad: '+speed+'×. Fuente: ' + [...new Set(segments.map(s=>s.provider))].join(', ');
+      let alignmentNote='Los subtítulos tienen tiempos estimados dentro de cada fragmento de voz.';
+      if(window.facelessSyncGeneratedAudio){
+        status.textContent='Voz lista. Sincronizando palabras y fotos con el audio…';
+        cancel.onclick=()=>{facelessVoiceCancel=true;window.facelessCancelLocalSpeech?.();};
+        try{
+          await window.facelessSyncGeneratedAudio(project,audioFile,mixed);
+          alignmentNote='Subtítulos alineados con las palabras reconocidas.';
+        }catch(error){alignmentNote='Se conservó la voz y la sincronización por fragmentos. '+String(error.message||error);}
+      }
+      status.textContent='✓ Voz y fotos sincronizadas por escena, sin espacios fijos ni aceleración automática. Duración real: '+project.duration.toFixed(1)+' s. '+alignmentNote+' Voz: '+voice+'. Velocidad: '+speed+'×. Fuente: '+[...new Set(segments.map(s=>s.provider))].join(', ');
     } catch (error) {
       const msg = String(error?.message || error);
       if (/código privado incorrecto/i.test(msg)) {

@@ -17,3 +17,23 @@ const repeated={duration:4,scenes:[{time:0,duration:4,text:'Lola volvió. Lola l
 const repeatedWords=['Lola','volvió','Lola','llamó','Lola','salió'].map((word,i)=>({word,start:i*.5,end:i*.5+.3}));
 assert.equal(align(repeated,repeatedWords,4).subtitleCues.map(c=>c.text).join(' '),repeated.scenes[0].text);
 console.log('PASS: speech anchors, pauses, scene and caption timing, preserved script, repeated words, mismatch rejection and stale-caption invalidation');
+
+// Deliberately unequal spoken clips must replace the old fixed 4-second slots.
+const natural=globalThis.FacelessTiming.fromSegments(p,[2,7,3],1.25);
+assert.deepEqual(natural.scenes.map(s=>s.time),[0,1.6,7.199999999999999]);
+assert.ok(Math.abs(natural.duration-9.6)<1e-9);
+assert.deepEqual(natural.scenes.map(s=>s.text),p.scenes.map(s=>s.text));
+assert.equal(globalThis.FacelessTiming.sceneAt(natural,1.59),0);
+assert.equal(globalThis.FacelessTiming.sceneAt(natural,1.6),1);
+assert.equal(globalThis.FacelessTiming.sceneAt(natural,natural.duration),2);
+assert.equal(globalThis.FacelessTiming.sceneAt(natural,999),2);
+for(const cue of natural.subtitleCues)for(const word of cue.words){
+ const i=globalThis.FacelessTiming.sceneAt(natural,word.start+1e-10);
+ assert.ok(natural.scenes[i].text.includes(word.text));
+ assert.ok(word.end<=natural.scenes[i].time+natural.scenes[i].duration+1e-9);
+}
+assert.equal(p.duration,12);
+assert.throws(()=>globalThis.FacelessTiming.fromSegments(p,[2,0,3]),/válido/);
+assert.throws(()=>globalThis.FacelessTiming.fromSegments(p,[2,7,3],0),/válido/);
+assert.throws(()=>globalThis.FacelessTiming.fromSegments(p,[201,201,201]),/10 minutos/);
+console.log('PASS: decoded speech sets scene cuts, chosen speed, total duration and caption bounds without modifying source');

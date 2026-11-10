@@ -59,6 +59,10 @@
    invalidateVideo();await saveAudio(p,file,Boolean(file.facelessManual));updatePreview();
    status.textContent='✓ IA local: voz reconocida y alineada con el guion ('+aligned.audioAlignment.coverage+' % de coincidencia). La vista previa y la descarga usarán los mismos tiempos. Revisa el resultado antes de compartirlo.';
   }
+  window.facelessSyncGeneratedAudio=async(project,file,decoded)=>{
+   if(project.id!==p.id||!status.isConnected)throw Error('Abre Video para sincronizar la narración.');
+   await sync(file,decoded);
+  };
   async function attach(file){
    if(!file||facelessIsWorking())return;busy(true);const ticket=++operation;
    try{

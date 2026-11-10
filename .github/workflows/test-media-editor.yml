@@ -152,6 +152,27 @@ jobs:
             const cinemaDownload=page.waitForEvent('download');await page.locator('#downloadArea a').click();await (await cinemaDownload).saveAs('/tmp/faceless-cinema.webm');
             assert.deepEqual(errors,[]);
             console.log('PASS: actual canvas photo motion and short video export with narration');
+            // Exercise actual TTS decoding/mixing and automatic speech alignment without API credits.
+            await page.evaluate(clips=>{
+              const p={id:'tts-sync-fixture',title:'Voz sincronizada',style:'Romance',duration:8,format:'9:16',scenes:[{time:0,duration:4,text:'Hola Lola.',prompt:'One'},{time:4,duration:4,text:'Grace vuelve.',prompt:'Two'}]};
+              p.narration=p.scenes.map(s=>s.text).join(' ');projects.unshift(p);activeId=p.id;tab='video';resetMedia();route('editor');
+              facelessRequestVoice=async text=>({dataURI:'data:audio/wav;base64,'+clips[text.startsWith('Hola')?0:1],provider:'Test fixture'});
+              window.facelessRecognizeLocal=async()=>[{word:'Hola',start:.1,end:.4},{word:'Lola',start:.5,end:.9},{word:'Grace',start:1.1,end:1.8},{word:'vuelve',start:2,end:2.8}];
+            },[wav(1).toString('base64'),wav(2).toString('base64')]);
+            await reveal('#aiVoiceGenerate');
+            await page.locator('#aiVoicePasscode').fill('fixture-passcode-for-ui');
+            await page.locator('#aiVoiceGenerate').click();
+            await page.waitForFunction(()=>current().id==='tts-sync-fixture'&&current().audioAlignment?.method==='speech'&&!facelessVoiceBusy);
+            const voiceSync=await page.evaluate(async()=>{
+              const p=current(),ctx=new AudioContext();
+              try{const decoded=await ctx.decodeAudioData(await audioFile.arrayBuffer());return {duration:p.duration,audioDuration:decoded.duration,cut:p.scenes[1].time,method:p.audioAlignment.method,signature:audioFile.facelessSignature===facelessVoiceSignature(p),saved:Boolean((await facelessMediaGet(p.id+':voice'))?.blob),active:FacelessCinema.captionState(FacelessTiming.cues(p),1.2).words[0].text};}finally{await ctx.close();}
+            });
+            assert.ok(Math.abs(voiceSync.duration-3)<.02);
+            assert.ok(Math.abs(voiceSync.audioDuration-3)<.02);
+            assert.equal(voiceSync.cut,1.1);assert.equal(voiceSync.active,'Grace');
+            assert.equal(voiceSync.signature,true);assert.equal(voiceSync.saved,true);
+            assert.deepEqual(errors,[]);
+            console.log('PASS: decoded TTS clips replace fixed slots; automatic word alignment, photo cuts and saved audio share a timeline');
             await browser.close();
           })().catch(e=>{console.error(e);process.exit(1)});
           JS

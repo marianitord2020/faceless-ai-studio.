@@ -163,7 +163,7 @@ function renderVideoTab(p){
      previewAudio.play().catch(()=>{const el=$('renderStatus');if(el)el.textContent='El navegador bloqueó el sonido. Escucha la narración desde el reproductor de voz.';stopPreview();$('previewVideo').textContent='Vista previa'});
    }
    const start=performance.now(),duration=p.duration*1000;
-   const tick=()=>{const elapsed=performance.now()-start,sec=Math.min(p.duration-0.01,previewAudio?previewAudio.currentTime:elapsed/1000);const i=p.scenes.findIndex(sc=>sec>=sc.time&&sec<sc.time+sc.duration);drawFrame(Math.max(i,0),sec);view.getContext('2d').drawImage(canvas,0,0);if(previewAudio?!previewAudio.ended:elapsed<duration){previewTimer=requestAnimationFrame(tick)}else{stopPreview();$('previewVideo').textContent='Vista previa'}};
+   const tick=()=>{const elapsed=performance.now()-start,sec=Math.min(p.duration-0.01,previewAudio?previewAudio.currentTime:elapsed/1000);const i=FacelessTiming.sceneAt(p,sec);drawFrame(i,sec);view.getContext('2d').drawImage(canvas,0,0);if(previewAudio?!previewAudio.ended:elapsed<duration){previewTimer=requestAnimationFrame(tick)}else{stopPreview();$('previewVideo').textContent='Vista previa'}};
    previewTimer=requestAnimationFrame(tick);
    $('previewVideo').textContent='Detener vista previa';
  };
@@ -233,7 +233,7 @@ async function renderVideo(){
        if(window.facelessProductionBusy&&window.facelessProductionCancelled){reject(new Error('Montaje detenido. Puedes volver a crear el video con los medios guardados.'));return}
        const elapsed=Math.min(duration,Math.max(0,audioSource?(audioCtx.currentTime-audioStartedAt)*1000:now-startTime));
        const sec=Math.min(p.duration-0.01,elapsed/1000);
-       const index=p.scenes.findIndex(sc=>sec>=sc.time&&sec<sc.time+sc.duration);
+       const index=FacelessTiming.sceneAt(p,sec);
        drawFrame(Math.max(0,index),sec);
        status.textContent=(withAudio?'Grabando video con voz: ':'Grabando video: ')+Math.floor(elapsed/duration*100)+'%';
        if(elapsed<duration)raf=requestAnimationFrame(tick);
@@ -353,5 +353,5 @@ route('discover');
   };
 })();;
  
-</script><script src="scripts/ai-photos.js?v=9"></script><script src="scripts/ai-voice.js?v=11"></script><script src="scripts/written-stories.js?v=1"></script><script src="scripts/cinematic-video.js?v=3"></script><script src="scripts/media-timing.js?v=2"></script><script src="scripts/manual-timing.js?v=1"></script><script src="scripts/local-speech.js?v=1"></script><script src="scripts/ai-client.js?v=1"></script><script src="scripts/stock-photos.js?v=3"></script><script src="scripts/media-editor.js?v=8"></script><script src="scripts/studio-menus.js?v=2"></script><script src="scripts/editor-layout.js?v=5"></script><script src="scripts/url-reader.js?v=1"></script><script src="scripts/discover.js?v=16"></script></body></html>
+</script><script src="scripts/ai-photos.js?v=10"></script><script src="scripts/ai-voice.js?v=12"></script><script src="scripts/written-stories.js?v=1"></script><script src="scripts/cinematic-video.js?v=3"></script><script src="scripts/media-timing.js?v=3"></script><script src="scripts/manual-timing.js?v=1"></script><script src="scripts/local-speech.js?v=1"></script><script src="scripts/ai-client.js?v=1"></script><script src="scripts/stock-photos.js?v=3"></script><script src="scripts/media-editor.js?v=9"></script><script src="scripts/studio-menus.js?v=2"></script><script src="scripts/editor-layout.js?v=5"></script><script src="scripts/url-reader.js?v=1"></script><script src="scripts/discover.js?v=16"></script></body></html>
 

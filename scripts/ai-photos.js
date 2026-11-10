@@ -323,7 +323,7 @@ function mountFacelessProduction(project){
   root.prepend(panel);
   const start=panel.querySelector('#productionStart'),stop=panel.querySelector('#productionStop'),status=panel.querySelector('#productionStatus');
   stop.onclick=()=>{
-    window.facelessProductionCancelled=true;facelessImageCancel=true;facelessVoiceCancel=true;
+    window.facelessProductionCancelled=true;facelessImageCancel=true;facelessVoiceCancel=true;window.facelessCancelLocalSpeech?.();
     status.textContent='Deteniendo… Los medios terminados quedan guardados para retomar.';
   };
   start.onclick=async()=>{
