@@ -2,7 +2,7 @@
 import {searchStock,importStock} from '../workers/stock-photos.js';
 import {hordeStart,hordePoll} from '../workers/free-image-providers.js';
 const env={APP_PASSCODE:process.env.APP_PASSCODE||'local-test-signing-code',PIXABAY_API_KEY:process.env.PIXABAY_API_KEY,PEXELS_API_KEY:process.env.PEXELS_API_KEY};
-for(const provider of ['pixabay','wikimedia','openverse','pexels']){
+for(const provider of (process.env.VERIFY_PIPELINE_ONLY==='true'?[]:['pixabay','wikimedia','openverse','pexels'])){
  if(provider==='pixabay'&&!env.PIXABAY_API_KEY||provider==='pexels'&&!env.PEXELS_API_KEY){console.log('IMAGE_SERVICE '+JSON.stringify({provider,status:'missing_key'}));continue;}
  try{
   const result=await searchStock({query:provider==='pixabay'?'playa':'beach',provider},env);
@@ -16,10 +16,11 @@ for(const provider of ['pixabay','wikimedia','openverse','pexels']){
 if(process.env.APP_PASSCODE){
  try{
   const r=await fetch('https://faceless-images.marianitord2020.workers.dev/images',{method:'POST',headers:{origin:'https://marianitord2020.github.io','content-type':'application/json','x-app-token':process.env.APP_PASSCODE},body:JSON.stringify({prompt:'A scenic tropical garden in daylight, cinematic photograph, no text',format:'9:16'}),signal:AbortSignal.timeout(100000)});
-  const d=await r.json();console.log('IMAGE_SERVICE '+JSON.stringify({provider:'deployed_generator',status:r.ok?(d.dataURI?'ok':d.pending?'queued':'invalid'):'failed',actualProvider:d.provider||'',httpStatus:r.status}));
+  const d=await r.json();console.log('IMAGE_SERVICE '+JSON.stringify({provider:'deployed_generator',status:r.ok?(d.dataURI?'ok':d.pending?'queued':'invalid'):'failed',actualProvider:d.provider||'',httpStatus:r.status,...(!r.ok?{detail:String(d.error||'').split(process.env.APP_PASSCODE).join('[redacted]').slice(0,1000)}:{})}));
   if(d.generationId?.startsWith('horde:'))await hordePoll(d.generationId,true).catch(()=>{});
  }catch{console.log('IMAGE_SERVICE '+JSON.stringify({provider:'deployed_generator',status:'connection_failed'}));}
 }
+if(process.env.VERIFY_PIPELINE_ONLY==='true')process.exit(0);
 let job;
 try{
  job=await hordeStart({AI_HORDE_API_KEY:process.env.AI_HORDE_API_KEY},'A watercolor tropical garden, sunlight, no text','9:16');

@@ -20,6 +20,7 @@ jobs:
       - name: Buscar descargar y generar imágenes reales
         env:
           APP_PASSCODE: ${{ secrets.APP_PASSCODE }}
+          VERIFY_PIPELINE_ONLY: "true"
           PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           AI_HORDE_API_KEY: ${{ secrets.AI_HORDE_API_KEY }}
