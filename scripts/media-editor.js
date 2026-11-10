@@ -79,6 +79,7 @@
   };
   window.facelessRefreshAudioAttachment=()=>{
    if(!audioRoot.isConnected)return;
+   window.facelessMountManualTiming?.(p,updatePreview);
    const has=Boolean(audioFile&&audioFileProjectId===p.id);
    audioRoot.hidden=!has||!audioFile.facelessManual;id('audioCount').hidden=!has;
    id('pickOwnAudio').querySelector('strong').textContent=has&&audioFile.facelessManual?'Cambiar mi audio':'Añadir mi audio';id('removeAudio').disabled=!has||Boolean(window.facelessMediaBusy);id('syncAudio').disabled=!has||Boolean(window.facelessMediaBusy);id('syncAudio').hidden=!has;
