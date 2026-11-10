@@ -14,13 +14,13 @@ function facelessDecodeURI(dataURI) {
   for (let k = 0; k < raw.length; k++) bytes[k] = raw.charCodeAt(k);
   return bytes.buffer;
 }
-async function facelessRequestVoice(text, voice, passcode) {
+async function facelessRequestVoice(text, voice, passcode, style) {
   let response;
   try {
     response = await fetch(FACELESS_VOICE_API, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-app-token': passcode },
-      body: JSON.stringify({ text, voice })
+      body: JSON.stringify({ text, voice, style })
     });
   } catch (_) { throw new Error('No se pudo conectar con Cloudflare para generar la voz.'); }
   let json;
@@ -89,11 +89,31 @@ function mountAIVoiceControls(project) {
     '<h3 style="margin:0 0 8px">🎙 Narración automática en español</h3>' +
     '<p>Convierte el guion en voz IA, une las escenas y añade el audio al video. Sin grabar con micrófono.</p>' +
     '<label class="group-label" for="aiVoiceOption">Voz para narración</label>' +
-    '<select id="aiVoiceOption" style="margin-bottom:12px"><option value="Fola">Fola (Google, si está conectado)</option>' +
-    '<option value="Kore">Kore (Google, si está conectado)</option>' +
-    '<option value="Aoede">Aoede (Google, si está conectado)</option>' +
+    '<select id="aiVoiceOption" style="margin-bottom:12px"><option value="automatic">✦ Automática según el relato</option>' +
+    '<option value="Fola">Fola (Google, cálida y versátil)</option>' +
+    '<option value="Kore">Kore (Google, firme y clara)</option>' +
+    '<option value="Aoede">Aoede (Google, suave y narrativa)</option>' +
+    '<option value="Puck">Puck (Google, dinámica)</option>' +
+    '<option value="Charon">Charon (Google, documental)</option>' +
+    '<option value="Leda">Leda (Google, juvenil)</option>' +
+    '<option value="Zephyr">Zephyr (Google, expresiva)</option>' +
     '<option value="female">Español: Celeste (Cloudflare)</option>' +
     '<option value="male">Español: Álvaro (Cloudflare)</option></select>' +
+    '<label class="group-label" for="aiVoiceMood">Interpretación</label>' +
+    '<select id="aiVoiceMood" style="margin-bottom:12px">' +
+    '<option value="automatic">Automática según la categoría</option>' +
+    '<option value="news">Noticiero profesional</option>' +
+    '<option value="suspense">Misterio y suspenso</option>' +
+    '<option value="romantic">Emotiva y romántica</option>' +
+    '<option value="documentary">Documental histórico</option>' +
+    '<option value="entertainment">Farándula y entretenimiento</option>' +
+    '<option value="energetic">Motivadora y enérgica</option>' +
+    '<option value="neutral">Neutra e informativa</option></select>' +
+    '<label class="group-label" for="aiVoiceSpeed">Velocidad de narración</label>' +
+    '<select id="aiVoiceSpeed" style="margin-bottom:12px">' +
+    '<option value="0.9">Pausada (0.9×)</option>' +
+    '<option value="1" selected>Normal (1×)</option>' +
+    '<option value="1.1">Ágil (1.1×)</option></select>' +
     '<label for="aiVoicePasscode" class="group-label">Código privado de Cloudflare</label>' +
     '<input type="password" id="aiVoicePasscode" autocomplete="new-password" placeholder="El mismo APP_PASSCODE que usas para las fotos" style="width:100%;margin-bottom:12px">' +
     '<button type="button" class="btn primary full" id="aiVoiceGenerate">🎙 Generar voz automáticamente</button>' +
@@ -112,8 +132,46 @@ function mountAIVoiceControls(project) {
   if (audioFile && /^faceless-voz-/.test(audioFile.name)) {
     status.textContent = 'La voz IA ya está cargada en este proyecto. Puedes descargarla o crear el video.';
   }
+  const voiceByGenre={
+    Noticias:{voice:'Charon',mood:'news'},
+    Misterio:{voice:'Charon',mood:'suspense'},
+    Historia:{voice:'Kore',mood:'documentary'},
+    Romance:{voice:'Aoede',mood:'romantic'},
+    Farándula:{voice:'Zephyr',mood:'entertainment'},
+    Curiosidades:{voice:'Puck',mood:'neutral'},
+    Motivación:{voice:'Fola',mood:'energetic'},
+    Educativo:{voice:'Fola',mood:'neutral'}
+  };
+  const preset=voiceByGenre[project.style]||{voice:'Fola',mood:'neutral'};
+  const moodSelect=panel.querySelector('#aiVoiceMood');
+  const speedSelect=panel.querySelector('#aiVoiceSpeed');
+  voiceSelect.value=project.voicePreset||'automatic';
+  moodSelect.value=project.voiceMood||'automatic';
+  speedSelect.value=String(project.voiceSpeed||1);
+  const voicePreview=panel.querySelector('p.smalltext');
+  const note=document.createElement('p');
+  note.className='smalltext';
+  note.textContent='Sugerencia para '+project.style+': voz '+preset.voice+' con interpretación '+preset.mood+'. Puedes cambiarla sin duplicar audios.';
+  voiceSelect.insertAdjacentElement('afterend',note);
   const voiceSelect = panel.querySelector('#aiVoiceOption');
+  const stopVoiceOnChange=()=>{
+    if (facelessVoiceBusy) { facelessVoiceCancel=true; return; }
+    facelessRemovePriorVoice(project,panel);
+    status.textContent='El audio anterior fue eliminado. Genera la nueva voz para sustituirlo.';
+  };
+  moodSelect.onchange=()=>{
+    project.voiceMood=moodSelect.value;
+    if(typeof persist==='function')persist();
+    stopVoiceOnChange();
+  };
+  speedSelect.onchange=()=>{
+    project.voiceSpeed=Number(speedSelect.value)||1;
+    if(typeof persist==='function')persist();
+    stopVoiceOnChange();
+  };
   voiceSelect.onchange = () => {
+    project.voicePreset=voiceSelect.value;
+    if(typeof persist==='function')persist();
     if (facelessVoiceBusy) {
       facelessVoiceCancel = true;
       status.textContent = 'Cambio de voz solicitado: cancelando generación anterior…';
@@ -132,7 +190,9 @@ function mountAIVoiceControls(project) {
       passwordInput.focus();
       return;
     }
-    const voice = panel.querySelector('#aiVoiceOption').value;
+    const voice = voiceSelect.value==='automatic'?preset.voice:voiceSelect.value;
+    const mood=moodSelect.value==='automatic'?preset.mood:moodSelect.value;
+    const speed=Number(speedSelect.value)||1;
     if (!project.scenes?.length) { status.textContent = 'Este proyecto no tiene escenas.'; return; }
     // Antes de generar una nueva voz, eliminar y detener TODO el audio antiguo.
     facelessRemovePriorVoice(project, panel);
@@ -153,7 +213,7 @@ function mountAIVoiceControls(project) {
         if (!text) continue;
         if (text.length > 650) throw new Error('La escena ' + (index + 1) + ' supera 650 caracteres. Acorta su texto antes de generar voz.');
         status.textContent = 'Generando voz IA: escena ' + (index + 1) + ' de ' + project.scenes.length + '…';
-        const result = await facelessRequestVoice(text, voice, facelessVoicePassword);
+        const result = await facelessRequestVoice(text, voice, facelessVoicePassword, mood);
         let decoded;
         try { decoded = await audioCtx.decodeAudioData(facelessDecodeURI(result.dataURI)); }
         catch (_) { throw new Error('No se pudo interpretar el audio de la escena ' + (index + 1) + '.'); }
@@ -170,10 +230,11 @@ function mountAIVoiceControls(project) {
       for (const segment of segments) {
         const source = offline.createBufferSource();
         source.buffer = segment.audio;
+        source.playbackRate.value=speed;
         source.connect(offline.destination);
         const available = Math.max(0, Math.min(segment.duration, duration - segment.time));
-        if (segment.audio.duration > available + 0.12) clipped++;
-        if (available > 0) source.start(segment.time, 0, Math.min(available, segment.audio.duration));
+        if (segment.audio.duration/speed > available + 0.12) clipped++;
+        if (available > 0) source.start(segment.time, 0, Math.min(available*speed, segment.audio.duration));
       }
       const mixed = await offline.startRendering();
       const blob = facelessAudioToWAV(mixed);
@@ -204,7 +265,7 @@ function mountAIVoiceControls(project) {
       audioArea.append(player, link);
       status.textContent = '✓ Voz lista e incorporada al proyecto. Pulsa «Crear y descargar video CON VOZ» para exportar el video narrado. ' +
         (clipped ? 'Aviso: ' + clipped + ' escenas tenían voz más larga que su tiempo asignado y se recortaron. Ajusta el guion para sincronizar.' : 'Las escenas respetan sus tiempos.') +
-        ' Fuente: ' + [...new Set(segments.map(s=>s.provider))].join(', ');
+        ' Voz: '+voice+'. Estilo: '+mood+'. Velocidad: '+speed+'×. Fuente: ' + [...new Set(segments.map(s=>s.provider))].join(', ');
     } catch (error) {
       const msg = String(error?.message || error);
       if (/código privado incorrecto/i.test(msg)) {
