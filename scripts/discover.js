@@ -125,17 +125,26 @@
   function shell(){
     const root=$id('discover');if(!root)return;
     root.innerHTML=
-    '<div class="studio-layout"><div class="studio-center">'+
+    '<div class="studio-layout"><aside class="studio-sidebar" aria-label="Herramientas del estudio">'+
+    '<div class="studio-sidebar-brand">✦ <strong>Faceless AI Studio</strong></div>'+
+    '<button type="button" class="studio-side-link on" data-studio-nav="discover">⊕ Crear proyecto</button>'+
+    '<button type="button" class="studio-side-link" data-studio-nav="projects">▱ Mis proyectos</button>'+
+    '<button type="button" class="studio-side-link" data-studio-nav="voices">♫ Voces IA</button>'+
+    '<button type="button" class="studio-side-link" data-studio-nav="images">▧ Imágenes IA</button>'+
+    '<button type="button" class="studio-side-link" data-studio-nav="videos">▷ Videos IA</button>'+
+    '<div class="studio-side-note">Tus proyectos se guardan en este navegador. Sin planes de pago activados.</div>'+
+    '</aside><div class="studio-center">'+
     '<div class="studio-menu-view">'+
-    '<h1 class="compact-title">Tu próximo video</h1>'+
+    '<h1 class="compact-title">Generador de Relatos y Noticias con IA</h1>'+
+    '<p class="studio-intro">Elige un estilo, escribe tu tema y descubre hasta 10 historias o noticias con portada, título y sinopsis.</p>'+
     '<section class="compact-story"><h2><span>01</span> Encuentra tu historia</h2><div class="compact-search"><input id="studioTopic" type="text" maxlength="220" placeholder="¿Qué quieres contar?" aria-label="Tema de tu video"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10" cy="10" r="7"/><path d="m15 15 6 6"/></svg></div></section>'+
     '<div class="compact-category"><select id="studioGenre" aria-label="Categoría"></select></div>'+
-    '<div hidden class="studio-models"><select id="studioSubcategory" aria-label="Subcategoría"><option value="">Todos los temas</option></select><select id="studioMode" aria-label="Tipo de contenido"><option value="fiction">Relatos creativos</option><option value="news">Noticias reales</option><option value="factual">Documentales</option></select></div>'+
+    '<div class="studio-models"><label class="studio-mode-label" for="studioMode">Tipo de contenido</label><select id="studioSubcategory" aria-label="Subcategoría" hidden><option value="">Todos los temas</option></select><select id="studioMode" aria-label="Tipo de contenido"><option value="fiction">Relatos creativos</option><option value="news">Noticias reales</option><option value="factual">Documentales reales</option></select></div>'+
     '<section class="compact-origin"><h2><span>02</span> Cómo quieres empezar</h2><select id="studioSource" aria-label="Cómo quieres empezar"><option value="ai">Crear con IA</option><option value="local">Explorar relatos</option></select></section>'+
     '<details class="studio-video-options compact-options" id="studioVideoOptions"><summary><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m10 2-1 3-3 1-3-1-2 4 2 2v3l-2 2 2 4 3-1 3 1 1 3h4l1-3 3-1 3 1 2-4-2-2v-3l2-2-2-4-3 1-3-1-1-3h-4Z"/><circle cx="12" cy="12" r="3"/></svg><span id="studioVideoSummary">Ajustes opcional • 60s • Cinematográfica</span></summary><div class="compact-options-body">'+
     '<div class="studio-addon"><label for="studioImageStyle">Estilo de imagen</label><select id="studioImageStyle"></select></div>'+
     '<div class="studio-addon"><label for="studioDuration">Duración</label><select id="studioDuration"><option value="30">30s</option><option value="60" selected>1 min</option><option value="120">2 min</option></select></div>'+
-    '<div class="studio-addon"><label for="studioVoice">Voz</label><select id="studioVoice"><option value="female">Femenina</option><option value="male">Masculina</option><option value="neutral">Neutra</option></select></div>'+
+    '<div class="studio-addon"><label for="studioVoice">Narrador</label><select id="studioVoice"><option value="automatic" selected>Automática según el relato</option><option value="female">Femenina</option><option value="male">Masculina</option><option value="Fola">Fola · Google</option><option value="Kore">Kore · Google</option><option value="Aoede">Aoede · Google</option><option value="Charon">Charon · Google</option><option value="Zephyr">Zephyr · Google</option><option value="Puck">Puck · Google</option></select></div>'+
     '<div class="compact-source-switch"><label for="studioShowSources">Fuentes</label><input type="checkbox" id="studioShowSources" role="switch" checked></div>'+
     '<div class="studio-addon studio-access"><label for="studioPass">Código de acceso</label><input id="studioPass" type="password" autocomplete="new-password" placeholder="Tu código privado"></div>'+
     '</div></details>'+
@@ -161,10 +170,21 @@
     function showResults(){root.querySelector('.studio-menu-view').hidden=true;root.querySelector('.studio-results-view').hidden=false;root.classList.add('studio-show-results');window.scrollTo({top:0,behavior:'instant'})}
     window.facelessShowStudioMenu=showMenu;window.facelessShowStudioResults=showResults;
     $id('studioBackToMenu').onclick=showMenu;
+    root.querySelectorAll('[data-studio-nav]').forEach(button=>button.onclick=()=>{
+      const target=button.dataset.studioNav;
+      if(target==='discover'){showMenu();return}
+      if(target==='projects'){route('projects');return}
+      const list=projects||[];
+      if(!list.length){toast('Crea o abre un proyecto para utilizar esta herramienta.');return}
+      activeId=list[0].id;
+      tab='video';
+      route('editor');
+      toast(target==='voices'?'Voces IA: abre Narración automática.':target==='images'?'Imágenes IA: abre Generar fotos automáticamente.':'Video IA: abre el reproductor y la exportación.');
+    });
     function updateVideoSummary(){
       const names={cinematic:'Cinematográfica',hyperreal:'Hiperrealista',anime:'Anime'};
       let text='Ajustes opcional • '+$id('studioDuration').value+'s • '+names[$id('studioImageStyle').value];
-      if($id('studioVoice').value!=='female')text+=' • '+($id('studioVoice').value==='male'?'Masculina':'Neutra');
+      if($id('studioVoice').value!=='automatic')text+=' • Voz '+$id('studioVoice').selectedOptions[0].textContent;
       if(!$id('studioShowSources').checked)text+=' • Sin fuentes';
       if($id('studioPass').value.trim())text+=' • Acceso listo';
       $id('studioVideoSummary').textContent=text;
@@ -180,7 +200,7 @@
       for(const name of subcategories[genre.value]||[])sub.add(new Option(name,name));
     }
     genre.value='Romance';refreshSubcategories();
-    const image=$id('studioImageStyle');for(const [key,name] of imageStyles)if(['cinematic','hyperreal','anime'].includes(key))image.add(new Option(name,key));
+    const image=$id('studioImageStyle');for(const [key,name] of imageStyles)image.add(new Option(name,key));
     $id('studioTopic').value='';
     $id('studioTopic').addEventListener('input',()=>{$id('studioTopic').dataset.edited='true';$id('studioTopic').setCustomValidity('')});
     genre.onchange=()=>{
@@ -213,6 +233,13 @@
     $id('studioImportWritten').onclick=importWritten;
     $id('studioTopic').addEventListener('input',()=>{$id('studioReddit').href='https://www.reddit.com/search/?'+new URLSearchParams({q:$id('studioTopic').value})});
     $id('studioDuration').onchange=renderFeature;
+    $id('studioMode').addEventListener('change',()=>{
+      const genre=$id('studioGenre');
+      if($id('studioMode').value==='news'&& !['Noticias','Farándula','Deportes','Entretenimiento'].includes(genre.value)){
+        genre.value='Noticias';
+        refreshSubcategories();
+      }
+    });
     $id('studioGenerate').onclick=generateIdeas;
     $id('studioTopic').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();generateIdeas()}});
     state.ideas=[];state.topic='';state.style='Romance';state.source='ai';state.mode='fiction';
@@ -595,8 +622,8 @@
         coverTitle:idea.title,coverSynopsis:idea.synopsis,coverPrompt:idea.coverPrompt,
         imageStyle:state.imageStyle,scriptMode:data.mode,
         writtenOriginal:written?(idea.importedOriginal||writtenData.originalText):'',writtenSpanish:writtenData?.originalText||'',writtenExcerpt:writtenData?.excerpt||false,
-        voicePreset:$id('studioVoice').value==='neutral'?'automatic':$id('studioVoice').value,
-        voiceMood:$id('studioVoice').value==='neutral'?'neutral':'automatic',showSources:$id('studioShowSources').checked,
+        voicePreset:$id('studioVoice').value==='automatic'?'automatic':$id('studioVoice').value,
+        voiceMood:'automatic',showSources:$id('studioShowSources').checked,
         aiProvider:data.provider||'Gemini',sources,inspirationSources:state.mode==='fiction'?validSources(state.sources):[],
         sourceCheckedAt:data.checkedAt||state.checkedAt,searchQuery:state.topic
       };
