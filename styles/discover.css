@@ -104,3 +104,6 @@ body.studio-mode{background:#050b16}
  #discover .studio-helper{flex-basis:100%}
 }
 @media(min-width:1450px){#discover .studio-card-visual{height:146px}#discover .studio-card{min-height:248px}}
+
+
+#studioWritten[hidden]{display:none}#studioWritten label{display:block;margin:14px 0 6px;font-weight:600}#studioWritten input,#studioWritten select,#studioWritten textarea{display:block;box-sizing:border-box;width:100%;max-width:100%;background:#0d1728;color:#e8e8f5;border:1px solid #35425c;border-radius:12px;padding:12px;font:inherit}#studioWritten textarea{resize:vertical}

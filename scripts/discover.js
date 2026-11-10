@@ -3,7 +3,7 @@
 (() => {
   'use strict';
   const API='https://faceless-images.marianitord2020.workers.dev';
-  const styles=['Romance','Misterio','Historia','Curiosidades','Noticias','Farándula','Entretenimiento','Motivación','Educativo'];
+  const styles=['Romance','Misterio','Terror','Fantasía','Historia','Curiosidades','Noticias','Farándula','Entretenimiento','Motivación','Educativo'];
   const imageStyles=[
     ['cinematic','Fotografía cinematográfica'],
     ['hyperreal','Foto hiperrealista'],
@@ -119,7 +119,7 @@
     '<div class="studio-free"><b>♢ Etapa gratuita</b><span>Cloudflare y Gemini sujetos a sus cuotas. No se activan servicios de pago.</span></div>'+
     '</aside>'+
     '<div class="studio-center">'+
-    '<div class="studio-title"><div><h1>Generador de <span class="sparkle">Relatos y Noticias</span> con IA</h1>'+
+    '<div class="studio-title"><div><h1>Generador de <span class="sparkle">Relatos y Noticias</span></h1>'+
     '<p>Elige un estilo y descubre portadas con título y sinopsis. Tú decides qué historia llevar a creación.</p></div></div>'+
     '<div class="studio-settings">'+
     '<div class="studio-fields">'+
@@ -129,12 +129,21 @@
     '<option value="fiction">Relatos creativos</option><option value="news">Noticias reales y actuales</option><option value="factual">Documentales / hechos reales</option></select></div>'+
     '<div class="studio-field"><button class="studio-generate" type="button" id="studioGenerate">⌕ Generar 10 propuestas</button></div></div>'+
     '<div class="studio-addons">'+
-    '<div class="studio-addon"><label for="studioSource">Origen de propuestas</label><select id="studioSource"><option value="ai">IA — Gemini</option><option value="local">Local — sin IA</option></select></div>'+
+    '<div class="studio-addon"><label for="studioSource">Origen de propuestas</label><select id="studioSource"><option value="ai">IA — Gemini</option><option value="local">Textos publicados — sin IA generativa</option></select></div>'+
     '<div class="studio-addon"><label for="studioImageStyle">Estilo de imágenes</label><select id="studioImageStyle"></select></div>'+
     '<div class="studio-addon"><label for="studioDuration">Duración</label><select id="studioDuration"><option value="30">30 segundos</option><option value="60" selected>60 segundos</option><option value="120">120 segundos</option></select></div>'+
     '<div class="studio-addon pass"><label for="studioPass">Código APP_PASSCODE</label><input id="studioPass" type="password" autocomplete="new-password" placeholder="Solo para IA; no es tu API Key"></div>'+
     '<div class="studio-helper" id="studioCoverage">Cobertura de República Dominicana y medios en español de noticias, farándula y entretenimiento. Cada resultado enlaza al artículo original. Se muestran solo fuentes recuperadas, nunca noticias inventadas. Las portadas visuales de noticias son ilustraciones editoriales.</div></div>'+
     '</div>'+
+    '<div id="studioWritten" class="studio-settings" hidden>'+
+    '<p>Busca obras en Wikisource o abre Reddit y pega el texto que quieras trabajar. La búsqueda automática de Reddit no está conectada.</p>'+
+    '<a id="studioReddit" class="studio-source" href="https://www.reddit.com/search/" target="_blank" rel="noopener noreferrer">↗ Buscar relatos en Reddit</a>'+
+    '<label for="studioWrittenTitle">Título del texto</label><input id="studioWrittenTitle" maxlength="120" placeholder="Título del relato publicado">'+
+    '<label for="studioWrittenUrl">Enlace original (opcional)</label><input id="studioWrittenUrl" type="url" maxlength="1000" placeholder="https://…">'+
+    '<label for="studioWrittenLanguage">Idioma del texto original</label><select id="studioWrittenLanguage"><option value="es">Español</option><option value="en">Inglés</option><option value="fr">Francés</option><option value="pt">Portugués</option><option value="it">Italiano</option><option value="de">Alemán</option></select>'+
+    '<label for="studioWrittenText">Texto publicado (hasta 5.000 caracteres)</label><textarea id="studioWrittenText" maxlength="5000" rows="6" placeholder="Pega aquí el relato. No lo sustituiremos por una historia inventada."></textarea>'+
+    '<p class="studio-limit">Si eliges otro idioma, se enviará el texto a MyMemory para traducirlo. Su cuota gratuita anónima es de 5.000 caracteres al día. Conserva autor, enlace y permisos de uso.</p>'+
+    '<button id="studioImportWritten" class="studio-create" type="button">Importar texto / traducir al español</button></div>'+
     '<div class="studio-results-head"><div><h2>✦ <span id="studioGalleryTitle">10 propuestas de historias</span></h2>'+
     '<p id="studioGallerySubtitle">Selecciona un relato, lee su sinopsis y llévalo a creación.</p></div>'+
     '<span class="studio-results-tag" id="studioGalleryTag">Sin propuestas</span></div>'+
@@ -159,25 +168,29 @@
         $id('studioMode').value='news';
         $id('studioSource').value='ai';
       }else if($id('studioMode').value==='news')$id('studioMode').value='fiction';
+      $id('studioSource').onchange();
     };
     $id('studioMode').onchange=()=>{
       if($id('studioMode').value==='news'&&!['Noticias','Farándula','Entretenimiento'].includes(genre.value))genre.value='Noticias';
       if($id('studioMode').value!=='fiction')$id('studioSource').value='ai';
+      $id('studioSource').onchange();
     };
     $id('studioSource').onchange=()=>{
       const local=$id('studioSource').value==='local';
-      if(local&&$id('studioMode').value!=='fiction'){
-        $id('studioMode').value='fiction';
-        $id('studioGallerySubtitle').textContent='Sin conexión solo hay relatos ficticios predefinidos; las noticias requieren fuentes actuales.';
-      }
+      $id('studioWritten').hidden=!local;
+      $id('studioGenerate').textContent=local?'⌕ Buscar textos publicados':'⌕ Generar 10 propuestas';
+      if(local)$id('studioMode').value='fiction';
+      $id('studioReddit').href='https://www.reddit.com/search/?'+new URLSearchParams({q:$id('studioTopic').value});
     };
+    $id('studioImportWritten').onclick=importWritten;
+    $id('studioTopic').addEventListener('input',()=>{$id('studioReddit').href='https://www.reddit.com/search/?'+new URLSearchParams({q:$id('studioTopic').value})});
     $id('studioDuration').onchange=renderFeature;
     $id('studioGenerate').onclick=generateIdeas;
     $id('studioTopic').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();generateIdeas()}});
     // Portadas de demostración visibles al abrir, igual que el diseño aprobado.
     state.ideas=localIdeas('Historias de amor','Romance');
     state.topic='Historias de amor';
-    state.style='Romance';state.source='local';state.mode='fiction';
+    state.style='Romance';state.source='demo';state.mode='fiction';
     $id('studioSource').value='ai';
     renderCards();renderFeature();
     setStatus('✦ Catálogo local de ejemplo. Puedes elegir El amor olvidado o escribir otro tema y generar 10 propuestas con Gemini.');
@@ -259,6 +272,11 @@
     const button=e('button','studio-create',state.building?'Preparando guion…':'▣ Llevar a creación');
     button.type='button';button.disabled=state.building||state.busy;button.onclick=createProject;
     text.appendChild(button);
+    if(state.source==='local'){
+      const adapt=e('button','studio-create','✦ Crear una historia nueva con IA a partir de este texto');
+      adapt.type='button';adapt.disabled=state.busy||state.building;adapt.onclick=adaptWritten;text.appendChild(adapt);
+    }
+    if(state.source==='local')text.appendChild(e('p','studio-limit','Texto publicado, sin generación con IA. Al crear se toma un fragmento según la duración; no se resume ni se inventa un final.'));
     if(idea.sourceUrl){
       const a=e('a','studio-source','↗ Ver fuente original');
       a.href=idea.sourceUrl;a.target='_blank';a.rel='noopener noreferrer';text.appendChild(a);
@@ -341,11 +359,6 @@
     const mode=requestedMode;
     if(topic.length<5){setStatus('Escribe un tema de al menos cinco caracteres.');$id('studioTopic').focus();return}
     if(local&&mode!=='fiction'){setStatus('Las noticias y los documentales reales requieren IA y fuentes actuales. Cambia el origen a «IA — Gemini».');return}
-    if(local&&(topic.toLocaleLowerCase()!=='historias de amor'||style!=='Romance')){
-      $id('studioSource').value='ai';
-      state.ideas=[];state.topic=topic;state.mode=mode;state.epoch++;initialState();
-      setStatus('El catálogo local contiene ejemplos; para generar tu tema «'+topic+'» usa IA — Gemini y pulsa Generar propuestas.');return;
-    }
     state.busy=true;state.epoch++;const epoch=state.epoch;
     state.pass=$id('studioPass').value.trim()||state.pass;
     state.topic=topic;state.style=style;state.mode=mode;state.source=local?'local':'ai';
@@ -354,8 +367,11 @@
     $id('studioGenerate').disabled=true;
     try{
       if(local){
-        state.ideas=localIdeas(topic,style);
-        setStatus('✓ 10 relatos locales preparados sin usar créditos de IA. Son ejemplos de ficción; puedes elegir uno.');
+        setStatus('Buscando textos publicados en Wikisource sobre «'+topic+'»…');
+        const result=await window.facelessWrittenStories.search(topic,style);
+        if(!result.ideas.length)throw Error('No encontré textos publicados. Puedes abrir Reddit y pegar un relato.');
+        state.ideas=result.ideas;state.sources=result.sources;state.sourceProvider=result.sourceProvider;state.matchType=result.matchType;
+        setStatus('✓ '+state.ideas.length+' textos publicados'+(state.matchType==='related'?' relacionados con el género elegido':'')+'. La descripción es un fragmento de la fuente, sin reescritura con IA.');
       }else{
         setStatus(mode==='news'?'Consultando GDELT para noticias reales y fuentes actuales…':
           'Gemini está preparando 10 títulos y sinopsis sobre «'+topic+'»…');
@@ -377,6 +393,45 @@
     }finally{
       state.busy=false;$id('studioGenerate').disabled=false;renderFeature();
     }
+  }
+  async function adaptWritten(){
+    if(state.busy||state.building)return;
+    const idea=selectedIdea();if(!idea)return;
+    state.pass=$id('studioPass').value.trim()||state.pass;
+    if(state.pass.length<16){setStatus('Para crear una historia nueva con IA necesitas el APP_PASSCODE. El texto publicado sigue disponible sin IA.');return}
+    state.busy=true;state.epoch++;renderFeature();
+    try{
+      setStatus('Leyendo la fuente para crear ficción nueva con Gemini…');
+      const text=await window.facelessWrittenStories.read(idea);
+      const style=$id('studioGenre').value;
+      const topic=('Una historia de '+style+' inspirada en '+idea.title).slice(0,220);
+      const result=await callEndpoint('/ideas',{topic,style,mode:'fiction',reference:{title:idea.title,url:idea.sourceUrl||'',text:text.slice(0,1800)}});
+      if(!result.ideas?.length)throw Error('No se prepararon propuestas nuevas.');
+      state.ideas=result.ideas;state.topic=topic;state.style=style;state.mode='fiction';state.source='ai';state.selected=0;state.matchType='exact';state.sources=result.sources||[];state.covers.clear();
+      $id('studioTopic').value=topic;$id('studioSource').value='ai';$id('studioSource').onchange();
+      setStatus('✓ Historias nuevas de ficción inspiradas en la fuente. No son sucesos reales ni traducciones del relato original.');
+    }catch(error){setStatus(String(error.message||error))}
+    finally{state.busy=false;renderCards();renderFeature()}
+  }
+  async function importWritten(){
+    if(state.busy||state.building)return;
+    const text=$id('studioWrittenText').value.trim(),title=$id('studioWrittenTitle').value.trim();
+    if(text.length<100||!title){setStatus('Escribe un título y pega al menos 100 caracteres del relato.');return}
+    let url=$id('studioWrittenUrl').value.trim();
+    try{if(url&&new URL(url).protocol!=='https:')throw Error()}catch{setStatus('El enlace original debe empezar con https://');return}
+    state.busy=true;state.epoch++;$id('studioImportWritten').disabled=true;
+    // Clear stale cards before translating; no previous story can be selected on failure.
+    state.ideas=[];state.topic=title;initialState();renderFeature();
+    try{
+      setStatus($id('studioWrittenLanguage').value==='es'?'Importando texto publicado…':'Traduciendo con MyMemory; conservando el texto original…');
+      const translated=await window.facelessWrittenStories.translate(text,$id('studioWrittenLanguage').value);
+      state.topic=title;state.style=$id('studioGenre').value;state.source='local';state.mode='fiction';state.selected=0;
+      state.sources=url?[{title,url}]:[];state.matchType='exact';state.sourceProvider='Texto importado';state.covers.clear();
+      state.ideas=[{id:'imported-'+Date.now(),title,synopsis:translated.slice(0,400)+(translated.length>400?'…':''),writtenText:translated,importedOriginal:text,sourceUrl:url,sourceTitle:title,outline:'Texto publicado importado por el usuario.',coverPrompt:''}];
+      setStatus('✓ Texto preparado en español. Revisa la traducción y la fuente antes de crear el video.');
+      state.busy=false;renderCards();renderFeature();
+    }catch(error){setStatus(String(error.message||error))}
+    finally{state.busy=false;$id('studioImportWritten').disabled=false;renderFeature()}
   }
   function imagePrompt(idea){
     const preset={
@@ -470,13 +525,20 @@
     state.pass=$id('studioPass').value.trim()||state.pass;
     state.building=true;renderFeature();
     const duration=Number($id('studioDuration').value)||60;
-    const local=state.source==='local';
+    const written=state.source==='local';
+    const local=written||state.source==='demo';
     const creationTopic=idea.matchType==='related'?idea.title:state.topic;
     setStatus(local?'Creando proyecto con el relato local seleccionado…':
       'Gemini está escribiendo el guion completo de «'+idea.title+'» sin cambiar su trama…');
     try{
-      const data=local?{title:idea.title,scenes:createLocalScenes(idea,duration),
-        sources:[],provider:'Relato local',mode:'ficcion',checkedAt:null}:await callEndpoint('/script',{
+      let writtenData;
+      if(written){
+        setStatus('Leyendo el texto seleccionado; se usará un fragmento acorde a la duración, sin inventar escenas…');
+        const original=await window.facelessWrittenStories.read(idea);
+        writtenData=window.facelessWrittenStories.scenes(original,duration,idea.title);
+      }
+      const data=local?{title:idea.title,scenes:written?writtenData.scenes:createLocalScenes(idea,duration),
+        sources:written?state.sources:[],provider:written?'Texto publicado / sin IA generativa':'Relato local',mode:written?'texto_publicado':'ficcion',checkedAt:null}:await callEndpoint('/script',{
         topic:creationTopic,
         duration,platform:choice.platform||'TikTok',style:state.style,
         mode:state.mode==='fiction'?'ficcion':state.mode==='news'?'noticias':'informativo',
@@ -502,6 +564,7 @@
         scenes,narration:scenes.map(s=>s.text).join('\n'),hook:scenes[0].text,
         coverTitle:idea.title,coverSynopsis:idea.synopsis,coverPrompt:idea.coverPrompt,
         imageStyle:state.imageStyle,scriptMode:data.mode,
+        writtenOriginal:written?(idea.importedOriginal||writtenData.originalText):'',writtenSpanish:writtenData?.originalText||'',writtenExcerpt:writtenData?.excerpt||false,
         voicePreset:'automatic',
         aiProvider:data.provider||'Gemini',sources,
         sourceCheckedAt:data.checkedAt||state.checkedAt,searchQuery:state.topic
@@ -517,7 +580,7 @@
       activeId=id;tab='summary';showEditor=false;
       resetMedia();tab='video';route('editor');
       window.facelessProductionPasscode=state.pass;
-      toast('✓ '+idea.title+' está en creación, con su propio guion.');
+      toast(writtenData?.excerpt?'✓ Fragmento del texto original preparado. Revisa el fragmento en el editor.':'✓ '+idea.title+' está en creación, con su propio guion.');
     }catch(error){setStatus('No se pudo llevar a creación: '+String(error?.message||error))}
     finally{state.building=false;if($id('studioFeature'))renderFeature()}
   }

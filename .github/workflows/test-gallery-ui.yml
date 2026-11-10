@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/discover.js'
+      - 'scripts/written-stories.js'
       - 'styles/discover.css'
       - 'index.html'
       - '.github/workflows/test-gallery-ui.yml'
@@ -158,6 +159,55 @@ jobs:
             if(relatedProject.type!=='related'||relatedProject.original!=='Turismo en Higüey'||chosenRelated.topic!==relatedProject.topic)
               throw Error('La elección relacionada no conservó la búsqueda original y el tema seleccionado');
             console.log('RELACIONADOS: etiqueta, motivo, fuente, selección, consulta original y categorías reales: OK');
+
+            await page.evaluate(()=>route('discover'));
+            await page.locator('#studioGenre').selectOption('Terror');
+            await page.locator('#studioSource').selectOption('local');
+            if(!await page.locator('#studioWritten').isVisible())throw Error('Falta importación de textos');
+            let aiCalls=0;
+            await page.route('**/faceless-images.marianitord2020.workers.dev/**',route=>{aiCalls++;return route.abort()});
+            const original='The traveler heard a strange noise behind the door. He opened the window and saw a shadow in the garden. Nobody answered when he called for help. At dawn, he found a letter on the table.';
+            const spanish='El viajero escuchó un ruido detrás de la puerta. Abrió la ventana y vio una sombra en el jardín. Nadie respondió cuando pidió ayuda. Al amanecer encontró una carta sobre la mesa.';
+            await page.route('https://api.mymemory.translated.net/get?**',route=>{
+              const params=new URL(route.request().url()).searchParams;
+              if(params.get('langpair')!=='en|es'||Buffer.byteLength(params.get('q'))>500)throw Error('Parámetros de traducción inválidos');
+              return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({responseStatus:200,responseData:{translatedText:spanish}})});
+            });
+            await page.locator('#studioWrittenTitle').fill('La sombra del jardín');
+            await page.locator('#studioWrittenUrl').fill('https://www.reddit.com/r/stories/');
+            await page.locator('#studioWrittenLanguage').selectOption('en');
+            await page.locator('#studioWrittenText').fill(original);
+            await page.locator('#studioImportWritten').click();
+            await page.waitForFunction(()=>document.querySelector('#studioFeature h2')?.textContent==='La sombra del jardín');
+            await page.locator('#studioFeature .studio-create').click();
+            await page.waitForFunction(()=>current()?.title==='La sombra del jardín');
+            const imported=await page.evaluate(()=>({text:current().scenes.map(s=>s.text).join(' '),seconds:current().scenes.reduce((a,s)=>a+s.duration,0),raw:current().writtenOriginal,mode:current().scriptMode,source:current().sources[0]?.url}));
+            if(imported.text!==spanish||imported.raw!==original||imported.seconds!==60||imported.mode!=='texto_publicado'||!imported.source.includes('reddit.com')||aiCalls)throw Error('Se alteró el texto, la fuente, el idioma o se invocó IA');
+            await page.evaluate(()=>route('discover'));
+            await page.route('https://es.wikisource.org/w/api.php?**',route=>{
+              const params=new URL(route.request().url()).searchParams;
+              return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(params.get('action')==='parse'?{parse:{text:'<div class="ws-noexport">NO NARRAR</div><span class="interwiki-extra">English</span><p>'+spanish.repeat(4)+'</p>'}}:{query:{search:[{pageid:123,title:'La leyenda publicada',snippet:'Un relato de terror publicado.'}]}})});
+            });
+            await page.locator('#studioTopic').fill('La leyenda publicada');
+            await page.locator('#studioGenerate').click();
+            await page.waitForFunction(()=>document.querySelector('#studioFeature h2')?.textContent==='La leyenda publicada');
+            await page.locator('#studioFeature .studio-create').click();
+            await page.waitForFunction(()=>current()?.title==='La leyenda publicada');
+            const extracted=await page.evaluate(()=>current().narration);
+            if(extracted.includes('NO NARRAR')||extracted.includes('English')||!extracted.startsWith('El viajero')||aiCalls)throw Error('El importador incluyó navegación o llamó IA');
+            console.log('TEXTOS PUBLICADOS: búsqueda, extracción sin navegación, traducción, texto íntegro en orden, fuente y cero llamadas IA: OK');
+            await page.evaluate(()=>route('discover'));
+            await page.unroute('**/faceless-images.marianitord2020.workers.dev/**');
+            let adaptation;
+            await page.route('**/faceless-images.marianitord2020.workers.dev/ideas',route=>{
+              adaptation=route.request().postDataJSON();
+              return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ideas:[{id:'new-fiction',title:'El jardín de las voces',synopsis:'Una ficción nueva con personajes y desenlace propios.',outline:'Una trama distinta',coverPrompt:''}],sources:[]})});
+            });
+            await page.locator('#studioGenre').selectOption('Fantasía');
+            await page.locator('#studioFeature').getByRole('button',{name:'✦ Crear una historia nueva con IA a partir de este texto',exact:true}).click();
+            await page.waitForFunction(()=>document.querySelector('#studioFeature h2')?.textContent==='El jardín de las voces');
+            if(adaptation.style!=='Fantasía'||adaptation.mode!=='fiction'||!adaptation.reference.text.startsWith('El viajero')||!adaptation.reference.url.includes('wikisource.org'))throw Error('La ficción nueva perdió la fuente o el género');
+            console.log('ADAPTACIÓN OPCIONAL: género elegido, texto recuperado y fuente enviados únicamente tras pedir IA: OK');
             await browser.close();
           })().catch(e=>{console.error(e);process.exit(1)});
           JS
@@ -170,4 +220,5 @@ jobs:
             /tmp/faceless-studio-mobile.png
             /tmp/faceless-studio-desktop.png
           retention-days: 3
+
 

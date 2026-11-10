@@ -149,6 +149,8 @@ function mountAIVoiceControls(project) {
   const voiceByGenre={
     Noticias:{voice:'Charon',mood:'news'},
     Misterio:{voice:'Charon',mood:'suspense'},
+    Terror:{voice:'Charon',mood:'suspense'},
+    Fantasía:{voice:'Zephyr',mood:'neutral'},
     Historia:{voice:'Kore',mood:'documentary'},
     Romance:{voice:'Aoede',mood:'romantic'},
     Farándula:{voice:'Zephyr',mood:'entertainment'},
