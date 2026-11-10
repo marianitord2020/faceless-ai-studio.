@@ -1,4 +1,5 @@
 import { geminiScriptCall, trustedSources } from './script-generator.js';
+import { searchRealNews } from './news-search.js';
 function ideasError(message,status=502){const e=new Error(message);e.httpStatus=status;throw e}
 function json(raw){
  try{return JSON.parse(raw)}catch{
@@ -26,6 +27,7 @@ export async function generateCoverIdeas(input,env){
  const style=String(input?.style||'Misterio').slice(0,40);
  const mode=['fiction','news','factual'].includes(input?.mode)?input.mode:'fiction';
  const date=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Santo_Domingo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+ if(mode==='news')return searchRealNews(topic,style,env);
  if(mode==='fiction'){
   const instructions=[
    'Crea EXACTAMENTE diez conceptos de historias de FICCIÓN DIFERENTES en español para que el usuario elija UNA portada y la convierta en video.',
