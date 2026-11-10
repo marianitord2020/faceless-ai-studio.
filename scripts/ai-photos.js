@@ -1,6 +1,6 @@
 /* Fotos IA de Faceless AI Studio.
  * Los secretos de los proveedores están en Cloudflare, nunca en este archivo.
- * Las imágenes y el código privado solo se guardan temporalmente en la memoria del navegador.
+ * Las imágenes se guardan en IndexedDB. El código privado permanece solo en memoria.
  */
 'use strict';
 const FACELESS_IMAGE_API = 'https://faceless-images.marianitord2020.workers.dev/images';
@@ -89,7 +89,7 @@ function mountAIPhotoControls(project, updatePreview) {
     '<button type="button" class="btn small" id="aiPhotosStop" style="margin-top:8px;display:none">Detener después de esta foto</button>' +
     '<p id="aiPhotosStatus" class="status" role="status" aria-live="polite"></p>' +
     '<div id="aiPhotosResults" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:9px;margin-top:12px"></div>' +
-    '<p class="smalltext">Modo inicial gratuito: Cloudflare Workers AI. Leonardo y Gemini se usarán solo si más adelante habilitas sus API de pago. Las fotos generadas quedan en esta sesión: descárgalas antes de cerrar la página.</p>';
+    '<p class="smalltext">Modo inicial gratuito: Cloudflare Workers AI. Leonardo y Gemini se usarán solo si más adelante habilitas sus API de pago. Las fotos generadas se guardan en este navegador. Descárgalas también como respaldo.</p>';
   root.insertAdjacentElement('afterbegin', panel);
   const start = panel.querySelector('#aiPhotosStart');
   const stop = panel.querySelector('#aiPhotosStop');
@@ -100,6 +100,7 @@ function mountAIPhotoControls(project, updatePreview) {
   imageStyleSelect.value=project.imageStyle||'cinematic';
   imageStyleSelect.onchange=()=>{
     project.imageStyle=imageStyleSelect.value;
+    photoMap.clear();refreshGallery();updatePreview();
     if(typeof persist==='function')persist();
   };
 
@@ -126,12 +127,16 @@ function mountAIPhotoControls(project, updatePreview) {
       results.appendChild(item);
     }
   }
+  const hydration=facelessRestoreMedia(project).then(()=>{
+    if(current()?.id===project.id && panel.isConnected){refreshGallery();updatePreview();updateAudioAttachmentUI()}
+  });
   refreshGallery();
   stop.onclick = function () {
     facelessImageCancel = true;
     status.textContent = 'Terminando la foto actual y deteniendo la generación…';
   };
   start.onclick = async function () {
+    await hydration;
     if (facelessImageRunning) return;
     // IMPORTANTE: el Worker de guiones y el de fotos tienen códigos distintos.
     // Nunca reutilizar geminiPass ni una clave API de otro servicio.
@@ -185,7 +190,10 @@ function mountAIPhotoControls(project, updatePreview) {
           photo.onerror = () => reject(new Error('La imagen generada no se pudo abrir.'));
           photo.src = data.dataURI;
         });
+        photo.facelessSignature=facelessImageSignature(project,i);
         photoMap.set(i, photo);
+        if(!await facelessMediaPut(project.id+':image:'+i,{signature:photo.facelessSignature,dataURI:data.dataURI}))
+          toast('No se pudo guardar esta foto en el dispositivo. Descárgala antes de cerrar.');
         done++;
         refreshGallery();
         updatePreview();
@@ -209,8 +217,148 @@ function mountAIPhotoControls(project, updatePreview) {
       }
     } finally {
       facelessImageRunning = false;
-      start.disabled = false;
+      start.disabled = Boolean(window.facelessProductionBusy);
       stop.style.display = 'none';
     }
   };
 }
+
+// Generated media are stored per project; credentials never enter this database.
+let facelessMediaDB;
+const facelessRestoring=new Map();
+function facelessOpenMedia(){
+  if(!facelessMediaDB)facelessMediaDB=new Promise((resolve,reject)=>{
+    const request=indexedDB.open('faceless-generated-media-v1',1);
+    request.onupgradeneeded=()=>request.result.createObjectStore('media');
+    request.onsuccess=()=>resolve(request.result);
+    request.onerror=()=>reject(request.error);
+    request.onblocked=()=>reject(new Error('El almacenamiento está ocupado en otra pestaña.'));
+  }).catch(error=>{facelessMediaDB=null;throw error});
+  return facelessMediaDB;
+}
+async function facelessMediaPut(key,value){
+  try{
+    const db=await facelessOpenMedia();
+    await new Promise((resolve,reject)=>{
+      const tx=db.transaction('media','readwrite');
+      tx.objectStore('media').put(value,key);
+      tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);
+    });return true;
+  }catch{return false}
+}
+async function facelessMediaDelete(key){
+  try{
+    const db=await facelessOpenMedia();
+    await new Promise((resolve,reject)=>{
+      const tx=db.transaction('media','readwrite');tx.objectStore('media').delete(key);
+      tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);
+    });
+  }catch{}
+}
+async function facelessMediaGet(key){
+  const db=await facelessOpenMedia();
+  return new Promise((resolve,reject)=>{
+    const req=db.transaction('media','readonly').objectStore('media').get(key);
+    req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
+  });
+}
+function facelessImageSignature(p,i){return JSON.stringify([p.format,p.imageStyle||'cinematic',p.topic,p.style,p.scenes[i]?.prompt,p.scenes[i]?.text])}
+function facelessVoiceSignature(p){return JSON.stringify([p.duration,p.voicePreset||'automatic',p.voiceMood||'automatic',Number(p.voiceSpeed)||1,p.style,p.scenes.map(s=>[s.time,s.duration,s.text])])}
+async function facelessRestoreMedia(p){
+  if(facelessRestoring.has(p.id))return facelessRestoring.get(p.id);
+  const task=(async()=>{
+    const map=facelessProjectPhotos(p.id);
+    for(let i=0;i<p.scenes.length;i++){
+      const signature=facelessImageSignature(p,i),existing=map.get(i);
+      if(existing?.facelessSignature===signature)continue;
+      if(existing)map.delete(i);
+      const stored=await facelessMediaGet(p.id+':image:'+i);
+      if(!stored||stored.signature!==signature)continue;
+      const photo=new Image();
+      await new Promise((resolve,reject)=>{photo.onload=resolve;photo.onerror=reject;photo.src=stored.dataURI});
+      photo.facelessSignature=signature;
+      if(facelessImageSignature(p,i)===signature)map.set(i,photo);
+    }
+    const signature=facelessVoiceSignature(p),cached=generatedVoiceByProject.get(p.id);
+    if(cached?.facelessSignature&&cached.facelessSignature!==signature){
+      generatedVoiceByProject.delete(p.id);
+      if(audioFile===cached){audioFile=null;updateAudioAttachmentUI()}
+    }
+    if(!generatedVoiceByProject.has(p.id)){
+      const stored=await facelessMediaGet(p.id+':voice');
+      if(stored?.signature===signature && stored.blob instanceof Blob && facelessVoiceSignature(p)===signature){
+        const file=new File([stored.blob],stored.name||'faceless-voz-'+p.id+'.wav',{type:stored.blob.type});
+        file.facelessSignature=signature;generatedVoiceByProject.set(p.id,file);
+      }
+    }
+    if(current()?.id===p.id && (!audioFile || audioFileProjectId!==p.id)){
+      audioFile=generatedVoiceByProject.get(p.id)||null;audioFileProjectId=p.id;
+    }
+    return true;
+  })().catch(()=>{toast('No se pudo recuperar el guardado de medios. Puedes generar y descargar los archivos.');return false})
+    .finally(()=>facelessRestoring.delete(p.id));
+  facelessRestoring.set(p.id,task);return task;
+}
+
+function mountFacelessProduction(project){
+  const root=document.querySelector('#tabBody .video-workspace > div');if(!root)return;
+  const panel=document.createElement('section');panel.className='notice';
+  panel.innerHTML='<h3>🎬 Crear el video completo</h3><p>Genera las fotos que faltan, añade la voz y monta el video. Puedes retomar si una etapa falla.</p>'+ 
+    '<label class="group-label" for="productionPass">Código privado</label><input type="password" id="productionPass" autocomplete="off" placeholder="Tu código privado" style="width:100%;margin-bottom:12px">'+
+    '<button type="button" class="btn primary full" id="productionStart">✦ Generar video completo</button>'+
+    '<button type="button" class="btn small" id="productionStop" hidden style="margin-top:10px">Detener</button>'+
+    '<p id="productionStatus" role="status" aria-live="polite">Fotos y voz se guardan en este navegador. Mantén la página abierta durante el montaje.</p>';
+  root.prepend(panel);
+  const start=panel.querySelector('#productionStart'),stop=panel.querySelector('#productionStop'),status=panel.querySelector('#productionStatus');
+  stop.onclick=()=>{
+    window.facelessProductionCancelled=true;facelessImageCancel=true;facelessVoiceCancel=true;
+    status.textContent='Deteniendo… Los medios terminados quedan guardados para retomar.';
+  };
+  start.onclick=async()=>{
+    if(window.facelessProductionBusy||facelessImageRunning||facelessVoiceBusy||rendering)return;
+    const pass=panel.querySelector('#productionPass').value.trim()||window.facelessProductionPasscode||facelessImagePasscode||facelessVoicePassword;
+    if(!pass||pass.length<16){status.textContent='Introduce tu código privado de mínimo 16 caracteres.';panel.querySelector('#productionPass').focus();return}
+    if(!safeMime(true)){status.textContent='Este navegador no permite exportar video con voz. Abre la página en Chrome actualizado.';return}
+    window.facelessProductionBusy=true;window.facelessProductionCancelled=false;
+    const controls=[...document.querySelectorAll('button,input,select,textarea')].filter(el=>el!==stop).map(el=>[el,el.disabled]);
+    controls.forEach(([el])=>el.disabled=true);stop.hidden=false;
+    let wakeLock;
+    try{
+      // Start audio in the original tap, before network requests, for Android.
+      const AudioCtx=window.AudioContext||window.webkitAudioContext;
+      window.facelessProductionAudioContext=new AudioCtx();
+      await window.facelessProductionAudioContext.resume();
+      try{wakeLock=await navigator.wakeLock?.request('screen')}catch{}
+      await facelessRestoreMedia(project);
+      const cancelled=()=>{if(window.facelessProductionCancelled)throw Error('Proceso detenido. Pulsa Generar video completo para retomar.')};
+      cancelled();
+      facelessImagePasscode=pass;facelessVoicePassword=pass;
+      document.getElementById('aiPhotosPasscode').value=pass;
+      document.getElementById('aiVoicePasscode').value=pass;
+      status.textContent='1 de 3 · Preparando las fotos de las escenas…';
+      await document.getElementById('aiPhotosStart').onclick();
+      cancelled();
+      if(project.scenes.some((_,i)=>!facelessProjectPhotos(project.id).has(i)))
+        throw Error(document.getElementById('aiPhotosStatus').textContent||'Faltan fotografías. Puedes retomar más tarde.');
+      status.textContent='2 de 3 · Preparando la narración en español…';
+      if(!audioFile || audioFileProjectId!==project.id)await document.getElementById('aiVoiceGenerate').onclick();
+      cancelled();
+      if(!audioFile||audioFileProjectId!==project.id)
+        throw Error(document.getElementById('aiVoiceStatus').textContent||'No se pudo generar la narración.');
+      status.textContent='3 de 3 · Montando el video con voz. Mantén esta página abierta…';
+      await renderVideo();cancelled();
+      if(!document.querySelector('#downloadArea a'))throw Error(document.getElementById('renderStatus').textContent||'No se pudo montar el video.');
+      status.textContent='✓ Video completo listo. Reprodúcelo y pulsa Descargar video.';
+      document.getElementById('downloadArea').scrollIntoView({behavior:'smooth',block:'center'});
+    }catch(error){status.textContent=String(error.message||error)+' Las fotos y voces terminadas se reutilizarán al retomar.'}
+    finally{
+      if(window.facelessProductionAudioContext)await window.facelessProductionAudioContext.close().catch(()=>{});
+      window.facelessProductionAudioContext=null;
+      if(wakeLock)await wakeLock.release().catch(()=>{});
+      window.facelessProductionBusy=false;stop.hidden=true;
+      controls.forEach(([el,disabled])=>el.disabled=disabled);
+      updateAudioAttachmentUI();
+    }
+  };
+}
+
