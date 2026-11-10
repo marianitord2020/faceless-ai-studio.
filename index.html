@@ -12,7 +12,7 @@
 .record-panel{margin:12px 0 17px;padding:16px;border:1px solid #45406c;border-radius:14px;background:#17152b}.record-panel b{color:#e8d4ff}.record-panel .media-controls{margin-top:6px}.record-panel #stopMic{border-color:#873055;color:#ffb4cb}</style>
 <link rel="stylesheet" href="styles/discover.css?v=8">
 <link rel="stylesheet" href="styles/studio-dashboard.css?v=2">
-<link rel="stylesheet" href="styles/editor.css?v=4"><link rel="stylesheet" href="styles/palette.css?v=1"><link rel="stylesheet" href="styles/stock-photos.css?v=2"></head><body>
+<link rel="stylesheet" href="styles/editor.css?v=5"><link rel="stylesheet" href="styles/palette.css?v=1"><link rel="stylesheet" href="styles/stock-photos.css?v=2"></head><body>
 <header class="topbar"><div class="container bar"><div class="brand"><div class="mark">▣</div><span>FACELESS <span>AI STUDIO</span></span></div><nav class="nav" aria-label="Principal"><button data-route="home" class="selected">Inicio</button><button data-route="discover" class="cta">Crear video</button><button data-route="projects">Mis proyectos <span id="count"></span></button></nav></div></header>
 <main class="container main">
 <section id="home" class="screen"><div class="mode-cards"><a class="mode-card" href="crear-con-ia/" data-flow="ai"><span aria-hidden="true">🤖</span><h1>CREAR CON IA</h1><p>Genera imágenes, narración y tu video automáticamente.</p></a><a class="mode-card" href="editar-sin-ia/" data-flow="manual"><span aria-hidden="true">✂️</span><h1>EDITAR SIN IA</h1><p>Monta tu video con tus fotos, clips, audio y subtítulos.</p></a></div></section>
@@ -43,7 +43,7 @@ $('generate').onclick=generate;
 function current(){return projects.find(p=>p.id===activeId)}
 function fmt(t){t=Math.max(0,Math.floor(Number(t)||0));return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0')}
 function saveFromEditor(){if(facelessIsWorking())return;const p=current();if(!p)return;p.title=$('editTitle').value.trim()||p.title;const updated=$('editNarration').value.trim();if(showEditor&&updated&&updated!==p.narration)applyNarrationToScenes(p,updated);p.hook=p.scenes[0]?.text||p.hook;p.date=new Date().toISOString();persist();showEditor=false;renderEditor();toast('Proyecto guardado.')}
-function renderEditor(){const p=current();if(!p){route('projects');return} $('editBanner').textContent='Editando proyecto guardado: '+p.title;$('editorTitle').textContent=p.title;$('editorTopic').textContent='Tema base: '+p.topic;$('editorPills').textContent=`${p.style} ${p.duration}s • ${p.format}`;$('sceneTotal').textContent=`Suma de escenas: ${p.scenes.reduce((a,s)=>a+s.duration,0)}s / ${p.duration}s`;$('editBox').classList.toggle('hidden',!showEditor);$('editTitle').value=p.title;$('editNarration').value=p.narration;document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));renderTab()}
+function renderEditor(){const p=current();if(!p){route('projects');return} $('editBanner').textContent='Editando proyecto guardado: '+p.title;$('editorTitle').textContent=p.title;$('editorTopic').textContent='Tema base: '+p.topic;$('editorPills').textContent=`${p.style} ${Number(p.duration.toFixed(1))}s • ${p.format}`;$('sceneTotal').textContent=`Suma de escenas: ${p.scenes.reduce((a,s)=>a+s.duration,0)}s / ${p.duration}s`;$('editBox').classList.toggle('hidden',!showEditor);$('editTitle').value=p.title;$('editNarration').value=p.narration;document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));renderTab()}
 $('toggleEdit').onclick=()=>{if(facelessIsWorking())return;showEditor=!showEditor;renderEditor()};$('saveProject').onclick=saveFromEditor;
 document.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{if(facelessIsWorking())return;if(micRecorder?.state==='recording')stopMicrophoneRecording();tab=el.dataset.tab;document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('on',x===el));renderTab()});
 async function copy(text){try{await navigator.clipboard.writeText(text);toast('Copiado al portapapeles')}catch{toast('Tu navegador no permite copiar automáticamente.')}}
@@ -105,25 +105,20 @@ const canvas=document.createElement('canvas');canvas.width=540;canvas.height=960
 function wrapText(t,x,y,maxWidth,lineHeight,maxLines){let lines=[],current='';for(const word of t.split(/\s+/)){const next=current?current+' '+word:word;if(ctx.measureText(next).width>maxWidth && current){lines.push(current);current=word}else current=next}if(current)lines.push(current);lines.slice(0,maxLines).forEach((l,i)=>ctx.fillText(l,x,y+i*lineHeight))}
 function drawFrame(index,seconds=0){
  const p=current();if(!p)return;
- const wide=p.format==='16:9',w=wide?960:540,h=wide?540:960;
+ const {width:w,height:h}=FacelessExport.dimensions(p,rendering);
  if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h}
  const photos=window.facelessSceneImages?.get(p.id);
  const getImage=i=>photos?.get(i)||(photos?.size===1?photos.values().next().value:null)||(imgs.length?imgs[i%imgs.length]:null);
  FacelessCinema.render(ctx,p,index,seconds,getImage,FacelessTiming.cues(p));
 }
-function safeMime(hasAudio=false){
- if(!window.MediaRecorder)return'';
- const webm=['video/webm;codecs=vp8,opus','video/webm;codecs=vp9,opus','video/webm'];
- const mp4=['video/mp4;codecs="avc1.42E01E,mp4a.40.2"','video/mp4'];
- return (hasAudio?[...webm,...mp4]:[...mp4,...webm]).find(m=>MediaRecorder.isTypeSupported(m))||'';
-}
+function safeMime(){return window.FacelessExport?FacelessExport.recordingMime(current()||{}):'';}
 function updateAudioAttachmentUI(){
  const label=$('audioCount'),button=$('renderVideo');
  if(label)label.textContent=audioFile
    ?'✓ Narración añadida automáticamente al video: '+(audioFile.name||'grabación')
    :'Sin narración. Puedes generar voz IA, grabarla o subir un audio.';
  if(button)button.textContent=window.facelessFlow==='manual'?'Exportar mi video':'Crear y descargar video';
- const format=$('mediaFormatNote');if(format){const mime=safeMime(Boolean(audioFile));format.textContent='Formato de exportación: '+(mime.startsWith('video/mp4')?'MP4':mime?'WebM':'No disponible')+(mime.startsWith('video/webm')?' · incluye pista de audio cuando añades una narración.':'')}
+ const format=$('mediaFormatNote');if(format&&current()){const selected=FacelessExport.settings(current());format.textContent='Exportación: '+selected.height+'p · '+selected.format.toUpperCase();}
  window.facelessRefreshAudioAttachment?.();
 }
 function renderVideoTab(p){
@@ -141,17 +136,19 @@ function renderVideoTab(p){
  <div id="mediaFormatNote" class="notice" style="margin-bottom:12px"><b>Formato de tu navegador:</b> ${ext}. ${ext==='WebM'?'La conversión a MP4 requiere una herramienta adicional.':''}</div>
  <p class="smalltext">La narración IA se incorpora al video y se escucha en la vista previa. Las fotos y voces generadas se recuperan al volver a abrir el proyecto en este navegador.</p>
  <div class="media-controls"><button class="btn small" id="previewVideo">▶ Vista previa</button><button class="btn primary" id="renderVideo" ${mime?'':'disabled'}>⬇ Crear y descargar video</button></div><p id="renderStatus" class="status" aria-live="polite"></p><div class="media-controls" id="downloadArea"></div></div>
- <div class="media-frame"><canvas id="previewCanvas" width="${p.format==='16:9'?960:540}" height="${p.format==='16:9'?540:960}" class="${p.format==='16:9'?'wide':''}"></canvas><video id="videoResult" controls playsinline class="hidden ${p.format==='16:9'?'wide':''}"></video><p class="smalltext" style="text-align:center;margin:8px 0 0">Vista previa ${p.format} · ${p.duration} segundos</p></div></div></div>`;
- const view=$('previewCanvas'),updateView=()=>{drawFrame(0);view.getContext('2d').drawImage(canvas,0,0)};
+ <div class="media-frame"><canvas id="previewCanvas" width="${p.format==='16:9'?960:540}" height="${p.format==='16:9'?540:960}" class="${p.format==='16:9'?'wide':''}"></canvas><video id="videoResult" controls playsinline class="hidden ${p.format==='16:9'?'wide':''}"></video><p class="smalltext" style="text-align:center;margin:8px 0 0">Vista previa ${p.format} · ${Number(p.duration.toFixed(1))} segundos</p></div></div></div>`;
+ const view=$('previewCanvas'),updateView=()=>{drawFrame(0);view.getContext('2d').drawImage(canvas,0,0,view.width,view.height)};
  if(window.facelessFlow!=='manual'){mountAIPhotoControls(p,updateView);mountAIVoiceControls(p);mountFacelessProduction(p);}
  window.facelessMountMediaEditor(p,updateView);
  if(window.facelessFlow==='manual')window.facelessMountStockPhotos?.(p,updateView);
  $('startMic').onclick=startMicrophoneRecording;$('stopMic').onclick=stopMicrophoneRecording;
  updateView();
  updateAudioAttachmentUI();
- $('previewVideo').onclick=()=>{
+ $('previewVideo').onclick=async()=>{
+   if(window.facelessMediaBusy||rendering)return;
    if(previewTimer){stopPreview();$('previewVideo').textContent='Vista previa';return}
    stopPreview();
+   if(audioFile){try{await window.facelessEnsureAudioSync?.();}catch(error){$('renderStatus').textContent='No se pudo sincronizar la vista previa: '+error.message;return;}}
    $('videoResult').pause();
    $('videoResult').classList.add('hidden');
    view.classList.remove('hidden');
@@ -162,7 +159,7 @@ function renderVideoTab(p){
    }
    window.facelessPlayOwnVideo?.().catch(error=>toast(error.message));
    const start=performance.now(),duration=p.duration*1000;
-   const tick=()=>{const elapsed=performance.now()-start,sec=Math.min(p.duration-0.01,previewAudio?previewAudio.currentTime:elapsed/1000);const i=FacelessTiming.sceneAt(p,sec);drawFrame(i,sec);view.getContext('2d').drawImage(canvas,0,0);if(previewAudio?!previewAudio.ended:elapsed<duration){previewTimer=requestAnimationFrame(tick)}else{stopPreview();$('previewVideo').textContent='Vista previa'}};
+   const tick=()=>{const elapsed=performance.now()-start,sec=Math.min(p.duration-0.01,previewAudio?previewAudio.currentTime:elapsed/1000);const i=FacelessTiming.sceneAt(p,sec);drawFrame(i,sec);view.getContext('2d').drawImage(canvas,0,0,view.width,view.height);if(previewAudio?!previewAudio.ended:elapsed<duration){previewTimer=requestAnimationFrame(tick)}else{stopPreview();$('previewVideo').textContent='Vista previa'}};
    previewTimer=requestAnimationFrame(tick);
    $('previewVideo').textContent='Detener vista previa';
  };
@@ -186,91 +183,76 @@ function stopMicTracks(){if(micStream){micStream.getTracks().forEach(t=>t.stop()
 function stopMicrophoneRecording(){if(micRecorder?.state==='recording'){micRecorder.stop();$('micStatus').textContent='Procesando grabación...';}else stopMicTracks()}
 function stopPreview(){window.facelessStopOwnVideo?.();const previewButton=$('previewVideo');if(previewButton)previewButton.textContent='▶ Vista previa';if(previewTimer)cancelAnimationFrame(previewTimer);previewTimer=null;if(previewAudio){previewAudio.pause();previewAudio.src='';previewAudio=null}if(previewAudioURL){URL.revokeObjectURL(previewAudioURL);previewAudioURL=null}}
 async function renderVideo(){
- if(rendering)return;
- const p=current(),withAudio=Boolean(audioFile),mime=safeMime(withAudio),status=$('renderStatus'),btn=$('renderVideo');
- if(!mime){status.textContent='Tu navegador no permite exportar video con MediaRecorder. Prueba Chrome actualizado.';return}
- stopPreview();
- rendering=true;btn.disabled=true;
- $('downloadArea').replaceChildren();
- status.textContent=withAudio?'Preparando video con voz IA…':'Preparando video sin voz…';
- let stream,rec,audioCtx,audioSource,audioStartedAt=0,raf=null;
+ if(rendering||window.facelessMediaBusy)return false;
+ const p=current(),status=$('renderStatus'),btn=$('renderVideo');if(!p)return false;
+ stopPreview();rendering=true;window.facelessExportCancelled=false;
+ const controls=[...document.querySelectorAll('button,input,select,textarea')].filter(el=>!['productionStop','cancelVideoExport'].includes(el.id)).map(el=>[el,el.disabled]);controls.forEach(([el])=>el.disabled=true);
+ const cancel=$('cancelVideoExport');if(cancel){cancel.hidden=false;cancel.disabled=false;}
+ let stream,rec,audioCtx,audioSource,audioStartedAt=0,raf=null,wakeLock,abortVisibility;
  try{
-   // La voz se convierte en una pista real del video ANTES de arrancar el grabador.
-   drawFrame(0,0);
-   stream=canvas.captureStream(24);
-   if(!stream.getVideoTracks().length)throw new Error('No se pudo capturar la imagen del video.');
+   const AudioContextImpl=window.AudioContext||window.webkitAudioContext;
+   if(AudioContextImpl){audioCtx=window.facelessProductionAudioContext||new AudioContextImpl();await audioCtx.resume();}
+   await facelessRestoreMedia(p);
+   if(audioFile){status.textContent='Sincronizando voz, subtítulos e imágenes con IA…';await window.facelessEnsureAudioSync?.();
+    if(!['speech','manual'].includes(p.audioAlignment?.method)||p.subtitleTextSignature!==FacelessTiming.signature(p))throw Error('Sincroniza el audio con IA antes de exportar.');}
+   const withAudio=Boolean(audioFile),mime=FacelessExport.recordingMime(p),profile=FacelessExport.settings(p);
+   if(!mime||!canvas.captureStream)throw Error('Este navegador no permite grabar video. Usa Chrome actualizado.');
+   if(document.hidden)throw Error('Mantén visible esta pantalla para exportar el video.');
+   try{wakeLock=await navigator.wakeLock?.request('screen');}catch{}
+   $('downloadArea').replaceChildren();status.textContent='Preparando '+profile.height+'p con '+(withAudio?'audio sincronizado':'subtítulos')+'…';
+   drawFrame(0,0);stream=canvas.captureStream(30);
+   if(!stream.getVideoTracks().length)throw Error('No se pudo capturar la imagen del video.');
    if(withAudio){
-     const AudioContextImpl=window.AudioContext||window.webkitAudioContext;
-     if(!AudioContextImpl)throw new Error('Este navegador no admite audio combinado. Utiliza Chrome actualizado.');
-     audioCtx=window.facelessProductionAudioContext||new AudioContextImpl();
-     // Reanudar mientras sigue activo el gesto del botón en Android.
+     if(!AudioContextImpl)throw Error('Este navegador no admite audio combinado. Usa Chrome actualizado.');
      await audioCtx.resume();
      const pcm=await audioCtx.decodeAudioData((await audioFile.arrayBuffer()).slice(0));
-     if(!pcm?.length||!pcm.duration)throw new Error('El audio de narración está vacío.');
-     const dest=audioCtx.createMediaStreamDestination();
-     audioSource=audioCtx.createBufferSource();
-     audioSource.buffer=pcm;
-     audioSource.connect(dest);
-     const tracks=dest.stream.getAudioTracks();
-     if(!tracks.length)throw new Error('No se pudo crear la pista de voz.');
-     for(const track of tracks)stream.addTrack(track);
-     await audioCtx.resume();
-     if(stream.getAudioTracks().length!==tracks.length)throw new Error('No se pudo adjuntar el audio al video.');
+     if(!pcm?.length||!pcm.duration)throw Error('El audio está vacío.');
+     const dest=audioCtx.createMediaStreamDestination();audioSource=audioCtx.createBufferSource();audioSource.buffer=pcm;audioSource.connect(dest);
+     for(const track of dest.stream.getAudioTracks())stream.addTrack(track);
+     if(!stream.getAudioTracks().length)throw Error('No se pudo adjuntar el audio al video.');
    }
-   const chunks=[];
-   rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:1650000,audioBitsPerSecond:128000});
-   rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
-   const completion=new Promise((resolve,reject)=>{
-     rec.onstop=resolve;
-     rec.onerror=e=>reject(new Error('Falló la grabación con sonido. '+(e?.error?.message||'')));
-   });
-   await window.facelessPlayOwnVideo?.();
-   rec.start(1000);
+   const chunks=[];rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:profile.bitrate,audioBitsPerSecond:192000});
+   rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
+   let failRecorder;
+   const completion=new Promise((resolve,reject)=>{rec.onstop=resolve;rec.onerror=e=>{const error=Error(e?.error?.message||'Falló la grabación. Prueba 720p.');failRecorder?.(error);reject(error);};});completion.catch(()=>{});
+   await window.facelessPlayOwnVideo?.();rec.start(1000);
    if(audioSource){audioStartedAt=audioCtx.currentTime;audioSource.start(audioStartedAt);}
    const duration=p.duration*1000,startTime=performance.now();
    await new Promise((resolve,reject)=>{
+     failRecorder=reject;abortVisibility=()=>{if(document.hidden)reject(Error('La pantalla se ocultó y se detuvo la exportación para evitar desajustes. Vuelve a exportar con la página visible.'));};document.addEventListener('visibilitychange',abortVisibility);
      const tick=now=>{
-       if(window.facelessProductionBusy&&window.facelessProductionCancelled){reject(new Error('Montaje detenido. Puedes volver a crear el video con los medios guardados.'));return}
+      try{
+       if(window.facelessExportCancelled||(window.facelessProductionBusy&&window.facelessProductionCancelled))throw Error('Exportación detenida. Tus archivos siguen guardados.');
        const elapsed=Math.min(duration,Math.max(0,audioSource?(audioCtx.currentTime-audioStartedAt)*1000:now-startTime));
-       const sec=Math.min(p.duration-0.01,elapsed/1000);
-       const index=FacelessTiming.sceneAt(p,sec);
-       drawFrame(Math.max(0,index),sec);
-       status.textContent=(withAudio?'Grabando video con voz: ':'Grabando video: ')+Math.floor(elapsed/duration*100)+'%';
-       if(elapsed<duration)raf=requestAnimationFrame(tick);
-       else resolve();
-     };
-     raf=requestAnimationFrame(tick);
+       const sec=Math.min(p.duration-0.001,elapsed/1000);drawFrame(FacelessTiming.sceneAt(p,sec),sec);
+       status.textContent='Exportando '+profile.height+'p: '+Math.floor(elapsed/duration*100)+' %';
+       if(elapsed<duration)raf=requestAnimationFrame(tick);else resolve();
+      }catch(error){reject(error);}
+     };raf=requestAnimationFrame(tick);
    });
+   if(abortVisibility)document.removeEventListener('visibilitychange',abortVisibility);
    rec.stop();await completion;
-   if(!chunks.some(c=>c.size))throw new Error('El navegador no generó ningún fragmento del video.');
-   const type=mime.startsWith('video/mp4')?'video/mp4':'video/webm',extension=type==='video/mp4'?'mp4':'webm';
-   const blob=new Blob(chunks,{type});
-   if(blob.size<1000)throw new Error('El archivo de video generado parece estar vacío.');
-   if(previewURL)URL.revokeObjectURL(previewURL);
-   previewURL=URL.createObjectURL(blob);
-   $('videoResult').src=previewURL;
-   $('videoResult').classList.remove('hidden');
-   $('previewCanvas').classList.add('hidden');
-   $('downloadArea').innerHTML='';
-   const link=document.createElement('a');
-   link.className='btn primary download';
-   link.download='faceless-'+p.id+'.'+extension;
-   link.href=previewURL;
-   link.textContent='↓ Descargar video '+extension.toUpperCase()+(withAudio?' CON VOZ':'');
-   $('downloadArea').appendChild(link);
-   status.textContent=withAudio
-     ?'✓ Video con narración incluido. Reprodúcelo y verifica que tenga sonido antes de descargar.'
-     :'Video creado sin narración. Para añadir voz, genera Fola y vuelve a crear el video.';
- }catch(e){
-   status.textContent='No se pudo crear el video'+(withAudio?' con voz':'')+': '+(e?.message||'error desconocido')+'\nPrueba Chrome actualizado o reduce la duración.';
-   if(rec&&rec.state!=='inactive')try{rec.stop()}catch{}
+   if(!chunks.some(c=>c.size))throw Error('No se generaron datos de video. Prueba 720p.');
+   const nativeType=(rec.mimeType||mime).startsWith('video/mp4')?'video/mp4':'video/webm';
+   let blob=new Blob(chunks,{type:nativeType});if(blob.size<1000)throw Error('El archivo de video está vacío.');
+   window.facelessStopOwnVideo?.();if(audioSource){audioSource.stop();audioSource=null;}
+   if(nativeType==='video/webm')blob=await window.ysFixWebmDuration(blob,p.duration*1000,{logger:false});
+   blob=await FacelessExport.convert(blob,profile.format,message=>status.textContent=message,profile.format==='mp4'&&!/avc1/i.test(rec.mimeType||mime));
+   await FacelessExport.verify(blob,p);
+   if(window.facelessExportCancelled||(window.facelessProductionBusy&&window.facelessProductionCancelled))throw Error('Exportación detenida.');
+   if(previewURL)URL.revokeObjectURL(previewURL);previewURL=URL.createObjectURL(blob);
+   $('videoResult').src=previewURL;$('videoResult').classList.remove('hidden');$('previewCanvas').classList.add('hidden');
+   const link=document.createElement('a');link.className='btn primary download';link.download='faceless-'+p.id+'-'+profile.height+'p.'+profile.format;link.href=previewURL;link.textContent='↓ Descargar '+profile.format.toUpperCase()+' · '+profile.height+'p';$('downloadArea').replaceChildren(link);
+   status.textContent='✓ '+profile.height+'p · '+profile.format.toUpperCase()+(withAudio?' · voz, subtítulos e imágenes sincronizados.':' · video listo.');
+   return true;
+ }catch(error){status.textContent='No se pudo exportar: '+String(error.message||error);if(rec&&rec.state!=='inactive')try{rec.stop();}catch{}return false;
  }finally{
-   window.facelessStopOwnVideo?.();
-   if(raf)cancelAnimationFrame(raf);
-   if(audioSource)try{audioSource.stop()}catch{}
+   if(abortVisibility)document.removeEventListener('visibilitychange',abortVisibility);
+   window.facelessStopOwnVideo?.();if(raf)cancelAnimationFrame(raf);if(audioSource)try{audioSource.stop();}catch{}
    if(stream)stream.getTracks().forEach(track=>track.stop());
    if(audioCtx&&audioCtx!==window.facelessProductionAudioContext)await audioCtx.close().catch(()=>{});
-   btn.disabled=false;rendering=false;
+   if(wakeLock)await wakeLock.release().catch(()=>{});
+   rendering=false;if(cancel)cancel.hidden=true;controls.forEach(([el,disabled])=>el.disabled=disabled);btn.disabled=Boolean(window.facelessProductionBusy);
  }
 }
 route('home');
@@ -354,5 +336,5 @@ route('home');
   };
 })();;
  
-</script><script src="scripts/ai-photos.js?v=10"></script><script src="scripts/ai-voice.js?v=12"></script><script src="scripts/written-stories.js?v=1"></script><script src="scripts/cinematic-video.js?v=4"></script><script src="scripts/media-timing.js?v=3"></script><script src="scripts/manual-timing.js?v=1"></script><script src="scripts/local-speech.js?v=1"></script><script src="scripts/ai-client.js?v=1"></script><script src="scripts/stock-photos.js?v=4"></script><script src="scripts/media-editor.js?v=10"></script><script src="scripts/studio-menus.js?v=2"></script><script src="scripts/editor-layout.js?v=6"></script><script src="scripts/url-reader.js?v=1"></script><script src="scripts/discover.js?v=17"></script><script src="scripts/own-video.js?v=2"></script><script src="scripts/flows.js?v=2"></script></body></html>
+</script><script src="scripts/ai-photos.js?v=11"></script><script src="scripts/ai-voice.js?v=12"></script><script src="scripts/written-stories.js?v=1"></script><script src="scripts/cinematic-video.js?v=5"></script><script src="scripts/media-timing.js?v=4"></script><script src="scripts/manual-timing.js?v=2"></script><script src="scripts/local-speech.js?v=2"></script><script src="scripts/ai-client.js?v=1"></script><script src="scripts/stock-photos.js?v=4"></script><script src="scripts/media-editor.js?v=11"></script><script src="scripts/studio-menus.js?v=2"></script><script src="scripts/editor-layout.js?v=7"></script><script src="scripts/url-reader.js?v=1"></script><script src="scripts/discover.js?v=17"></script><script src="scripts/vendor/fix-webm-duration.js?v=1"></script><script src="scripts/video-export.js?v=1"></script><script src="scripts/own-video.js?v=3"></script><script src="scripts/flows.js?v=3"></script></body></html>
 

@@ -58,6 +58,18 @@
   });
   return timeline(p,words,duration,'tts-segments',null);
  }
+ // Generate captions from speech when the manual project has no written script.
+ function transcribed(p,recognized,duration){
+  if(!Number.isFinite(duration)||duration<=0||duration>600)throw Error('Usa un audio de hasta 10 minutos.');
+  const speech=recognized.map(w=>({text:String(w.word||'').trim(),start:Number(w.start),end:Math.min(duration,Number(w.end))})).filter(w=>w.text&&Number.isFinite(w.start)&&Number.isFinite(w.end)&&w.start>=0&&w.end>w.start);
+  if(!speech.length)throw Error('No se reconoció voz. Prueba una grabación más clara.');
+  for(let i=1;i<speech.length;i++)if(speech[i].start<speech[i-1].start)throw Error('La IA devolvió palabras fuera de orden. Vuelve a sincronizar.');
+  const count=Math.max(1,p.scenes.length),starts=Array.from({length:count},(_,i)=>i===0?0:speech.length>=count?speech[Math.floor(i*speech.length/count)].start:duration*i/count);
+  if(starts.some((n,i)=>i&&n<=starts[i-1]))throw Error('La IA no pudo separar los tiempos de las escenas.');
+  const words=speech.map(w=>({...w,scene:Math.max(0,starts.findLastIndex(t=>t<=w.start))}));
+  const scenes=starts.map((time,i)=>({...p.scenes[i],time,duration:(starts[i+1]??duration)-time,text:words.filter(w=>w.scene===i).map(w=>w.text).join(' ')}));
+  return {duration,scenes,narration:scenes.map(s=>s.text).join('\n'),subtitleCues:cuesFromWords(words),subtitleTextSignature:signature({scenes}),audioAlignment:{method:'speech',coverage:100,source:'transcription'}};
+ }
  function sceneAt(p,seconds){
   let index=0;
   for(let i=1;i<p.scenes.length;i++){if(seconds<p.scenes[i].time)break;index=i;}
@@ -67,5 +79,5 @@
   if(p.subtitleTextSignature===signature(p)&&Array.isArray(p.subtitleCues))return p.subtitleCues;
   return p.scenes.flatMap(s=>{const words=String(s.text).split(/\s+/).filter(Boolean);return cuesFromWords(words.map((text,i)=>({text,scene:0,start:s.time+i*s.duration/words.length,end:s.time+(i+1)*s.duration/words.length})))})
  }
- const api={signature,estimated,align,fromSegments,sceneAt,cues};root.FacelessTiming=api;if(typeof module!=='undefined')module.exports=api;
+ const api={signature,estimated,align,fromSegments,transcribed,sceneAt,cues};root.FacelessTiming=api;if(typeof module!=='undefined')module.exports=api;
 })(typeof window==='undefined'?globalThis:window);

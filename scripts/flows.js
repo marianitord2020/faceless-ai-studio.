@@ -42,7 +42,7 @@
  window.facelessMountCaptionStyle=(p,host)=>{
   const panel=document.createElement('section');panel.className='editor-video-card caption-style';
   panel.innerHTML='<label class="group-label" for="captionStyle">Estilo de subtítulos</label><select id="captionStyle"><option value="highlight">Palabra resaltada · amarillo</option><option value="purple">Palabra resaltada · violeta</option><option value="classic">Clásico · blanco</option></select>';
-  const select=panel.querySelector('select');select.value=p.captionStyle||'highlight';select.onchange=()=>{p.captionStyle=select.value;persist();drawFrame(0);const view=document.getElementById('previewCanvas');view?.getContext('2d').drawImage(canvas,0,0);};host.append(panel);
+  const select=panel.querySelector('select');select.value=p.captionStyle||'highlight';select.onchange=()=>{p.captionStyle=select.value;persist();drawFrame(0);const view=document.getElementById('previewCanvas');view?.getContext('2d').drawImage(canvas,0,0,view.width,view.height);};host.append(panel);
  };
  window.facelessManualLayout=(p,root)=>{
   const byId=id=>document.getElementById(id),shell=root.parentElement;
@@ -68,21 +68,22 @@
   ['imageCount','manualPhotoSlots','stockPhotos'].forEach(id=>move(id,visual));
   const audio=makeCard('02','Audio','Añade tu narración o grábala desde el teléfono.');
   audio.append(byId('audio').closest('.media-upload-group'));
-  ['audioCount','audioAttachment','audioSyncStatus'].forEach(id=>move(id,audio));
-  byId('syncAudio').hidden=true;
-  byId('audioAttachment').querySelector('p').textContent='Puedes ajustar los tiempos manualmente en Subtítulos.';
+  ['audioCount','audioAttachment','audioSyncStatus','cancelLocalSpeech'].forEach(id=>move(id,audio));
+  byId('syncAudio').hidden=false;byId('syncAudio').textContent='Sincronizar con IA local';
+  byId('audioAttachment').querySelector('p').textContent='La IA local sincroniza automáticamente tu voz, los subtítulos y las fotos. Puedes ajustar el resultado en Subtítulos.';
   const recorder=byId('startMic').closest('.record-panel'),recordDetails=document.createElement('details');recordDetails.className='manual-disclosure';
   const recordSummary=document.createElement('summary');recordSummary.textContent='Grabar mi voz';recordDetails.append(recordSummary,recorder);audio.append(recordDetails);
   recorder.querySelector('b')?.remove();
-  const captions=makeCard('03','Subtítulos','Escribe el texto y elige cómo se verá en tu video.');
+  const captions=makeCard('03','Subtítulos','La IA local crea y sincroniza los subtítulos con tu audio. También puedes editarlos.');
   const label=document.createElement('label');label.className='sr-only';label.htmlFor='manualCaptions';label.textContent='Subtítulos manuales';
   const field=document.createElement('textarea');field.id='manualCaptions';field.rows=4;field.placeholder='Escribe aquí tus subtítulos…';field.value=p.scenes.map(s=>s.text).join('\n');
   const save=document.createElement('button');save.id='saveManualCaptions';save.type='button';save.className='btn small manual-save-captions';save.textContent='Guardar subtítulos';
   save.onclick=()=>{const raw=field.value.trim();if(raw)applyNarrationToScenes(p,raw);else{p.scenes.forEach(s=>s.text='');p.narration='';}delete p.subtitleCues;delete p.subtitleTextSignature;persist();renderEditor();toast('Subtítulos guardados.');};
   captions.append(label,field,save);window.facelessMountCaptionStyle(p,captions);
   // Timing controls stay available with or without an uploaded audio file.
-  window.facelessMountManualTiming?.(p,()=>{drawFrame(0);const view=byId('previewCanvas');view?.getContext('2d').drawImage(canvas,0,0);});
+  window.facelessMountManualTiming?.(p,()=>{drawFrame(0);const view=byId('previewCanvas');view?.getContext('2d').drawImage(canvas,0,0,view.width,view.height);});
   move('manualTiming',captions);
+  window.facelessMountExportOptions?.(p,cards);
   const preview=makeCard('04','Vista previa','Revisa tu montaje antes de exportarlo.');preview.classList.add('manual-preview-card');
   preview.append(frame);move('mediaFormatNote',preview);move('downloadArea',preview);
   const status=byId('renderStatus'),toolbar=document.createElement('div');toolbar.className='editor-export-bar';shell.append(toolbar);

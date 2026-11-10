@@ -6,7 +6,7 @@ window.facelessCompactVideoEditor = function (project) {
   if(window.facelessFlow==='manual'){window.facelessManualLayout(project,root);return;}
   const shell = root.parentElement;
   const panels = ['productionStart','aiPhotosStart','aiVoiceGenerate'].map(id => byId(id).closest('section'));
-  const titles = ['Video automático sin créditos','Fotografías automáticas con IA','Narración automática en español'];
+  const titles = ['Video completo con IA','Fotografías automáticas con IA','Narración automática en español'];
   const icons = [
     '<rect x="3" y="5" width="13" height="14" rx="3"/><path d="m16 10 5-3v10l-5-3M8 9l4 3-4 3Z"/>',
     '<path d="M8 6 9.5 3h5L16 6h3a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z"/><circle cx="12" cy="13" r="4"/>',
@@ -41,7 +41,7 @@ window.facelessCompactVideoEditor = function (project) {
   infrastructure.append(byId('images').closest('.media-upload-group'));
   ['imageCount','manualPhotoSlots','stockPhotos'].forEach(id=>move(id,infrastructure));move('aiPhotosResults',custom[1]);
   infrastructure.append(byId('audio').closest('.media-upload-group'));
-  ['audioCount','audioAttachment','syncAudio','audioSyncStatus'].forEach(id=>move(id,infrastructure));move('aiVoiceAudioArea',custom[2]);
+  ['audioCount','audioAttachment','syncAudio','audioSyncStatus','cancelLocalSpeech'].forEach(id=>move(id,infrastructure));move('aiVoiceAudioArea',custom[2]);
   const recorder=byId('startMic').closest('.record-panel');
   recorder.querySelectorAll('b,p:not([id])').forEach(el=>el.remove());byId('micStatus').textContent='';infrastructure.append(recorder);
   byId('audioAttachment').querySelectorAll('p:not([id])').forEach(el=>el.remove());
@@ -50,7 +50,7 @@ window.facelessCompactVideoEditor = function (project) {
   const toolbar=document.createElement('div');toolbar.className='editor-export-bar';
   move('previewVideo',toolbar);move('renderVideo',toolbar);
   const cards=document.createElement('div');cards.className='editor-video-cards';panels.forEach(panel=>cards.append(panel));
-  shell.className='compact-video-editor';shell.replaceChildren(cards,byId('renderStatus'),toolbar,infrastructure);window.facelessMountCaptionStyle?.(project,cards);
+  shell.className='compact-video-editor';shell.replaceChildren(cards,byId('renderStatus'),toolbar,infrastructure);window.facelessMountCaptionStyle?.(project,cards);window.facelessMountExportOptions?.(project,cards);
   byId('productionStart').textContent='Crear video completo';
   byId('aiPhotosStart').textContent='Generar fotos automáticamente';
   byId('aiPhotosStart').className='btn outline full';
@@ -73,6 +73,7 @@ window.facelessCompactVideoEditor = function (project) {
       return original.call(this,event);
     };
   });
+  byId('renderVideo').onclick=()=>byId('productionStart').onclick();
   const showPreview=()=>{custom[0].open=true;frame.hidden=false;};
   const preview=byId('previewVideo'), originalPreview=preview.onclick;
   preview.onclick=function(event){showPreview();frame.scrollIntoView({block:'center',behavior:'smooth'});return originalPreview.call(this,event);};

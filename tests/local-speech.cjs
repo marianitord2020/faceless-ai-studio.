@@ -3,7 +3,7 @@ const vm=require('node:vm');
 const fs=require('node:fs');
 let active;
 class Worker {
- constructor(){active=this;this.terminated=false;}
+ constructor(url){this.url=String(url);active=this;this.terminated=false;}
  postMessage(message){this.message=message;}
  terminate(){this.terminated=true;}
 }
@@ -13,10 +13,11 @@ class OfflineAudioContext {
  async startRendering(){return {getChannelData(){return new Float32Array(32000);}};}
 }
 const window={Worker,OfflineAudioContext};
-vm.runInNewContext(fs.readFileSync('scripts/local-speech.js','utf8'),{window,Worker,OfflineAudioContext,setTimeout,clearTimeout,Error});
+vm.runInNewContext(fs.readFileSync('scripts/local-speech.js','utf8'),{window,Worker,OfflineAudioContext,setTimeout,clearTimeout,Error,URL,document:{currentScript:{src:'https://example.test/faceless/scripts/local-speech.js?v=2'}}});
 (async()=>{
  const job=window.facelessRecognizeLocal({duration:2});
  await new Promise(setImmediate);
+ assert.equal(active.url,'https://example.test/faceless/scripts/local-speech-worker.js');
  await assert.rejects(window.facelessRecognizeLocal({duration:2}),/Ya se/);
  active.onmessage({data:{id:active.message.id+1,words:[]}});
  const words=[{word:'hola',start:0,end:1}];

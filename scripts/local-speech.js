@@ -1,6 +1,7 @@
 /* Run multilingual Whisper off the UI thread, with a bounded worker lifetime. */
 (() => {
  'use strict';
+ const workerURL=typeof document==='undefined'?'scripts/local-speech-worker.js':new URL('local-speech-worker.js',document.currentScript.src);
  let worker=null,sequence=0,pending=false;
  let cancel=null;
  window.facelessCancelLocalSpeech=()=>cancel?.();
@@ -13,7 +14,7 @@
    const context=new OfflineAudioContext(1,Math.ceil(buffer.duration*16000),16000);
    const source=context.createBufferSource();source.buffer=buffer;source.connect(context.destination);source.start();
    const mono=(await context.startRendering()).getChannelData(0).slice();
-   worker ??= new Worker('scripts/local-speech-worker.js',{type:'module'});
+   worker ??= new Worker(workerURL,{type:'module'});
    const id=++sequence;
    return await new Promise((resolve,reject)=>{
     const timer=setTimeout(()=>finish(Error('El análisis tardó demasiado. Puedes reintentarlo o ajustar las frases manualmente.')),15*60*1000);

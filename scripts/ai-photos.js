@@ -323,7 +323,7 @@ function mountFacelessProduction(project){
   root.prepend(panel);
   const start=panel.querySelector('#productionStart'),stop=panel.querySelector('#productionStop'),status=panel.querySelector('#productionStatus');
   stop.onclick=()=>{
-    window.facelessProductionCancelled=true;facelessImageCancel=true;facelessVoiceCancel=true;window.facelessCancelLocalSpeech?.();
+    window.facelessProductionCancelled=true;window.facelessCancelConversion?.();facelessImageCancel=true;facelessVoiceCancel=true;window.facelessCancelLocalSpeech?.();
     status.textContent='Deteniendo… Los medios terminados quedan guardados para retomar.';
   };
   start.onclick=async()=>{
@@ -347,17 +347,20 @@ function mountFacelessProduction(project){
       facelessImagePasscode=pass;facelessVoicePassword=pass;
       document.getElementById('aiPhotosPasscode').value=pass;
       document.getElementById('aiVoicePasscode').value=pass;
-      status.textContent='1 de 3 · Preparando las fotos de las escenas…';
+      status.textContent='1 de 4 · Preparando las fotos de las escenas…';
       await document.getElementById('aiPhotosStart').onclick();
       cancelled();
       if(project.scenes.some((_,i)=>!facelessProjectPhotos(project.id).has(i)))
         throw Error(document.getElementById('aiPhotosStatus').textContent||'Faltan fotografías. Puedes retomar más tarde.');
-      status.textContent='2 de 3 · Preparando la narración en español…';
+      status.textContent='2 de 4 · Preparando la narración en español…';
       if(!audioFile || audioFileProjectId!==project.id)await document.getElementById('aiVoiceGenerate').onclick();
       cancelled();
       if(!audioFile||audioFileProjectId!==project.id)
         throw Error(document.getElementById('aiVoiceStatus').textContent||'No se pudo generar la narración.');
-      status.textContent='3 de 3 · Montando el video con voz. Mantén esta página abierta…';
+      status.textContent='3 de 4 · Sincronizando palabras, voz e imágenes con IA…';
+      await window.facelessEnsureAudioSync?.({force:true});cancelled();
+      if(project.audioAlignment?.method!=='speech'||project.subtitleTextSignature!==FacelessTiming.signature(project))throw Error('La IA no completó la sincronización de voz. Pulsa Crear video completo para reintentar.');
+      status.textContent='4 de 4 · Montando el video con voz. Mantén esta página abierta…';
       await renderVideo();cancelled();
       if(!document.querySelector('#downloadArea a'))throw Error(document.getElementById('renderStatus').textContent||'No se pudo montar el video.');
       status.textContent='✓ Video completo listo. Reprodúcelo y pulsa Descargar video.';

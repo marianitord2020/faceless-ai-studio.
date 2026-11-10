@@ -38,6 +38,7 @@ window.facelessMountManualTiming=function(p,updatePreview){
    row.append(text,start.wrap,end.wrap,listen);rows.append(row);captionRows.push({text,start:start.field,end:end.field});
   });
  }
+ window.facelessRefreshManualTiming=()=>{if(box.isConnected&&box.open)load();};
  reload.onclick=load;box.addEventListener('toggle',()=>{if(box.open&&!captionRows.length)load();});
  save.onclick=()=>{
   if(facelessIsWorking()){message.textContent='Espera a que termine el montaje.';return}
