@@ -175,7 +175,7 @@ async function cloudflareVoice(text,voice,env){
 async function makeVoice(text,voice,env){
   const issues=[];
   // Gemini 3.8 Flash-Lite TTS tiene nivel API gratuito sujeto a cuotas.
-  if(env.GEMINI_TTS_API_KEY){
+  if(env.GEMINI_TTS_API_KEY && !['female','male'].includes(voice)){
     try{return await geminiVoice(text,voice,env)}catch(e){issues.push(readableError(e));}
   }
   try{return await cloudflareVoice(text,voice,env);}
