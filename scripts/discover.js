@@ -628,6 +628,7 @@
     finally{state.building=false;if($id('studioFeature'))renderFeature()}
   }
   shell();
+  window.mountFriendlyStudioMenus?.();
   window.facelessStudioReady=true;
 })();
 
