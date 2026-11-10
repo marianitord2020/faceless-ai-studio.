@@ -1,0 +1,80 @@
+name: Probar portada visual y relato local
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/discover.js'
+      - 'styles/discover.css'
+      - '.github/workflows/test-gallery-ui.yml'
+permissions:
+  contents: read
+jobs:
+  gallery:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Preparar Chromium
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install chromium
+      - name: Iniciar web local
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/studio-http.log 2>&1 &
+          sleep 2
+      - name: Comprobar portada y seleccionar el relato 2
+        run: |
+          node <<'JS'
+          const {chromium}=require('playwright');
+          (async()=>{
+            const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+            const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:1});
+            page.on('pageerror',err=>console.error('PAGE ERROR:',err.message));
+            console.log('Abrir galería...');
+            await page.goto('http://127.0.0.1:4173/',{waitUntil:'load',timeout:15000});
+            await page.waitForFunction(()=>window.facelessStudioReady,{timeout:10000});
+            console.log('READY',await page.evaluate(()=>({
+              current:document.querySelector('.screen:not(.hidden)')?.id,
+              cards:document.querySelectorAll('#studioCards .studio-card').length,
+              title:document.querySelector('#studioFeature h2')?.textContent,
+              overflow:document.documentElement.scrollWidth>window.innerWidth+6
+            })));
+            if(await page.locator('#studioCards .studio-card').count()!==10)throw Error('No aparecen 10 portadas iniciales');
+            await page.screenshot({path:'/tmp/faceless-studio-mobile.png',fullPage:true});
+            console.log('Seleccionando portada 2...');
+            await page.locator('#studioCards .studio-card').nth(1).click({timeout:12000});
+            if(await page.locator('#studioFeature h2').textContent()!=='El amor olvidado')throw Error('La portada 2 no corresponde al relato.');
+            console.log('Portada 2 seleccionada. Crear...');
+            await page.locator('#studioFeature .studio-create').click({timeout:12000});
+            await page.waitForFunction(()=>current()?.title==='El amor olvidado',{timeout:12000});
+            const data=await page.evaluate(()=>({
+              title:current()?.title,
+              scenes:current()?.scenes.length,
+              summary:current()?.coverSynopsis,
+              first:current()?.scenes[0]?.text,
+              last:current()?.scenes.slice(-1)[0]?.text,
+              route:document.querySelector('.screen:not(.hidden)')?.id
+            }));
+            console.log('PROYECTO OK:',JSON.stringify(data));
+            if(data.route!=='editor'||data.scenes!==8||!data.first?.includes('Elena')||!data.summary)
+              throw Error('El guion no mantiene la historia y sinopsis.');
+            await page.evaluate(()=>route('discover'));
+            await page.setViewportSize({width:1440,height:900});
+            await page.screenshot({path:'/tmp/faceless-studio-desktop.png',fullPage:true});
+            console.log('PANTALLA RESPONSIVE Y RELATO LOCAL: VERIFICADOS');
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          JS
+      - name: Guardar vistas de comprobación
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: faceless-studio-mobile-desktop
+          path: |
+            /tmp/faceless-studio-mobile.png
+            /tmp/faceless-studio-desktop.png
+          retention-days: 3
