@@ -24,6 +24,7 @@ const $=id=>document.getElementById(id),escapeHtml=s=>String(s??'').replace(/[&<
 const storeKey='faceless-studio-pro-projects-v1';
 const options={platform:[['TikTok','🎵','Videos cortos'],['Shorts','▶','YouTube'],['Reels','◎','Instagram'],['Facebook','▣','Videos sociales']],duration:[[30,'30 s','Corto'],[60,'60 s','Mediano'],[120,'120 s','Largo']],style:[['Misterio','🔦','Suspenso e intriga'],['Historia','📜','Narración cronológica'],['Curiosidades','🧠','Datos sorprendentes'],['Motivación','⚡','Inspiración y energía'],['Noticias','📰','Ágil y actual'],['Educativo','🎓','Didáctico y claro']],format:[['9:16','▯','Vertical — TikTok, Reels, Shorts'],['16:9','▭','Horizontal — YouTube, Facebook']]};
 let choice={platform:'TikTok',duration:30,style:'Misterio',format:'9:16'};let projects=[];let activeId=null;let tab='summary',showEditor=false;let imgs=[],audioFile=null,previewURL=null,previewTimer=null,rendering=false;let micRecorder=null,micStream=null,micURL=null;
+const generatedVoiceByProject=new Map();let audioFileProjectId=null,previewAudio=null,previewAudioURL=null;
 try{projects=JSON.parse(localStorage.getItem(storeKey)||'[]');if(!Array.isArray(projects))projects=[]}catch{projects=[]}
 function toast(msg){const el=$('toast');el.textContent=msg;el.classList.remove('hidden');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.add('hidden'),3200)}
 function persist(){try{localStorage.setItem(storeKey,JSON.stringify(projects));$('count').textContent=projects.length?'('+projects.length+')':'';return true}catch{toast('No se pudo guardar. Libera espacio del navegador.');return false}}
@@ -70,7 +71,7 @@ function renderTab(){const p=current();if(!p)return;const container=$('tabBody')
 function renderProjects(){const term=$('search').value.toLocaleLowerCase();let list=projects.filter(p=>(p.title+' '+p.topic+' '+p.platform+' '+p.style).toLocaleLowerCase().includes(term));$('projectsList').innerHTML=list.length?list.map(p=>`<article class="card project"><div class="pill-row"><span class="pill violet">${escapeHtml(p.platform)}</span><span class="pill blue">${fmt(p.duration)}</span><span class="pill">${p.format}</span></div><h3>${escapeHtml(p.title)}</h3><p>Tema: ${escapeHtml(p.topic)}</p><div class="excerpt">“${escapeHtml((p.hook||'').slice(0,165))}”</div><p class="spec">${p.scenes.length} escenas · ${p.style} · ${new Date(p.date).toLocaleDateString('es')}</p><div class="project-bottom"><div class="selection-panel"><button class="btn small ghost" data-project="copy" data-id="${p.id}" title="Duplicar proyecto">⧉</button><button class="btn small ghost" data-project="download" data-id="${p.id}" title="Descargar copia JSON">↓ JSON</button><button class="btn small ghost" data-project="delete" data-id="${p.id}" title="Eliminar proyecto">⌫</button></div><button class="btn primary small" data-project="open" data-id="${p.id}">Abrir y editar →</button></div></article>`).join(''):'<div class="empty">Todavía no hay proyectos. Pulsa «Crear video» para comenzar.</div>'}
 $('search').addEventListener('input',renderProjects);
 $('projectsList').addEventListener('click',e=>{const b=e.target.closest('[data-project]');if(!b)return;const p=projects.find(p=>p.id===b.dataset.id);if(!p)return;const action=b.dataset.project;if(action==='open'){activeId=p.id;tab='summary';showEditor=false;resetMedia();route('editor')}else if(action==='download')jsonDownload(p);else if(action==='copy'){const duplicate=structuredClone(p);duplicate.id=String(Date.now())+Math.random().toString(36).slice(2,7);duplicate.title+=' (copia)';duplicate.date=new Date().toISOString();projects.unshift(duplicate);persist();renderProjects();toast('Proyecto duplicado')}else if(action==='delete'){if(confirm('¿Eliminar este proyecto del navegador? Esta acción no se puede deshacer.')){projects=projects.filter(x=>x.id!==p.id);persist();renderProjects();toast('Proyecto eliminado')}}});
-function resetMedia(){stopPreview();if(micRecorder?.state==='recording')micRecorder.stop();stopMicTracks();imgs=[];audioFile=null;previewURL=null;if(micURL){URL.revokeObjectURL(micURL);micURL=null}}
+function resetMedia(){stopPreview();if(micRecorder?.state==='recording')micRecorder.stop();stopMicTracks();imgs=[];audioFile=null;audioFileProjectId=null;previewURL=null;if(micURL){URL.revokeObjectURL(micURL);micURL=null}}
 const canvas=document.createElement('canvas');canvas.width=540;canvas.height=960;const ctx=canvas.getContext('2d');
 function wrapText(t,x,y,maxWidth,lineHeight,maxLines){let lines=[],current='';for(const word of t.split(/\s+/)){const next=current?current+' '+word:word;if(ctx.measureText(next).width>maxWidth && current){lines.push(current);current=word}else current=next}if(current)lines.push(current);lines.slice(0,maxLines).forEach((l,i)=>ctx.fillText(l,x,y+i*lineHeight))}
 function drawFrame(index,seconds=0){
@@ -99,9 +100,22 @@ function drawFrame(index,seconds=0){
  ctx.shadowBlur=0;const progress=Math.max(0,Math.min(1,seconds/Math.max(1,p.duration)));
  ctx.fillStyle='rgba(255,255,255,.30)';ctx.fillRect(w*.08,h*.955,w*.84,6);ctx.fillStyle='#c07bff';ctx.fillRect(w*.08,h*.955,w*.84*progress,6);
 }
-function safeMime(){if(!window.MediaRecorder)return'';return ['video/mp4;codecs="avc1.42E01E,mp4a.40.2"','video/mp4','video/webm;codecs=vp8,opus','video/webm'].find(m=>MediaRecorder.isTypeSupported(m))||''}
+function safeMime(hasAudio=false){
+ if(!window.MediaRecorder)return'';
+ const webm=['video/webm;codecs=vp8,opus','video/webm;codecs=vp9,opus','video/webm'];
+ const mp4=['video/mp4;codecs="avc1.42E01E,mp4a.40.2"','video/mp4'];
+ return (hasAudio?[...webm,...mp4]:[...mp4,...webm]).find(m=>MediaRecorder.isTypeSupported(m))||'';
+}
+function updateAudioAttachmentUI(){
+ const label=$('audioCount'),button=$('renderVideo');
+ if(label)label.textContent=audioFile
+   ?'✓ Narración añadida automáticamente al video: '+(audioFile.name||'grabación')
+   :'Sin narración. Puedes generar voz IA, grabarla o subir un audio.';
+ if(button)button.textContent=audioFile?'⬇ Crear y descargar video CON VOZ':'⬇ Crear y descargar video';
+}
 function renderVideoTab(p){
- const mime=safeMime(),ext=mime.startsWith('video/mp4')?'MP4':mime?'WebM':'No disponible';
+ if(audioFileProjectId!==p.id){audioFile=generatedVoiceByProject.get(p.id)||null;audioFileProjectId=p.id}
+ const mime=safeMime(Boolean(audioFile)),ext=mime.startsWith('video/mp4')?'MP4':mime?'WebM':'No disponible';
  $('tabBody').innerHTML=`<div class="detail"><h3>✦ Video automático sin créditos</h3><p>La aplicación crea <b>fondos animados para cada escena</b> sin necesidad de imágenes. Si subes fotos, las utilizará en su lugar. Agrega audio o graba tu narración con el micrófono del Android.</p>
  <div class="video-workspace"><div>
  <div class="notice" style="margin-top:0"><b>Fondos automáticos activados</b> · ${p.scenes.length} escenas · ${p.duration} segundos. Son gráficos diseñados con código, no imágenes generadas con IA.</div>
@@ -111,17 +125,30 @@ function renderVideoTab(p){
  <div class="record-panel"><b>🎙 Grabar narración desde el teléfono</b><p class="smalltext" style="margin:5px 0 8px">Pulsa Grabar, permite usar el micrófono y lee tu guion. Pulsa Detener al terminar. La grabación queda disponible en esta sesión.</p>
  <div class="media-controls"><button class="btn small" id="startMic">● Grabar voz</button><button class="btn small" id="stopMic" disabled>■ Detener</button></div><p id="micStatus" class="status">Micrófono listo, sujeto al permiso del navegador.</p><audio id="micPlayback" controls class="hidden" style="width:100%"></audio></div>
  <div class="notice" style="margin-bottom:12px"><b>Formato de tu navegador:</b> ${ext}. ${ext==='WebM'?'La conversión a MP4 requiere una herramienta adicional.':''}</div>
- <p class="warning">⚠️ La voz se graba con tu micrófono; no es una voz sintética de IA. El montaje dura exactamente ${p.duration} segundos: para evitar silencios o cortes, prepara una narración de duración similar. Los archivos no permanecen guardados tras recargar la página.</p>
+ <p class="smalltext">La narración IA se incorpora al video y se escucha en la vista previa. Los audios se conservan únicamente durante esta sesión del navegador.</p>
  <div class="media-controls"><button class="btn small" id="previewVideo">▶ Vista previa</button><button class="btn primary" id="renderVideo" ${mime?'':'disabled'}>⬇ Crear y descargar video</button></div><p id="renderStatus" class="status" aria-live="polite"></p><div class="media-controls" id="downloadArea"></div></div>
  <div class="media-frame"><canvas id="previewCanvas" width="${p.format==='16:9'?960:540}" height="${p.format==='16:9'?540:960}" class="${p.format==='16:9'?'wide':''}"></canvas><video id="videoResult" controls playsinline class="hidden ${p.format==='16:9'?'wide':''}"></video><p class="smalltext" style="text-align:center;margin:8px 0 0">Vista previa ${p.format} · ${p.duration} segundos</p></div></div></div>`;
  const view=$('previewCanvas'),updateView=()=>{drawFrame(0);view.getContext('2d').drawImage(canvas,0,0)};
  mountAIPhotoControls(p,updateView);
  mountAIVoiceControls(p);
   $('images').addEventListener('change',async ev=>{imgs=[];const selected=[...ev.target.files];for(const file of selected){const im=new Image();const url=URL.createObjectURL(file);try{await new Promise((resolve,reject)=>{im.onload=resolve;im.onerror=reject;im.src=url});imgs.push(im)}catch{toast('No se pudo abrir una imagen.')}finally{URL.revokeObjectURL(url)}}$('imageCount').textContent=imgs.length?`${imgs.length} imágenes cargadas`:'Fondos animados listos';updateView()});
- $('audio').addEventListener('change',ev=>{audioFile=ev.target.files[0]||null;$('audioCount').textContent=audioFile?`Audio seleccionado: ${audioFile.name}`:'Sin audio seleccionado.';if(audioFile){$('micPlayback').classList.add('hidden')}});
+ $('audio').addEventListener('change',ev=>{audioFile=ev.target.files[0]||null;audioFileProjectId=p.id;generatedVoiceByProject.delete(p.id);updateAudioAttachmentUI();if(audioFile){$('micPlayback').classList.add('hidden')}});
  $('startMic').onclick=startMicrophoneRecording;$('stopMic').onclick=stopMicrophoneRecording;
  updateView();
- $('previewVideo').onclick=()=>{if(previewTimer){stopPreview();$('previewVideo').textContent='▶ Vista previa';return}const start=performance.now(),duration=p.duration*1000;const tick=()=>{const elapsed=performance.now()-start,sec=Math.min(p.duration-0.01,elapsed/1000);const i=p.scenes.findIndex(s=>sec>=s.time&&sec<s.time+s.duration);drawFrame(Math.max(i,0),sec);view.getContext('2d').drawImage(canvas,0,0);if(elapsed<duration){previewTimer=requestAnimationFrame(tick)}else{stopPreview();$('previewVideo').textContent='▶ Vista previa'}};previewTimer=requestAnimationFrame(tick);$('previewVideo').textContent='■ Detener vista previa'};
+ updateAudioAttachmentUI();
+ $('previewVideo').onclick=()=>{
+   if(previewTimer){stopPreview();$('previewVideo').textContent='▶ Vista previa';return}
+   stopPreview();
+   if(audioFile){
+     previewAudioURL=URL.createObjectURL(audioFile);
+     previewAudio=new Audio(previewAudioURL);
+     previewAudio.play().catch(()=>{const el=$('renderStatus');if(el)el.textContent='El navegador bloqueó el sonido. Escucha la narración desde el reproductor de voz.'});
+   }
+   const start=performance.now(),duration=p.duration*1000;
+   const tick=()=>{const elapsed=performance.now()-start,sec=Math.min(p.duration-0.01,elapsed/1000);const i=p.scenes.findIndex(sc=>sec>=sc.time&&sec<sc.time+sc.duration);drawFrame(Math.max(i,0),sec);view.getContext('2d').drawImage(canvas,0,0);if(elapsed<duration){previewTimer=requestAnimationFrame(tick)}else{stopPreview();$('previewVideo').textContent='▶ Vista previa'}};
+   previewTimer=requestAnimationFrame(tick);
+   $('previewVideo').textContent=audioFile?'■ Detener vista previa CON VOZ':'■ Detener vista previa';
+ };
  $('renderVideo').onclick=renderVideo;
 }
 async function startMicrophoneRecording(){
@@ -132,14 +159,14 @@ async function startMicrophoneRecording(){
   const type=['audio/webm;codecs=opus','audio/webm','audio/mp4'].find(t=>MediaRecorder.isTypeSupported(t))||'';
   micRecorder=type?new MediaRecorder(micStream,{mimeType:type}):new MediaRecorder(micStream);
   const chunks=[];micRecorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
-  micRecorder.onstop=()=>{const realtype=micRecorder?.mimeType||type||'audio/webm',blob=new Blob(chunks,{type:realtype});if(blob.size){audioFile=blob;if(micURL)URL.revokeObjectURL(micURL);micURL=URL.createObjectURL(blob);const play=$('micPlayback');if(play){play.src=micURL;play.classList.remove('hidden')}const n=$('audioCount');if(n)n.textContent='✓ Narración grabada en este dispositivo y lista para incluir en el video.';if(status)status.textContent='Narración lista. Escúchala y luego crea tu video.'}else if(status)status.textContent='La grabación está vacía. Inténtalo de nuevo.';stopMicTracks();};
+  micRecorder.onstop=()=>{const realtype=micRecorder?.mimeType||type||'audio/webm',blob=new Blob(chunks,{type:realtype});if(blob.size){audioFile=blob;audioFileProjectId=activeId;generatedVoiceByProject.delete(activeId);if(micURL)URL.revokeObjectURL(micURL);micURL=URL.createObjectURL(blob);const play=$('micPlayback');if(play){play.src=micURL;play.classList.remove('hidden')}const n=$('audioCount');if(n)n.textContent='✓ Narración grabada en este dispositivo y lista para incluir en el video.';if(status)status.textContent='Narración lista. Escúchala y luego crea tu video.'}else if(status)status.textContent='La grabación está vacía. Inténtalo de nuevo.';stopMicTracks();};
   micRecorder.onerror=()=>{status.textContent='Error al grabar audio.';stopMicTracks()};
   micRecorder.start(500);$('startMic').disabled=true;$('stopMic').disabled=false;status.textContent='● Grabando... lee tu guion y pulsa Detener al terminar.';
  }catch(e){stopMicTracks();status.textContent=e?.name==='NotAllowedError'?'Permiso de micrófono denegado. Actívalo en Chrome.':'No se pudo abrir el micrófono: '+(e.message||'error')}
 }
 function stopMicTracks(){if(micStream){micStream.getTracks().forEach(t=>t.stop());micStream=null}const a=$('startMic'),b=$('stopMic');if(a)a.disabled=false;if(b)b.disabled=true}
 function stopMicrophoneRecording(){if(micRecorder?.state==='recording'){micRecorder.stop();$('micStatus').textContent='Procesando grabación...';}else stopMicTracks()}
-function stopPreview(){if(previewTimer)cancelAnimationFrame(previewTimer);previewTimer=null}
+function stopPreview(){if(previewTimer)cancelAnimationFrame(previewTimer);previewTimer=null;if(previewAudio){previewAudio.pause();previewAudio.src='';previewAudio=null}if(previewAudioURL){URL.revokeObjectURL(previewAudioURL);previewAudioURL=null}}
 async function renderVideo(){if(rendering)return;const p=current(),mime=safeMime(),status=$('renderStatus'),btn=$('renderVideo');if(!mime){status.textContent='Este navegador no admite la exportación con MediaRecorder.';return}stopPreview();rendering=true;btn.disabled=true;status.textContent='Preparando el video…';let stream,rec,audioCtx,audioEl=null,audioURL=null,raf=null;try{stream=canvas.captureStream(24);let chunks=[];if(audioFile){audioCtx=new (window.AudioContext||window.webkitAudioContext)();await audioCtx.resume();audioEl=new Audio();audioURL=URL.createObjectURL(audioFile);audioEl.src=audioURL;audioEl.preload='auto';await new Promise((resolve,reject)=>{audioEl.oncanplay=resolve;audioEl.onerror=()=>reject(new Error('No se pudo leer el audio.'));audioEl.load()});const source=audioCtx.createMediaElementSource(audioEl),dest=audioCtx.createMediaStreamDestination();source.connect(dest);source.connect(audioCtx.destination);dest.stream.getAudioTracks().forEach(track=>stream.addTrack(track))}rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:1650000});rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};const completion=new Promise((resolve,reject)=>{rec.onstop=resolve;rec.onerror=()=>reject(new Error('Falló la grabación.'))});rec.start(1000);if(audioEl)await audioEl.play();const duration=p.duration*1000,start=performance.now();await new Promise(resolve=>{const next=(now)=>{const elapsed=Math.min(duration,now-start),sec=Math.min(p.duration-.01,elapsed/1000),idx=p.scenes.findIndex(s=>sec>=s.time&&sec<s.time+s.duration);drawFrame(Math.max(0,idx),sec);status.textContent='Procesando: '+Math.floor(elapsed/duration*100)+'%';if(elapsed<duration){raf=requestAnimationFrame(next)}else resolve()};raf=requestAnimationFrame(next)});rec.stop();await completion;const type=mime.startsWith('video/mp4')?'video/mp4':'video/webm',extension=type==='video/mp4'?'mp4':'webm',blob=new Blob(chunks,{type});if(blob.size<1000)throw Error('El archivo de video generado parece estar vacío.');if(previewURL)URL.revokeObjectURL(previewURL);previewURL=URL.createObjectURL(blob);$('videoResult').src=previewURL;$('videoResult').classList.remove('hidden');$('previewCanvas').classList.add('hidden');$('downloadArea').innerHTML='';const a=document.createElement('a');a.className='btn primary download';a.download='faceless-'+p.id+'.'+extension;a.href=previewURL;a.textContent='↓ Descargar '+extension.toUpperCase();$('downloadArea').appendChild(a);status.textContent='Video listo. Reprodúcelo y comprueba imagen, sonido y subtítulos.'}catch(e){status.textContent='No se pudo crear el video: '+(e?.message||'error desconocido')+'\nPrueba con menos imágenes, sin audio o con una duración más corta.';if(rec&&rec.state!=='inactive')try{rec.stop()}catch{}}finally{if(raf)cancelAnimationFrame(raf);if(audioEl)audioEl.pause();if(audioURL)URL.revokeObjectURL(audioURL);if(stream)stream.getTracks().forEach(t=>t.stop());if(audioCtx)await audioCtx.close().catch(()=>{});btn.disabled=false;rendering=false}}
 route('home'); 
 (() => {
