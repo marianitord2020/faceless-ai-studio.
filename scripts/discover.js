@@ -258,7 +258,7 @@
     $id('studioTopic').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();generateIdeas()}});
     state.ideas=[];state.topic='';state.style='Romance';state.source='ai';state.mode='fiction';
     $id('studioSource').value='ai';$id('studioSource').onchange();
-    updateVideoSummary();showMenu();
+    updateVideoSummary();showMenu();initialState();
   }
 
   function initialState(){
