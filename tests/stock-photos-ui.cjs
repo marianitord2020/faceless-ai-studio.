@@ -16,8 +16,8 @@ const assert=require('node:assert/strict');
  assert.equal(await page.locator('#stockPhotos').count(),1);
  for(const width of [320,390,768]){await page.setViewportSize({width,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));}
  await page.getByLabel('Buscar fotografías',{exact:true}).fill('playa');await page.locator('#stockPhotos').getByLabel('Código privado de la aplicación',{exact:true}).fill('fixture-stock-private-code');await page.getByLabel('Escena de destino').selectOption('1');
- await page.getByRole('button',{name:'Buscar fotos',exact:true}).click();await page.waitForSelector('.stock-card');
- assert.equal(await page.locator('.stock-card b').textContent(),credit.title);assert.equal(await page.locator('.stock-card script').count(),0);
+ await page.getByRole('button',{name:'Buscar fotos',exact:true}).click();await page.waitForSelector('.stock-results .stock-card');
+ assert.equal(await page.locator('.stock-results .stock-card b').textContent(),credit.title);assert.equal(await page.locator('.stock-card script').count(),0);
  await page.getByRole('button',{name:'Usar esta foto',exact:true}).click();await page.waitForFunction(()=>current().scenes[1].stockCredit?.author==='Autor de prueba');
  assert.equal(await page.evaluate(()=>Boolean(facelessProjectPhotos(current().id).get(1))),true);
  assert.equal(await page.evaluate(()=>Boolean(current().scenes[0].stockCredit)),false);
