@@ -27,7 +27,8 @@ await assert.rejects(()=>searchRealNews('Turismo en Higüey hoy','Noticias',{}),
 globalThis.fetch=async()=>new Response('',{status:503});
 await assert.rejects(()=>searchRealNews('Turismo en Higüey hoy','Noticias',{}),e=>e.httpStatus===503);
 globalThis.fetch=original;
-globalThis.fetch=async url=>{
+globalThis.fetch=async (url,options)=>{
+ if(String(url).includes('wikipedia.org')){assert.match(options.headers['User-Agent'],/FacelessAIStudioBot\/.*github/);assert.equal(options.headers['Api-User-Agent'],options.headers['User-Agent']);}
  if(String(url).includes('wikipedia.org'))return Response.json({query:{pages:[
    {title:'Artículo incompleto',extract:'Corto',fullurl:'https://es.wikipedia.org/wiki/Corto'},
    {title:'Napoleón Bonaparte',extract:'Información documentada sobre Napoleón Bonaparte. '.repeat(5),fullurl:'https://es.wikipedia.org/wiki/Napoleón_Bonaparte'}]}});

@@ -8,6 +8,7 @@ function parseJson(raw){
   catch{factualError('El generador no devolvió propuestas documentales completas.',502)}
  }
 }
+const WIKI_AGENT='FacelessAIStudioBot/1.1 (https://github.com/marianitord2020/faceless-ai-studio.; documentary source lookup)';
 function https(u){try{const x=new URL(u);return x.protocol==='https:'?x.href:''}catch{return ''}}
 export async function generateWikipediaIdeas(topic,style,env){
  const params=new URLSearchParams({
@@ -17,7 +18,12 @@ export async function generateWikipediaIdeas(topic,style,env){
   format:'json',formatversion:'2',utf8:'1'
  });
  let response;
- try{response=await fetch('https://es.wikipedia.org/w/api.php?'+params,{headers:{accept:'application/json'}})}
+ try{
+   response=await fetch('https://es.wikipedia.org/w/api.php?'+params,{
+     headers:{accept:'application/json','User-Agent':WIKI_AGENT,'Api-User-Agent':WIKI_AGENT},
+     signal:AbortSignal.timeout(15000)
+   });
+ }
  catch{factualError('No se pudo consultar Wikipedia para verificar el tema.',503)}
  if(!response.ok)factualError('Wikipedia no respondió correctamente (HTTP '+response.status+').',503);
  let data;
