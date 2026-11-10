@@ -81,6 +81,9 @@ jobs:
             printf '%s' "$GROQ_API_KEY" | npx --yes wrangler@4 secret put GROQ_API_KEY --config wrangler.toml
           fi
 
+      - name: Validar Groq real y generación en la ruta publicada
+        run: node tests/groq-live.mjs
+
       - name: Sincronizar claves privadas de los adaptadores multimedia
         working-directory: workers
         shell: bash
