@@ -1,4 +1,4 @@
-/* Per-scene uploads, removable audio and speech-based caption timing. */
+/* Local media uploads and estimated caption timing. No network speech processing. */
 (() => {
  'use strict';
  let playerURL='',operation=0;
@@ -8,22 +8,7 @@
  function applyTiming(p,data){Object.assign(p,data);p.date=new Date().toISOString();persist();id('sceneTotal').textContent='Suma de escenas: '+fmt(p.duration)+' / '+fmt(p.duration);const pills=id('editorPills');if(pills)pills.textContent=p.style+' '+p.duration+'s • '+p.format}
  function restoreTimeline(p){if(p.audioBaseTimeline){const base=p.audioBaseTimeline;if(base.scenes.length===p.scenes.length){p.duration=base.duration;p.scenes.forEach((s,i)=>Object.assign(s,base.scenes[i]))}else Object.assign(p,FacelessTiming.estimated(p,base.duration));delete p.audioBaseTimeline}delete p.subtitleCues;delete p.subtitleTextSignature;delete p.audioAlignment;persist()}
  async function saveAudio(p,file,manual=true){file.facelessManual=manual;file.facelessSignature=facelessVoiceSignature(p);audioFile=file;audioFileProjectId=p.id;generatedVoiceByProject.set(p.id,file);const saved=await facelessMediaPut(p.id+':voice',{manual,signature:file.facelessSignature,blob:file,name:file.name});if(!saved)toast('El audio está disponible en esta sesión, pero no se pudo guardar.');updateAudioAttachmentUI()}
- function password(){return id('productionPass')?.value.trim()||id('aiPhotosPasscode')?.value.trim()||id('aiVoicePasscode')?.value.trim()||window.facelessProductionPasscode||facelessImagePasscode||facelessVoicePassword||''}
  async function decode(file){if(file.size>35_000_000)throw Error('El audio supera 35 MB. Usa un archivo de hasta 10 minutos.');const Context=window.AudioContext||window.webkitAudioContext;const context=new Context();try{const buffer=await context.decodeAudioData((await file.arrayBuffer()).slice(0));if(!buffer.duration||buffer.duration>600)throw Error('Usa un audio de hasta 10 minutos.');return buffer}finally{await context.close()}}
- async function transcribe(buffer,pass,status){
-  const words=[];
-  for(let offset=0;offset<buffer.duration;offset+=25){
-   status.textContent='Reconociendo la voz: '+Math.floor(offset/buffer.duration*100)+'%…';
-   const duration=Math.min(25,buffer.duration-offset),offline=new OfflineAudioContext(1,Math.ceil(duration*16000),16000),source=offline.createBufferSource();source.buffer=buffer;source.connect(offline.destination);source.start(0,offset,duration);
-   const wav=facelessAudioToWAV(await offline.startRendering());
-   const response=await fetch('https://faceless-images.marianitord2020.workers.dev/transcribe',{method:'POST',headers:{'content-type':'audio/wav','x-app-token':pass},body:wav,signal:AbortSignal.timeout(110000)});
-   let data;try{data=await response.json()}catch{throw Error('El reconocimiento no devolvió datos válidos.')}
-   if(!response.ok)throw Error(data.error||'No se pudo reconocer la voz.');
-   if(!Array.isArray(data.words)||!data.words.length)continue;
-   for(const w of data.words)words.push({...w,start:Number(w.start)+offset,end:Number(w.end)+offset});
-  }
-  return words;
- }
  window.facelessMountMediaEditor=function(p,updatePreview){
   const photoRoot=id('manualPhotoSlots'),audioRoot=id('audioAttachment');if(!photoRoot||!audioRoot)return;
   const status=id('audioSyncStatus');
@@ -63,10 +48,10 @@
   id('pickOwnPhotos').onclick=()=>{if(!facelessIsWorking())id('images').click()};
   id('pickOwnAudio').onclick=()=>{if(!facelessIsWorking())id('audio').click()};
   async function sync(file,decoded){
-   const pass=password();if(pass.length<16){status.textContent='Duración ajustada al audio. Los subtítulos tienen tiempos estimados. Introduce tu código privado arriba y pulsa Sincronizar con la voz para reconocer las palabras.';return}
-   const recognized=await transcribe(decoded,pass,status);
    if(audioFile!==file||current()?.id!==p.id)return;
-   const data=FacelessTiming.align(p,recognized,decoded.duration);applyTiming(p,data);invalidateVideo();await saveAudio(p,file,Boolean(file.facelessManual));updatePreview();status.textContent='✓ Subtítulos y escenas ajustados a la voz reconocida. Coincidencia del guion: '+data.audioAlignment.coverage+'%. Revisa la vista previa.';
+   applyTiming(p,FacelessTiming.estimated(p,decoded.duration));
+   invalidateVideo();await saveAudio(p,file,Boolean(file.facelessManual));updatePreview();
+   status.textContent='✓ Audio detectado: '+decoded.duration.toFixed(1)+' segundos. Fotos, escenas y subtítulos ajustados localmente al guion. Los tiempos por palabra son aproximados; no se reconoce ni se transcribe la voz.';
   }
   async function attach(file){
    if(!file||facelessIsWorking())return;busy(true);const ticket=++operation;
@@ -78,7 +63,7 @@
     id('aiVoiceAudioArea')?.replaceChildren();
     if(!p.audioBaseTimeline)p.audioBaseTimeline={duration:p.duration,scenes:p.scenes.map(s=>({time:s.time,duration:s.duration}))};
     applyTiming(p,FacelessTiming.estimated(p,decoded.duration));await saveAudio(p,file);updatePreview();
-    status.textContent='Audio añadido. Ajustando los subtítulos a tu voz…';
+    status.textContent='Audio añadido. Ajustando los subtítulos localmente…';
     try{await sync(file,decoded)}catch(error){status.textContent=String(error.message||error)+' El audio sigue añadido; los tiempos son estimados. Puedes reintentar la sincronización.'}
    }catch(error){status.textContent=String(error.message||error)}finally{busy(false);photoRefresh(p.id);updateAudioAttachmentUI();id('audio').value=''}
   }
@@ -100,7 +85,7 @@
    if(playerURL){URL.revokeObjectURL(playerURL);playerURL=''}
    const player=id('uploadedAudioPlayer');player.pause();player.removeAttribute('src');player.load();player.hidden=!has||!audioFile.facelessManual;
    if(has&&audioFile.facelessManual){playerURL=URL.createObjectURL(audioFile);player.src=playerURL;
-    if(!window.facelessMediaBusy&&p.subtitleTextSignature!==FacelessTiming.signature(p))status.textContent='El guion cambió. Pulsa Sincronizar con la voz para recalcular los subtítulos.';
+    if(!window.facelessMediaBusy&&p.subtitleTextSignature!==FacelessTiming.signature(p))status.textContent='El guion cambió. Pulsa Ajustar subtítulos localmente para recalcular los tiempos.';
    }
    id('audioFileName').textContent=has?(audioFile.name||'Narración añadida'):'No hay audio añadido';
   };
