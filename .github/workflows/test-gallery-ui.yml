@@ -46,6 +46,14 @@ jobs:
               overflow:document.documentElement.scrollWidth>window.innerWidth+6
             })));
             if(await page.locator('#studioCards .studio-card').count()!==10)throw Error('No aparecen 10 portadas iniciales');
+            for(const width of [360,390,768,1440]){
+              await page.setViewportSize({width,height:900});
+              const layout=await page.evaluate(()=>({overflow:document.documentElement.scrollWidth>window.innerWidth+2,nav:document.querySelectorAll('.nav button').length,search:document.querySelectorAll('#studioGenerate').length,topic:document.getElementById('studioTopic').getBoundingClientRect().right<=window.innerWidth}));
+              if(layout.overflow||layout.nav!==3||layout.search!==1||!layout.topic)throw Error('Diseño desbordado o controles duplicados a '+width+'px: '+JSON.stringify(layout));
+            }
+            await page.setViewportSize({width:390,height:844});
+            console.log('DISEÑO: 360, 390, 768 y 1440 px sin desbordamiento; navegación única y búsqueda visible: OK');
+
             await page.screenshot({path:'/tmp/faceless-studio-mobile.png',fullPage:true});
             if(await page.locator('#studioSource').inputValue()!=='ai')throw Error('Las búsquedas nuevas deben usar Gemini por defecto');
             await page.locator('#studioDuration').selectOption('30');

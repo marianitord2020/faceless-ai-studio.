@@ -109,34 +109,25 @@
     const root=$id('discover');if(!root)return;
     root.innerHTML=
     '<div class="studio-layout">'+
-    '<aside class="studio-rail" aria-label="Herramientas del estudio">'+
-    '<h3>Mi estudio creativo</h3>'+
-    '<button type="button" class="active" id="studioSideNew">✦ Crear proyecto</button>'+
-    '<button type="button" id="studioSideProjects">▱ Mis proyectos</button>'+
-    '<button type="button" id="studioSideOld">◫ Editor clásico</button>'+
-    '<button type="button" id="studioSideVoices">♫ Voces IA</button>'+
-    '<button type="button" id="studioSidePhotos">▧ Imágenes IA</button>'+
-    '<div class="studio-free"><b>♢ Etapa gratuita</b><span>Cloudflare y Gemini sujetos a sus cuotas. No se activan servicios de pago.</span></div>'+
-    '</aside>'+
     '<div class="studio-center">'+
-    '<div class="studio-title"><div><h1>Generador de <span class="sparkle">Relatos y Noticias</span></h1>'+
-    '<p>Elige un estilo y descubre portadas con título y sinopsis. Tú decides qué historia llevar a creación.</p></div></div>'+
+    '<div class="studio-title"><div><span class="studio-eyebrow">TU ESPACIO CREATIVO</span><h1>Una idea. <span class="sparkle">Tu próximo video.</span></h1>'+
+    '<p>Encuentra una historia, elige tu favorita y dale vida.</p></div></div>'+
     '<div class="studio-settings">'+
     '<div class="studio-fields">'+
-    '<div class="studio-field"><label for="studioGenre"><em>1</em> Estilo narrativo</label><select id="studioGenre"></select></div>'+
-    '<div class="studio-field"><label for="studioTopic"><em>2</em> Tema o búsqueda</label><input id="studioTopic" type="text" maxlength="220" placeholder="Ej.: Historias de amor"></div>'+
-    '<div class="studio-field"><label for="studioMode"><em>3</em> Tipo de contenido</label><select id="studioMode">'+
+    '<div class="studio-field"><label for="studioGenre">Género</label><select id="studioGenre"></select></div>'+
+    '<div class="studio-field"><label for="studioTopic">¿Qué quieres contar?</label><input id="studioTopic" type="text" maxlength="220" placeholder="Ej.: Historias de amor"></div>'+
+    '<div class="studio-field"><label for="studioMode">Contenido</label><select id="studioMode">'+
     '<option value="fiction">Relatos creativos</option><option value="news">Noticias reales y actuales</option><option value="factual">Documentales / hechos reales</option></select></div>'+
     '<div class="studio-field"><button class="studio-generate" type="button" id="studioGenerate">⌕ Generar 10 propuestas</button></div></div>'+
     '<div class="studio-addons">'+
-    '<div class="studio-addon"><label for="studioSource">Origen de propuestas</label><select id="studioSource"><option value="ai">IA — Gemini</option><option value="local">Textos publicados — sin IA generativa</option></select></div>'+
+    '<div class="studio-addon"><label for="studioSource">Cómo quieres empezar</label><select id="studioSource"><option value="ai">IA — Gemini</option><option value="local">Textos publicados — sin IA generativa</option></select></div>'+
     '<div class="studio-addon"><label for="studioImageStyle">Estilo de imágenes</label><select id="studioImageStyle"></select></div>'+
     '<div class="studio-addon"><label for="studioDuration">Duración</label><select id="studioDuration"><option value="30">30 segundos</option><option value="60" selected>60 segundos</option><option value="120">120 segundos</option></select></div>'+
-    '<div class="studio-addon pass"><label for="studioPass">Código APP_PASSCODE</label><input id="studioPass" type="password" autocomplete="new-password" placeholder="Solo para IA; no es tu API Key"></div>'+
-    '<div class="studio-helper" id="studioCoverage">Cobertura de República Dominicana y medios en español de noticias, farándula y entretenimiento. Cada resultado enlaza al artículo original. Se muestran solo fuentes recuperadas, nunca noticias inventadas. Las portadas visuales de noticias son ilustraciones editoriales.</div></div>'+
+    '<div class="studio-addon pass"><label for="studioPass">Código de acceso</label><input id="studioPass" type="password" autocomplete="new-password" placeholder="Tu código privado para usar IA"></div>'+
+    '<div class="studio-helper" id="studioCoverage">Noticias de República Dominicana y medios en español, con enlace a su fuente. Las imágenes generadas son ilustraciones editoriales.</div></div>'+
     '</div>'+
     '<div id="studioWritten" class="studio-settings" hidden>'+
-    '<p>Busca obras en Wikisource o abre Reddit y pega el texto que quieras trabajar. La búsqueda automática de Reddit no está conectada.</p>'+
+    '<p>Busca obras en Wikisource o importa un relato de otra página.</p>'+
     '<a id="studioReddit" class="studio-source" href="https://www.reddit.com/search/" target="_blank" rel="noopener noreferrer">↗ Buscar relatos en Reddit</a>'+
     '<label for="studioWrittenTitle">Título del texto</label><input id="studioWrittenTitle" maxlength="120" placeholder="Título del relato publicado">'+
     '<label for="studioWrittenUrl">Enlace original (opcional)</label><input id="studioWrittenUrl" type="url" maxlength="1000" placeholder="https://…">'+
@@ -150,17 +141,27 @@
     '<p id="studioStatus" class="studio-status" aria-live="polite"></p>'+
     '<div class="studio-results-layout"><div id="studioCards" class="studio-cards"></div>'+
     '<aside class="studio-feature" id="studioFeature" aria-label="Relato seleccionado"></aside></div>'+
-    '<p class="studio-limit" id="studioLimit">Una portada seleccionada siempre conservará su título, tema y sinopsis al crear el guion.</p>'+
     '</div></div>';
+    // One primary navigation; no duplicate sidebar links or placeholder media shortcuts.
+    const panel=root.querySelector('.studio-settings');panel.classList.add('studio-search-panel');
+    const heading=e('div','studio-panel-heading');
+    heading.append(e('span','studio-step','01'),e('div',null,'Encuentra tu historia'));
+    panel.prepend(heading);
+    const fields=panel.querySelector('.studio-fields'),addons=panel.querySelector('.studio-addons');
+    const topicField=$id('studioTopic').parentElement;topicField.classList.add('studio-topic');fields.prepend(topicField);
+    const sourceField=$id('studioSource').parentElement;sourceField.classList.add('studio-field');fields.appendChild(sourceField);
+    const action=$id('studioGenerate').parentElement;action.className='studio-search-action';
+    const helper=$id('studioCoverage'),sourceInfo=e('details','studio-source-info');
+    sourceInfo.append(e('summary',null,'Fuentes y cobertura'),helper);
+    const searchFooter=e('div','studio-search-footer');searchFooter.append(sourceInfo,action);panel.append(searchFooter);
+    addons.prepend(e('div','studio-preferences-title','Preferencias del video'));
+    const writtenHeading=e('div','studio-panel-heading');writtenHeading.append(e('span','studio-step','↳'),e('div',null,'Importa un relato'));
+    $id('studioWritten').prepend(writtenHeading);
+    const resultsHeading=root.querySelector('.studio-results-head');resultsHeading.prepend(e('span','studio-step','02'));
     const genre=$id('studioGenre');for(const name of styles){const opt=new Option(name,name);genre.add(opt)}
     genre.value='Romance';
     const image=$id('studioImageStyle');for(const [key,name] of imageStyles)image.add(new Option(name,key));
     $id('studioTopic').value='Historias de amor';
-    $id('studioSideNew').onclick=()=>{$id('studioTopic').focus()};
-    $id('studioSideProjects').onclick=()=>route('projects');
-    $id('studioSideOld').onclick=()=>route('create');
-    $id('studioSideVoices').onclick=()=>{toast('Selecciona un relato. En 🎬 Video podrás elegir voz automática o manual.')};
-    $id('studioSidePhotos').onclick=()=>{toast('Selecciona un relato para abrir el generador de imágenes de escenas.')};
     $id('studioTopic').addEventListener('input',()=>{$id('studioTopic').dataset.edited='true'});
     genre.onchange=()=>{
       if(!$id('studioTopic').dataset.edited&&['Noticias','Farándula','Entretenimiento'].includes(genre.value))$id('studioTopic').value=genre.value==='Noticias'?'Noticias de República Dominicana hoy':genre.value+' hoy';
@@ -193,7 +194,7 @@
     state.style='Romance';state.source='demo';state.mode='fiction';
     $id('studioSource').value='ai';
     renderCards();renderFeature();
-    setStatus('✦ Catálogo local de ejemplo. Puedes elegir El amor olvidado o escribir otro tema y generar 10 propuestas con Gemini.');
+    setStatus('Relatos de ejemplo · Escribe tu tema para encontrar o crear otra historia.');
   }
   function initialState(){
     $id('studioGalleryTitle').textContent=state.mode==='news'?'Noticias sobre «'+state.topic+'»':'Resultados de «'+state.topic+'»';
@@ -247,11 +248,11 @@
         e('span','chip',idea.matchType==='related'?'≈ Relacionado':state.mode==='news'?'📰 Fuente real':state.mode==='factual'?'📚 Documental':'✦ '+state.style));
       if(idea.matchType==='related'&&idea.matchReason)body.appendChild(e('small',null,idea.matchReason));
       card.append(picture,body);
-      card.onclick=()=>{state.selected=index;renderCards();renderFeature()};
+      card.onclick=()=>{state.selected=index;renderCards();renderFeature();if(window.matchMedia('(max-width: 760px)').matches)$id('studioFeature').scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'})};
       cards.appendChild(card);
     });
     $id('studioGalleryTag').textContent=state.ideas.length+' '+(state.matchType==='related'?'relacionados':state.mode==='news'?'noticias encontradas':'propuestas');
-    $id('studioGalleryTitle').textContent=state.matchType==='related'?'Temas relacionados con «'+state.topic+'»':state.mode==='news'?'Noticias encontradas':state.ideas.length+' propuestas de '+(state.mode==='factual'?'documentales':'historias');
+    $id('studioGalleryTitle').textContent=state.matchType==='related'?'Temas relacionados con «'+state.topic+'»':state.mode==='news'?'Noticias encontradas':(state.mode==='factual'?'Documentales para elegir':'Historias para elegir');
     if(state.source==='local'){$id('studioGalleryTitle').textContent=state.ideas.length+' texto'+(state.ideas.length===1?'':'s')+' publicado'+(state.ideas.length===1?'':'s');$id('studioGalleryTag').textContent=state.ideas.length+' resultado'+(state.ideas.length===1?'':'s')}
     $id('studioGallerySubtitle').textContent=state.matchType==='related'?'No hubo coincidencias exactas. Estos resultados son cercanos a tu búsqueda; revisa el motivo y su fecha.':state.mode==='news'
       ?'Solo noticias vinculadas a fuentes reales. Selecciona una y consulta su fecha y origen.'
