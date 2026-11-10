@@ -1,0 +1,85 @@
+/* Dashboard visual de Faceless AI Studio: solo afecta #discover y el modo estudio.
+   El editor, el exportador, las fotos y la voz conservan sus estilos anteriores. */
+#discover .studio-intro{font-size:14px;color:#aebbd0;margin:-12px 0 23px;line-height:1.6}
+#discover .studio-sidebar{display:none}
+#discover .studio-models{display:flex;flex-direction:column;gap:8px;min-width:0}
+#discover .studio-mode-label{font-size:12px;font-weight:650;color:#d4d8eb}
+#discover .studio-models #studioMode{display:block!important;appearance:auto;min-height:46px;border:1px solid #36415b;border-radius:10px;background:#0b1424;color:#f0efff;padding:10px 12px;width:100%;font-size:13px}
+#discover .studio-models #studioSubcategory[hidden]{display:none!important}
+#discover .studio-menu-view{min-width:0}
+#discover .studio-results-view{min-width:0}
+#discover .studio-card-text .chip{margin-top:auto;border-radius:20px;padding:4px 9px;background:#282044;color:#d5a7ff}
+#discover .studio-card{box-shadow:0 8px 22px #00000026}
+#discover .studio-card.on{border-color:#a969ff;box-shadow:0 0 0 2px #a66aff40,0 12px 30px #0007}
+#discover .studio-feature{background:linear-gradient(145deg,#151d31,#101627);box-shadow:0 12px 36px #0005}
+#discover .studio-create{background:linear-gradient(110deg,#5d42f5,#9433ed);font-weight:750;font-size:14px}
+#discover .studio-card-text b{font-weight:750}
+#discover .studio-results-head h2{font-weight:750}
+#discover .studio-results-tag{color:#d4c6ff;border-color:#514078;background:#271d43}
+#discover .studio-status{color:#c5d0eb}
+@media(min-width:1024px){
+ body.studio-mode .main{width:min(1700px,calc(100% - 36px));max-width:none;padding:28px 0 60px}
+ #discover .studio-layout{display:grid;grid-template-columns:230px minmax(0,1fr);gap:25px;align-items:start}
+ #discover .studio-sidebar{display:flex;flex-direction:column;gap:7px;position:sticky;top:95px;min-height:calc(100vh - 130px);padding:18px 13px;background:linear-gradient(180deg,#0c1423,#090e1a);border:1px solid #263249;border-radius:17px}
+ #discover .studio-sidebar-brand{display:flex;align-items:center;gap:9px;font-size:15px;color:#e6d9ff;padding:12px 9px 20px;line-height:1.25}
+ #discover .studio-sidebar-brand strong{font-size:14px}
+ #discover .studio-side-link{border:1px solid transparent;background:transparent;border-radius:10px;color:#c0c8df;text-align:left;padding:13px 14px;min-height:46px;font-size:14px;font-weight:600}
+ #discover .studio-side-link:hover,#discover .studio-side-link:focus-visible{background:#1a2540;border-color:#3d4770}
+ #discover .studio-side-link.on{background:linear-gradient(105deg,#6a2dca,#3558a9);color:white}
+ #discover .studio-side-note{margin-top:auto;border-top:1px solid #28354c;padding:16px 8px 8px;color:#8495b1;font-size:11px;line-height:1.6}
+ #discover .studio-center{min-width:0}
+ #discover .compact-title{font-size:clamp(27px,2.3vw,36px);margin-bottom:14px}
+ #discover .studio-intro{margin:-5px 0 18px;font-size:14px}
+ #discover .studio-menu-view{display:grid!important;grid-template-columns:minmax(180px,1fr) minmax(210px,1.15fr) minmax(200px,1.1fr) minmax(165px,.7fr);gap:14px;align-items:end;background:#0e1727;border:1px solid #283952;border-radius:16px;padding:17px;margin-bottom:22px}
+ #discover .studio-menu-view[hidden]{display:grid!important}
+ #discover .studio-menu-view>.compact-title,#discover .studio-menu-view>.studio-intro{grid-column:1/-1}
+ #discover .compact-story{grid-column:2;grid-row:3;padding:0;background:transparent;border:0;margin:0}
+ #discover .compact-story h2,#discover .compact-origin h2{font-size:12px;margin-bottom:8px}
+ #discover .compact-category{grid-column:1;grid-row:3;margin:0}
+ #discover .compact-category .choice-group-nav{display:none}
+ #discover .compact-category .choice-category-grid{display:none}
+ #discover .compact-category #studioGenre{display:block!important;width:100%;min-height:46px;border:1px solid #34455f;border-radius:10px;background:#0b1424;color:#f4efff;padding:10px}
+ #discover .studio-models{grid-column:3;grid-row:3}
+ #discover .compact-origin{grid-column:1/3;grid-row:4;margin:0}
+ #discover .compact-origin .friendly-choice-source{display:none}
+ #discover .compact-origin #studioSource{display:block!important;min-height:40px;width:100%;background:#0b1424;color:#fff;border:1px solid #34455f;border-radius:10px;padding:8px}
+ #discover .compact-origin h2{margin-bottom:6px}
+ #discover .compact-options{grid-column:3/5;grid-row:4}
+ #discover .studio-fixed-action{grid-column:4;grid-row:3;position:static;transform:none;width:auto;padding:0;background:transparent;z-index:auto}
+ #discover .studio-fixed-action .studio-generate{height:auto;min-height:46px;font-size:13px;border-radius:10px;padding:10px;white-space:normal}
+ #discover .studio-results-view{display:block!important;padding-bottom:20px}
+ #discover .studio-results-view[hidden]{display:block!important}
+ #discover .studio-results-view #studioBackToMenu{display:none}
+ #discover .studio-results-view .studio-results-head{margin:8px 0 17px}
+ #discover .studio-results-view .studio-results-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(290px,34%);gap:19px;align-items:start}
+ #discover .studio-results-view .studio-cards{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+ #discover .studio-card-text{padding:10px}
+ #discover .studio-card-text b{font-size:12px}
+ #discover .studio-card-text small{font-size:10px;line-height:1.5}
+ #discover .studio-card-visual{aspect-ratio:16/10}
+ #discover .studio-feature{position:sticky;top:92px;padding:13px}
+ #discover .studio-feature-picture{aspect-ratio:16/11}
+ #discover .studio-feature-text h2{font-size:23px}
+ #discover .studio-feature-text p{font-size:13px}
+}
+@media(min-width:1024px) and (max-width:1250px){
+ #discover .studio-layout{grid-template-columns:190px minmax(0,1fr);gap:14px}
+ #discover .studio-menu-view{grid-template-columns:repeat(3,minmax(0,1fr))}
+ #discover .studio-fixed-action{grid-column:1/-1;grid-row:5}
+ #discover .studio-results-view .studio-cards{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:1023px){
+ #discover .studio-models{padding:14px 15px;margin:0 0 15px;background:#171828;border:1px solid #39324c;border-radius:12px}
+ #discover .studio-mode-label{font-size:13px}
+ #discover .studio-models #studioMode{background:#24223a}
+ #discover .studio-intro{font-size:13px;margin:-7px 0 17px}
+ #discover .studio-results-view .studio-cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+ #discover .studio-card-text{padding:11px}
+ #discover .studio-card-text b{font-size:12px}
+ #discover .studio-card-text small{font-size:10px}
+}
+@media(max-width:390px){
+ #discover .studio-card-text{padding:9px}
+ #discover .studio-card-text b{font-size:11px}
+ #discover .studio-results-view .studio-cards{gap:8px}
+}
