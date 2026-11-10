@@ -33,17 +33,18 @@ function persist(){try{localStorage.setItem(storeKey,JSON.stringify(projects));$
 function selected(name,val){choice[name]=val;renderOpts()}
 function renderOpts(){for(const key of ['platform','duration','style','format']){const el=$(key+'Opts');el.innerHTML=options[key].map(row=>{const [value,a,b]=row;const on=choice[key]===value;const d=key==='duration';const title=d?(a+' — '+b):(key==='format'?b:value);const secondary=d?'':(key==='format'?a+' · ':a+' ')+(key==='platform'||key==='style'?b:'');return `<button type="button" class="option ${on?'on':''}" data-kind="${key}" data-choice="${escapeHtml(value)}" aria-pressed="${on}"><b>${title}</b><small>${escapeHtml(secondary)}</small></button>`}).join('')}}
 renderOpts();persist();
-function route(name){if(window.facelessProductionBusy){toast('Espera a que termine el video o pulsa Detener.');return}document.body.classList.toggle('studio-mode',name==='discover');if(name!=='editor'&&micRecorder?.state==='recording')stopMicrophoneRecording();for(const el of document.querySelectorAll('.screen'))el.classList.toggle('hidden',el.id!==name);document.querySelectorAll('[data-route]').forEach(el=>el.classList.toggle('selected',el.dataset.route===name));if(name==='projects'){renderProjects();window.facelessRenderProjectCovers?.()}if(name==='editor')renderEditor();window.scrollTo({top:0,behavior:'instant'})}
+function facelessIsWorking(){return Boolean(window.facelessProductionBusy||rendering||(typeof facelessImageRunning!=='undefined'&&facelessImageRunning)||(typeof facelessVoiceBusy!=='undefined'&&facelessVoiceBusy))}
+function route(name){if(facelessIsWorking()){toast('Espera a que termine la generación o pulsa Detener.');return}document.body.classList.toggle('studio-mode',name==='discover');if(name!=='editor'&&micRecorder?.state==='recording')stopMicrophoneRecording();for(const el of document.querySelectorAll('.screen'))el.classList.toggle('hidden',el.id!==name);document.querySelectorAll('[data-route]').forEach(el=>el.classList.toggle('selected',el.dataset.route===name));if(name==='projects'){renderProjects();window.facelessRenderProjectCovers?.()}if(name==='editor')renderEditor();window.scrollTo({top:0,behavior:'instant'})}
 document.addEventListener('click',ev=>{const opt=ev.target.closest('[data-choice]');if(opt){let val=opt.dataset.choice;selected(opt.dataset.kind,opt.dataset.kind==='duration'?Number(val):val);return}const rt=ev.target.closest('[data-route]');if(rt){route(rt.dataset.route)}});
 function sceneTemplates(topic,style,index,count){const clean=topic.replace(/\s+/g,' ').replace(/[.!?]+$/,'').trim();const starters={Misterio:['Hay algo inquietante que casi nadie menciona.','Las primeras pistas despiertan más preguntas que respuestas.','Lo sorprendente aparece cuando observamos los detalles.','Una teoría popular no cuenta toda la historia.','La última pregunta sigue sin respuesta clara.'],Historia:['Todo empieza con un contexto que vale la pena conocer.','Después ocurrió un cambio importante.','Los protagonistas tuvieron que decidir qué hacer.','La situación avanzó de una manera inesperada.','Su impacto todavía se recuerda.'],Curiosidades:['El primer dato puede sorprenderte.','El siguiente detalle es todavía más interesante.','La explicación tiene una parte poco conocida.','Hay un hecho que suele pasarse por alto.','Y el último dato merece atención.'],Motivación:['Todo cambio empieza con una decisión pequeña.','La constancia importa más que la perfección.','Los obstáculos también enseñan.','Cada paso aporta experiencia.','Lo importante es continuar avanzando.'],Noticias:['Primero, revisemos qué se sabe con certeza.','Después, veamos qué información falta confirmar.','Hay diferentes puntos de vista que conviene contrastar.','El contexto ayuda a entender la situación.','Consulta fuentes actualizadas antes de compartir conclusiones.'],Educativo:['Primero definamos la idea principal.','Veamos un ejemplo sencillo.','Ahora entendamos por qué funciona así.','Este detalle suele generar dudas.','Resumamos los puntos esenciales.']};const stems=starters[style]||starters.Educativo; if(index===0)return `Hoy exploramos ${clean.toLowerCase()}. ${stems[0]}`;if(index===count-1)return `${stems[4]} ¿Qué opinas sobre ${clean.toLowerCase()}?`;return stems[Math.min(index,3)]+' Relacionémoslo con el tema central.'}
 function generate(){const topic=$('topic').value.trim();if(topic.length<5){toast('Escribe un tema de al menos cinco caracteres.');$('topic').focus();return}const duration=Number(choice.duration),count=duration===30?5:duration===60?8:12,base=Math.floor(duration/count),extra=duration%count;let cursor=0;const scenes=Array.from({length:count},(_,i)=>{const d=base+(i<extra?1:0),text=sceneTemplates(topic,choice.style,i,count),s={time:cursor,duration:d,text,prompt:`Imagen para ${topic}. Escena ${i+1}: ${text} Estilo visual ${choice.style.toLowerCase()}, composición cinematográfica ${choice.format}, sin letras ni marcas de agua.`};cursor+=d;return s});const proj={id:String(Date.now())+Math.random().toString(36).slice(2,7),topic,title:topic.charAt(0).toUpperCase()+topic.slice(1),...choice,date:new Date().toISOString(),scenes,narration:scenes.map(s=>s.text).join('\n'),hook:scenes[0].text};projects.unshift(proj);if(!persist())return;activeId=proj.id;tab='summary';showEditor=false;resetMedia();route('editor');toast('Borrador creado. Revisa el texto antes de publicar.')}
 $('generate').onclick=generate;
 function current(){return projects.find(p=>p.id===activeId)}
 function fmt(t){return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0')}
-function saveFromEditor(){const p=current();if(!p)return;p.title=$('editTitle').value.trim()||p.title;p.narration=$('editNarration').value.trim()||p.narration;p.hook=p.scenes[0]?.text||p.hook;p.date=new Date().toISOString();persist();showEditor=false;renderEditor();toast('Proyecto guardado.')}
+function saveFromEditor(){if(facelessIsWorking())return;const p=current();if(!p)return;p.title=$('editTitle').value.trim()||p.title;const updated=$('editNarration').value.trim();if(showEditor&&updated&&updated!==p.narration)applyNarrationToScenes(p,updated);p.hook=p.scenes[0]?.text||p.hook;p.date=new Date().toISOString();persist();showEditor=false;renderEditor();toast('Proyecto guardado.')}
 function renderEditor(){const p=current();if(!p){route('projects');return}window.facelessShowEditorCover?.(p); $('editBanner').textContent='Editando proyecto guardado: '+p.title;$('editorTitle').textContent=p.title;$('editorTopic').textContent='Tema base: '+p.topic;$('editorPills').innerHTML=`<span class="pill violet">${escapeHtml(p.platform)}</span><span class="pill blue">${fmt(p.duration)}</span><span class="pill">${escapeHtml(p.style)}</span><span class="pill">${p.format}</span>`;$('sceneTotal').textContent=`Suma de escenas: ${p.scenes.reduce((a,s)=>a+s.duration,0)}s / ${p.duration}s`;$('editBox').classList.toggle('hidden',!showEditor);$('editTitle').value=p.title;$('editNarration').value=p.narration;document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));renderTab()}
-$('toggleEdit').onclick=()=>{showEditor=!showEditor;renderEditor()};$('saveProject').onclick=saveFromEditor;
-document.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{if(micRecorder?.state==='recording')stopMicrophoneRecording();tab=el.dataset.tab;document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('on',x===el));renderTab()});
+$('toggleEdit').onclick=()=>{if(facelessIsWorking())return;showEditor=!showEditor;renderEditor()};$('saveProject').onclick=saveFromEditor;
+document.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{if(facelessIsWorking())return;if(micRecorder?.state==='recording')stopMicrophoneRecording();tab=el.dataset.tab;document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('on',x===el));renderTab()});
 async function copy(text){try{await navigator.clipboard.writeText(text);toast('Copiado al portapapeles')}catch{toast('Tu navegador no permite copiar automáticamente.')}}
 function combined(p){return [p.title,'TEMA: '+p.topic,'','NARRACIÓN:',p.narration,'','ESCENAS:',...p.scenes.map((s,i)=>`${i+1}. [${fmt(s.time)} - ${fmt(s.time+s.duration)}] ${s.text}\nVisual: ${s.prompt}`)].join('\n')}
 $('copyAll').onclick=()=>{const p=current();if(p)copy(combined(p))};
@@ -51,10 +52,7 @@ function downloadBlob(blob,filename){const url=URL.createObjectURL(blob),a=docum
 function jsonDownload(p){downloadBlob(new Blob([JSON.stringify(p,null,2)],{type:'application/json'}),'faceless-proyecto-'+p.id+'.json')}
 $('exportJson').onclick=()=>{const p=current();if(p)jsonDownload(p)};
 
-function splitNarrationIntoScenes(){
- const p=current();if(!p)return;
- const raw=$('autoScript')?.value.trim()||'';
- if(raw.length<20){toast('Escribe un guion de al menos 20 caracteres.');return}
+function applyNarrationToScenes(p,raw){
  // First respect paragraphs and sentence endings; fallback to groups of words.
  let phrases=raw.split(/(?<=[.!?¡¿;])\s+|\n+/u).map(s=>s.trim()).filter(Boolean);
  const target=p.duration===30?5:p.duration===60?8:12;
@@ -66,6 +64,13 @@ function splitNarrationIntoScenes(){
  let time=0;
  p.scenes=groups.map((group,i)=>{const duration=base+(i<extra?1:0),text=group.join(' ').trim();const scene={time,duration,text,prompt:`Escena ${i+1} sobre ${p.topic}: ${text}. Estilo ${p.style}, formato ${p.format}, sin texto incrustado.`};time+=duration;return scene});
  p.narration=raw;p.hook=p.scenes[0]?.text||'';p.date=new Date().toISOString();
+}
+
+function splitNarrationIntoScenes(){
+ const p=current();if(!p||facelessIsWorking())return;
+ const raw=$('autoScript')?.value.trim()||'';
+ if(raw.length<20){toast('Escribe un guion de al menos 20 caracteres.');return}
+ applyNarrationToScenes(p,raw);
  persist();tab='scenes';renderEditor();toast('Escenas y subtítulos preparados con tus palabras.');
 }
 
@@ -73,7 +78,7 @@ function renderResearchSources(project,root){
  if(!Array.isArray(project.sources)||!project.sources.length)return;
  const section=document.createElement('section');
  section.className='detail';
- const h=document.createElement('h3');h.textContent='🔎 Fuentes consultadas por Google Search';
+ const h=document.createElement('h3');h.textContent='🔎 Fuentes del contenido';
  section.appendChild(h);
  const desc=document.createElement('p');
  const stamp=project.sourceCheckedAt?new Date(project.sourceCheckedAt).toLocaleString('es'):'sin fecha registrada';
@@ -359,5 +364,5 @@ route('discover');
   };
 })();;
  
-</script><script src="scripts/ai-photos.js?v=5"></script><script src="scripts/ai-voice.js?v=5"></script><script src="scripts/discover.js?v=5"></script></body></html>
+</script><script src="scripts/ai-photos.js?v=6"></script><script src="scripts/ai-voice.js?v=6"></script><script src="scripts/discover.js?v=6"></script></body></html>
 
