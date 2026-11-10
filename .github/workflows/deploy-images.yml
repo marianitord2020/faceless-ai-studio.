@@ -23,6 +23,7 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       APP_PASSCODE: ${{ secrets.APP_PASSCODE }}
+      GEMINI_TTS_API_KEY: ${{ secrets.GEMINI_TTS_API_KEY }}
     steps:
       - name: Verificar las credenciales de Cloudflare
         run: |
@@ -46,6 +47,16 @@ jobs:
         working-directory: workers
         run: |
           printf '%s' "$APP_PASSCODE" | npx --yes wrangler@4 secret put APP_PASSCODE --config wrangler.toml
+
+      - name: Configurar API gratuita de Google Gemini TTS cuando exista la clave
+        working-directory: workers
+        run: |
+          if [ -n "$GEMINI_TTS_API_KEY" ]; then
+            printf '%s' "$GEMINI_TTS_API_KEY" | npx --yes wrangler@4 secret put GEMINI_TTS_API_KEY --config wrangler.toml
+            echo "Gemini TTS habilitado sin exponer la clave."
+          else
+            echo "Sin GEMINI_TTS_API_KEY: se utiliza voz Cloudflare Aura-2-es."
+          fi
 
       - name: Comprobar que el servidor exige un código privado
         run: |
