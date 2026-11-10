@@ -28,6 +28,8 @@
   const w=ctx.canvas.width,h=ctx.canvas.height,maxWidth=w*.82;
   ctx.save();
   let size=wide?32:38,lines;
+  const longest=state.words.reduce((max,word)=>Math.max(max,String(word.text).length),1);
+  size=Math.min(size,Math.max(10,Math.floor(maxWidth/(longest*.65))));
   do{
    ctx.font='800 '+size+'px system-ui, sans-serif';lines=[[]];let used=0;
    state.words.forEach((word,index)=>{const width=ctx.measureText(word.text).width+size*.3;if(used+width>maxWidth&&lines[lines.length-1].length){lines.push([]);used=0;}lines[lines.length-1].push({...word,index,width});used+=width;});
@@ -43,8 +45,8 @@
    const width=line.reduce((sum,word)=>sum+word.width,0);let x=(w-width)/2;
    const y=top+row*lineHeight+lineHeight/2;
    line.forEach(word=>{
-    if(word.index===state.active){rounded(ctx,x-size*.1,y-size*.62,word.width-size*.06,size*1.23,8);ctx.fillStyle='#ffe14a';ctx.fill();ctx.fillStyle='#11121d';ctx.fillText(word.text,x,y);}
-    else{ctx.strokeStyle='#060814';ctx.strokeText(word.text,x,y);ctx.fillStyle='#ffffff';ctx.fillText(word.text,x,y);}
+    if(word.index===state.active){rounded(ctx,x-size*.1,y-size*.62,word.width-size*.06,size*1.23,8);ctx.fillStyle='#ffe14a';ctx.fill();ctx.fillStyle='#11121d';ctx.fillText(word.text,x,y,maxWidth);}
+    else{ctx.strokeStyle='#060814';ctx.strokeText(word.text,x,y,maxWidth);ctx.fillStyle='#ffffff';ctx.fillText(word.text,x,y,maxWidth);}
     x+=word.width;
    });
   });ctx.restore();
