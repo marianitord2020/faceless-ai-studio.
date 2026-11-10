@@ -65,6 +65,7 @@ export async function deepgramAnalyze(env,bytes,type,duration){
 }
 export async function hfAnalyze(env,bytes,duration){
  const model=hfModel(env,'HF_ASR_MODEL','openai/whisper-large-v3');
+ if(bytes.length>960044)throw providerError('El respaldo HF admite fragmentos de hasta 30 segundos. Usa Whisper local para archivos largos.',503);
  const data=await json(await request('https://router.huggingface.co/hf-inference/models/'+model,env.HF_API_KEY,JSON.stringify({inputs:base64(bytes),parameters:{return_timestamps:true}})));
  // HF may return phrase chunks. Never invent word times by dividing a phrase.
  const segments=(data.chunks||[]).map(c=>({word:c.text,start:c.timestamp?.[0],end:c.timestamp?.[1]}));

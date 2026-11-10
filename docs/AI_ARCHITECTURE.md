@@ -57,7 +57,7 @@ const timing = await FacelessAI.analyzeAudio(file, appCode, {
 // vuelve a Whisper local. No se envía audio con remote:false.
 ```
 
-`generateText` devuelve un guion de escenas del proyecto, no un chat genérico. El cliente convierte MP3/WAV/M4A/etc. que pueda decodificar el navegador a WAV PCM mono 16 kHz. Máximo de entrada: 35 MB y 10 minutos. Los abortos, el acceso no autorizado y los errores de formato no se reintentan en otro servicio. `AbortSignal` se puede pasar a las funciones.
+`generateText` devuelve un guion de escenas del proyecto, no un chat genérico. El cliente convierte MP3/WAV/M4A/etc. que pueda decodificar el navegador a WAV PCM mono 16 kHz. Máximo de entrada: 35 MB y 10 minutos. El respaldo remoto HF se limita a 30 segundos por petición para acotar memoria; archivos más largos vuelven a Whisper local si Deepgram no está disponible. Los abortos, el acceso no autorizado y los errores de formato no se reintentan en otro servicio. `AbortSignal` se puede pasar a las funciones.
 
 ## Claves privadas y configuración
 
