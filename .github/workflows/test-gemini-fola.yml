@@ -1,0 +1,72 @@
+name: Verificar voz Fola con Google Gemini
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/test-gemini-fola.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    env:
+      GEMINI_TTS_API_KEY: ${{ secrets.GEMINI_TTS_API_KEY }}
+    steps:
+      - name: Probar acceso directo seguro a Fola
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "$GEMINI_TTS_API_KEY" ]; then
+            echo "::error::Falta GEMINI_TTS_API_KEY como GitHub Actions secret."
+            exit 1
+          fi
+          cat > "$RUNNER_TEMP/payload.json" <<'JSON'
+          {
+            "contents": [
+              {
+                "role": "user",
+                "parts": [
+                  {
+                    "text": "Hola. Esta es una prueba de la voz Fola para Faceless AI Studio.",
+                    "speechMetadata": {"style": "Alegre, clara y natural en español latinoamericano"}
+                  }
+                ]
+              }
+            ],
+            "generationConfig": {
+              "responseModalities": ["AUDIO"],
+              "speechConfig": {"voiceConfig": {"voice": "Fola"}}
+            }
+          }
+          JSON
+          status=$(curl --silent --show-error --max-time 85 \
+            --output "$RUNNER_TEMP/fola.json" --write-out '%{http_code}' \
+            -H 'Content-Type: application/json' \
+            -H "x-goog-api-key: $GEMINI_TTS_API_KEY" \
+            --data-binary @"$RUNNER_TEMP/payload.json" \
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash-lite-tts:generateContent')
+          if [ "$status" != "200" ]; then
+            echo "::error::Google no aceptó la prueba Fola. HTTP $status"
+            python3 - "$RUNNER_TEMP/fola.json" <<'PY'
+          import json,sys
+          try:
+            e=json.load(open(sys.argv[1]))['error']
+            print('Google:',e.get('status','ERROR'),str(e.get('message','')).splitlines()[0][:280])
+          except Exception: print('Google no devolvió información de error interpretable.')
+          PY
+            exit 1
+          fi
+          python3 - "$RUNNER_TEMP/fola.json" <<'PY'
+          import json,sys,base64
+          d=json.load(open(sys.argv[1]))
+          parts=d.get('candidates',[{}])[0].get('content',{}).get('parts',[])
+          audio=next((p.get('inlineData') or p.get('inline_data') for p in parts if p.get('inlineData') or p.get('inline_data')),None)
+          assert audio and audio.get('data'),'Google no devolvió audio'
+          blob=base64.b64decode(audio['data'],validate=True)
+          assert blob.startswith(b'RIFF') and len(blob)>1000,'La respuesta no es un archivo WAV válido'
+          print('VOZ FOLA REAL VERIFICADA: audio WAV generado, bytes:',len(blob))
+          PY
