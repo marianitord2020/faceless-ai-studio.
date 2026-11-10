@@ -1,3 +1,4 @@
+import {imageRouter,hordeStart,hordePoll} from './free-image-providers.js';
 import {hfEnabled,hfImage,hfSpeech,analyzeAudio,easyVoice,withFallback} from './media-providers.js';
 import { generateVerifiedScript } from './script-generator.js';
 import { generateCoverIdeas } from './ideas-generator.js';
@@ -139,6 +140,8 @@ async function generate(prompt, format, env, skipLeonardo = false) {
     // Same account and daily allocation. This cannot bypass an account quota.
     options.push(['Cloudflare FLUX.2 klein', () => cloudflareBackupImage(prompt,format,env)]);
   }
+  if(env.ENABLE_IMAGEROUTER!=='false'&&env.IMAGEROUTER_API_KEY)options.push(['ImageRouter gratis',()=>imageRouter(env,prompt,format)]);
+  if(env.ENABLE_AI_HORDE==='true')options.push(['AI Horde',()=>hordeStart(env,prompt,format)]);
   if (!options.length) reject('No hay proveedor habilitado. Configura el binding AI de Cloudflare.', 503);
   const failures = [];
   for (const [name, call] of options) {
@@ -303,7 +306,10 @@ export default {
       if (prompt.length < 10) return reply({ error: 'Escribe un prompt de al menos 10 caracteres.' }, 400, cors);
       const format = data?.format === '16:9' ? '16:9' : '9:16';
       let result;
-      if (data?.generationId) {
+      if(String(data?.generationId||'').startsWith('horde:')){
+        if(env.ENABLE_AI_HORDE!=='true')return reply({error:'AI Horde no está habilitado.'},503,cors);
+        result=await hordePoll(String(data.generationId),data.cancelJob===true);
+      } else if (data?.generationId) {
         if (env.ENABLE_PAID_IMAGES !== 'true' || !env.LEONARDO_API_KEY) {
           return reply({ error: 'Leonardo no está activado.' }, 400, cors);
         }

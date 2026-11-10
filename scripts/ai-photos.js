@@ -33,34 +33,39 @@ async function facelessFetchPhoto(passcode, prompt, format, generationId) {
     throw new Error(String(body.error || 'Error ' + response.status).slice(0, 350));
   }
   if (body.pending && body.generationId) {
-    // Leonardo genera de forma asíncrona. Consultar el MISMO trabajo evita cobrar otro.
-    for (let n = 0; n < 20 && !facelessImageCancel; n++) {
-      await new Promise(resolve => setTimeout(resolve, 1800));
+    // Poll the same asynchronous job; never start a second generation while waiting.
+    for (let n = 0; n < (body.generationId.startsWith('horde:')?120:20) && !facelessImageCancel; n++) {
+      await new Promise(resolve => setTimeout(resolve, body.generationId.startsWith('horde:')?3000:1800));
       const result = await facelessFetchPhotoPoll(passcode, prompt, format, body.generationId);
       if (!result.pending) return result;
+      if(body.generationId.startsWith('horde:')){const status=document.getElementById('aiPhotosStatus');if(status)status.textContent='AI Horde está preparando la foto en su cola comunitaria… Puedes detener el proceso.';}
     }
-    throw new Error('Leonardo no terminó a tiempo. Inténtalo después; no se inició una segunda generación.');
+    if(body.generationId.startsWith('horde:')){
+      await facelessFetchPhotoPoll(passcode,prompt,format,body.generationId,true).catch(()=>{});
+      throw new Error(facelessImageCancel?'Generación detenida.':'AI Horde sigue en cola. Se solicitó cancelar el trabajo; puedes intentarlo más tarde.');
+    }
+    throw new Error('La IA no terminó a tiempo. No se inició una segunda generación.');
   }
   if (!body.dataURI || !/^data:image\/(jpeg|png|webp);base64,/.test(body.dataURI)) {
     throw new Error('La IA no devolvió una fotografía válida.');
   }
   return body;
 }
-async function facelessFetchPhotoPoll(passcode, prompt, format, generationId) {
+async function facelessFetchPhotoPoll(passcode, prompt, format, generationId, cancelJob=false) {
   let response;
   try {
     response = await fetch(FACELESS_IMAGE_API, {
       method: 'POST',
       signal: typeof AbortSignal.timeout==='function'?AbortSignal.timeout(90000):undefined,
       headers: { 'content-type': 'application/json', 'x-app-token': passcode },
-      body: JSON.stringify({ prompt: prompt, format: format, generationId: generationId })
+      body: JSON.stringify({ prompt: prompt, format: format, generationId: generationId, ...(cancelJob?{cancelJob:true}:{}) })
     });
   } catch (_) { throw new Error('No se pudo consultar la foto pendiente.'); }
   let data;
-  try { data = await response.json(); } catch (_) { throw new Error('Respuesta no válida de Leonardo.'); }
-  if (!response.ok) throw new Error(String(data.error || 'Error consultando Leonardo').slice(0, 350));
-  if (!data.pending && (!data.dataURI || !/^data:image\/(jpeg|png|webp);base64,/.test(data.dataURI))) {
-    throw new Error('Leonardo no devolvió imagen válida.');
+  try { data = await response.json(); } catch (_) { throw new Error('Respuesta no válida del proveedor de fotos.'); }
+  if (!response.ok) throw new Error(String(data.error || 'Error consultando la foto').slice(0, 350));
+  if (!data.cancelled && !data.pending && (!data.dataURI || !/^data:image\/(jpeg|png|webp);base64,/.test(data.dataURI))) {
+    throw new Error('El proveedor no devolvió una imagen válida.');
   }
   return data;
 }

@@ -31,6 +31,8 @@ jobs:
       DEEPGRAM_API_KEY: ${{ secrets.DEEPGRAM_API_KEY }}
       EASYVOICE_API_KEY: ${{ secrets.EASYVOICE_API_KEY }}
       HF_API_KEY: ${{ secrets.HF_API_KEY }}
+      IMAGEROUTER_API_KEY: ${{ secrets.IMAGEROUTER_API_KEY }}
+      AI_HORDE_API_KEY: ${{ secrets.AI_HORDE_API_KEY }}
     steps:
       - name: Verificar las credenciales de Cloudflare
         run: |
@@ -49,6 +51,7 @@ jobs:
           node tests/transcribe-route.mjs
           node tests/text-fallback.mjs
           node tests/media-providers.mjs
+          node tests/free-image-providers.mjs
       - name: Publicar código, variables públicas y binding AI
         uses: cloudflare/wrangler-action@v4
         with:
@@ -88,7 +91,7 @@ jobs:
         working-directory: workers
         shell: bash
         run: |
-          for key in GEMINI_API_KEY GEMINI_IMAGE_API_KEY DEEPGRAM_API_KEY EASYVOICE_API_KEY HF_API_KEY; do
+          for key in GEMINI_API_KEY GEMINI_IMAGE_API_KEY DEEPGRAM_API_KEY EASYVOICE_API_KEY HF_API_KEY IMAGEROUTER_API_KEY AI_HORDE_API_KEY; do
             if [ -n "${!key}" ]; then
               printf '%s' "${!key}" | npx --yes wrangler@4 secret put "$key" --config wrangler.toml
             fi

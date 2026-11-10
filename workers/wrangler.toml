@@ -15,3 +15,7 @@ GEMINI_IMAGE_MODEL = "gemini-3.1-flash-image"
 FREE_DAILY_ONLY = "true"
 ENABLE_HF_INFERENCE = "false"
 ENABLE_DEEPGRAM_TRIAL = "false"
+
+ENABLE_AI_HORDE = "true"
+ENABLE_IMAGEROUTER = "true"
+IMAGEROUTER_MODEL = "Tongyi-MAI/Z-Image-Turbo:free"

@@ -77,3 +77,15 @@ Para usar posteriormente créditos de prueba u opciones que podrían costar dine
 Modelos HF configurables: `HF_TEXT_MODEL`, `HF_IMAGE_MODEL`, `HF_ASR_MODEL`, `HF_TTS_MODEL`. Un modelo del Hub no implica que esté servido por Inference Providers. HF TTS no tiene modelo predeterminado: necesita comprobar un despliegue compatible; sin él el respaldo continúa a la voz existente. No se conecta una URL arbitraria ni se envían tokens a dominios configurados por visitantes.
 
 No se ha verificado generación real con claves nuevas. Las pruebas automatizadas usan respuestas simuladas para comprobar contratos, autenticación, bloqueo de coste, validación de tiempos, binarios y respaldo. Una prueba simulada no demuestra disponibilidad o crédito de una cuenta real.
+
+## Respaldos gratuitos de fotos: AI Horde e ImageRouter
+
+Orden gratuito: Cloudflare FLUX.1 → Cloudflare FLUX.2 → ImageRouter si tiene clave → AI Horde. Los dos modelos de Cloudflare comparten cuota; los nuevos respaldos usan proveedores independientes.
+
+- `ENABLE_AI_HORDE=true` habilita AI Horde. `AI_HORDE_API_KEY` es opcional para probar el acceso anónimo; una cuenta propia mejora la prioridad y evita restricciones del acceso anónimo. Los trabajos son asíncronos: se consulta su estado sin iniciar otra foto; al detener o superar seis minutos se solicita cancelar el trabajo. La disponibilidad depende de voluntarios y puede no haber capacidad.
+- `ENABLE_IMAGEROUTER=true` habilita ImageRouter únicamente cuando existe `IMAGEROUTER_API_KEY`. `IMAGEROUTER_MODEL` selecciona `Tongyi-MAI/Z-Image-Turbo:free` por defecto. Antes de generar se verifica que esté en el catálogo gratuito con precios mínimo y máximo cero. Si desaparece o cambia de precio, se omite. No se cambia a un modelo de pago. La cuota efectiva debe comprobarse en la cuenta de ImageRouter; no se promete una cantidad diaria universal para la API.
+- Guarda las claves en GitHub Actions Secrets con los nombres exactos anteriores. El despliegue las sincroniza en Cloudflare; no se escriben en el navegador.
+- Los resultados de AI Horde se solicitan como base64 WebP: el servidor no descarga enlaces arbitrarios devueltos por trabajadores comunitarios. ImageRouter usa `b64_ephemeral`.
+- `node tests/free-image-providers.mjs` verifica el catálogo gratuito, las claves ausentes, la cola, la cancelación y el respaldo tras agotar la cuota de Cloudflare con respuestas simuladas. Una prueba simulada no acredita una generación real.
+
+Registro: https://aihorde.net/register y https://imagerouter.io/ (API Keys en su panel).
