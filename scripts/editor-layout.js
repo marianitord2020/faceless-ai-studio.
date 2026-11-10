@@ -6,13 +6,17 @@ window.facelessCompactVideoEditor = function (project) {
   const shell = root.parentElement;
   const panels = ['productionStart','aiPhotosStart','aiVoiceGenerate'].map(id => byId(id).closest('section'));
   const titles = ['Video automático sin créditos','Fotografías automáticas con IA','Narración automática en español'];
-  const icons = ['▹','▧','◉'];
+  const icons = [
+    '<rect x="3" y="5" width="13" height="14" rx="3"/><path d="m16 10 5-3v10l-5-3M8 9l4 3-4 3Z"/>',
+    '<path d="M8 6 9.5 3h5L16 6h3a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z"/><circle cx="12" cy="13" r="4"/>',
+    '<path d="M5 4a14 14 0 0 0 0 16M8 7a9 9 0 0 0 0 10M19 4a14 14 0 0 1 0 16M16 7a9 9 0 0 1 0 10M12 9v6"/>'
+  ];
   const custom = panels.map((panel, i) => {
     panel.className = 'editor-video-card'; panel.id = ['videoAutoCard','videoPhotosCard','videoVoiceCard'][i];
     panel.removeAttribute('style');
     panel.querySelectorAll('h3,p:not([id])').forEach(el => el.remove());
     const header = document.createElement('div'); header.className = 'editor-card-heading';
-    const icon = document.createElement('span'); icon.className = 'editor-card-icon'; icon.textContent = icons[i]; icon.setAttribute('aria-hidden','true');
+    const icon = document.createElement('span'); icon.className = 'editor-card-icon'; icon.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+icons[i]+'</svg>'; icon.setAttribute('aria-hidden','true');
     const text = document.createElement('div'); const title = document.createElement('h3'); title.textContent = titles[i]; text.append(title);
     if(i) { const caption = document.createElement('span'); caption.id = i===1?'editorPhotoStyle':'editorVoiceSummary'; caption.className='editor-card-caption'; caption.textContent=i===1?'Cinematográfica':'Automática según el relato'; text.append(caption); }
     header.append(icon,text); panel.prepend(header);
