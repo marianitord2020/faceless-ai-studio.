@@ -252,6 +252,7 @@
     });
     $id('studioGalleryTag').textContent=state.ideas.length+' '+(state.matchType==='related'?'relacionados':state.mode==='news'?'noticias encontradas':'propuestas');
     $id('studioGalleryTitle').textContent=state.matchType==='related'?'Temas relacionados con «'+state.topic+'»':state.mode==='news'?'Noticias encontradas':state.ideas.length+' propuestas de '+(state.mode==='factual'?'documentales':'historias');
+    if(state.source==='local'){$id('studioGalleryTitle').textContent=state.ideas.length+' texto'+(state.ideas.length===1?'':'s')+' publicado'+(state.ideas.length===1?'':'s');$id('studioGalleryTag').textContent=state.ideas.length+' resultado'+(state.ideas.length===1?'':'s')}
     $id('studioGallerySubtitle').textContent=state.matchType==='related'?'No hubo coincidencias exactas. Estos resultados son cercanos a tu búsqueda; revisa el motivo y su fecha.':state.mode==='news'
       ?'Solo noticias vinculadas a fuentes reales. Selecciona una y consulta su fecha y origen.'
       :'Selecciona una portada, lee la sinopsis y luego llévala a creación.';
@@ -566,7 +567,7 @@
         imageStyle:state.imageStyle,scriptMode:data.mode,
         writtenOriginal:written?(idea.importedOriginal||writtenData.originalText):'',writtenSpanish:writtenData?.originalText||'',writtenExcerpt:writtenData?.excerpt||false,
         voicePreset:'automatic',
-        aiProvider:data.provider||'Gemini',sources,
+        aiProvider:data.provider||'Gemini',sources,inspirationSources:state.mode==='fiction'?validSources(state.sources):[],
         sourceCheckedAt:data.checkedAt||state.checkedAt,searchQuery:state.topic
       };
       projects.unshift(project);

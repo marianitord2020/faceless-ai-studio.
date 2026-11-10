@@ -97,7 +97,7 @@ jobs:
             await page.waitForFunction(()=>document.querySelector('#studioFeature h2')?.textContent==='Historia IA 1');
             await page.waitForFunction(()=>document.querySelector('#studioFeature .studio-create')?.disabled===false);
             await coverStarted;
-            await page.locator('#studioFeature .studio-create').click();
+            await page.locator('#studioFeature').getByRole('button',{name:'▣ Llevar a creación',exact:true}).click();
             await page.waitForFunction(()=>current()?.title==='Historia IA 1');
             if(!releaseCover)throw Error('La prueba no tenía una portada pendiente');
             releaseCover();
@@ -153,7 +153,7 @@ jobs:
             await page.waitForFunction(()=>document.getElementById('studioGalleryTitle').textContent.includes('Temas relacionados'));
             if(!(await page.locator('#studioCards .chip').textContent()).includes('Relacionado'))throw Error('Se ocultó la etiqueta de coincidencia aproximada');
             if(!(await page.locator('#studioFeature').textContent()).includes('mantiene Higüey'))throw Error('No se explicó por qué se relaciona el resultado');
-            await page.locator('#studioFeature .studio-create').click();
+            await page.locator('#studioFeature').getByRole('button',{name:'▣ Llevar a creación',exact:true}).click();
             await page.waitForFunction(()=>current()?.title==='Festival cultural abre sus puertas en Higüey');
             const relatedProject=await page.evaluate(()=>({topic:current().topic,original:current().originalQuery,type:current().matchType}));
             if(relatedProject.type!=='related'||relatedProject.original!=='Turismo en Higüey'||chosenRelated.topic!==relatedProject.topic)
@@ -179,7 +179,7 @@ jobs:
             await page.locator('#studioWrittenText').fill(original);
             await page.locator('#studioImportWritten').click();
             await page.waitForFunction(()=>document.querySelector('#studioFeature h2')?.textContent==='La sombra del jardín');
-            await page.locator('#studioFeature .studio-create').click();
+            await page.locator('#studioFeature').getByRole('button',{name:'▣ Llevar a creación',exact:true}).click();
             await page.waitForFunction(()=>current()?.title==='La sombra del jardín');
             const imported=await page.evaluate(()=>({text:current().scenes.map(s=>s.text).join(' '),seconds:current().scenes.reduce((a,s)=>a+s.duration,0),raw:current().writtenOriginal,mode:current().scriptMode,source:current().sources[0]?.url}));
             if(imported.text!==spanish||imported.raw!==original||imported.seconds!==60||imported.mode!=='texto_publicado'||!imported.source.includes('reddit.com')||aiCalls)throw Error('Se alteró el texto, la fuente, el idioma o se invocó IA');
@@ -191,7 +191,7 @@ jobs:
             await page.locator('#studioTopic').fill('La leyenda publicada');
             await page.locator('#studioGenerate').click();
             await page.waitForFunction(()=>document.querySelector('#studioFeature h2')?.textContent==='La leyenda publicada');
-            await page.locator('#studioFeature .studio-create').click();
+            await page.locator('#studioFeature').getByRole('button',{name:'▣ Llevar a creación',exact:true}).click();
             await page.waitForFunction(()=>current()?.title==='La leyenda publicada');
             const extracted=await page.evaluate(()=>current().narration);
             if(extracted.includes('NO NARRAR')||extracted.includes('English')||!extracted.startsWith('El viajero')||aiCalls)throw Error('El importador incluyó navegación o llamó IA');
