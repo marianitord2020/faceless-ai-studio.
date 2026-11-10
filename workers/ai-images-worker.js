@@ -1,3 +1,4 @@
+import {hfEnabled,hfImage,hfSpeech,analyzeAudio,easyVoice,withFallback} from './media-providers.js';
 import { generateVerifiedScript } from './script-generator.js';
 import { generateCoverIdeas } from './ideas-generator.js';
 /**
@@ -107,7 +108,7 @@ async function geminiImage(prompt, format, env) {
   if (!/^[\w.-]+$/.test(model)) reject('Configuración Gemini inválida', 500);
   const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent', {
     method: 'POST',
-    headers: { 'x-goog-api-key': env.GEMINI_IMAGE_API_KEY, 'content-type': 'application/json' },
+    headers: { 'x-goog-api-key': env.GEMINI_IMAGE_API_KEY||env.GEMINI_API_KEY, 'content-type': 'application/json' },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: { responseModalities: ['IMAGE'], responseFormat: { image: { aspectRatio: format } } }
@@ -124,13 +125,14 @@ async function geminiImage(prompt, format, env) {
   return { provider: 'Gemini Image', dataURI: 'data:' + mime + ';base64,' + inline.data };
 }
 async function generate(prompt, format, env, skipLeonardo = false) {
-  const paid = env.ENABLE_PAID_IMAGES === 'true';
+  const paid = env.FREE_DAILY_ONLY==='false' && env.ENABLE_PAID_IMAGES === 'true';
   const options = [];
+  if (paid && (env.GEMINI_IMAGE_API_KEY||env.GEMINI_API_KEY)) {
+    options.push(['Gemini', () => geminiImage(prompt, format, env)]);
+  }
+  if(hfEnabled(env))options.push(['Hugging Face',()=>hfImage(env,prompt,format)]);
   if (paid && env.LEONARDO_API_KEY && !skipLeonardo) {
     options.push(['Leonardo', () => leonardoStart(prompt, format, env)]);
-  }
-  if (paid && env.GEMINI_IMAGE_API_KEY) {
-    options.push(['Gemini', () => geminiImage(prompt, format, env)]);
   }
   if (env.AI) {
     options.push(['Cloudflare Workers AI', () => cloudflareImage(prompt, env)]);
@@ -195,7 +197,7 @@ async function cloudflareVoice(text,voice,env){
   if(bytes.length>6_000_000)reject('Audio por escena demasiado grande',413);
   return {provider:'Cloudflare Aura-2 español',...voiceDataURI('audio/mpeg',encode64(bytes))};
 }
-async function makeVoice(text,voice,env,style){
+async function legacyVoice(text,voice,env,style){
   const issues=[];
   // Gemini 3.8 Flash-Lite TTS tiene nivel API gratuito sujeto a cuotas.
   if(env.GEMINI_TTS_API_KEY && !['female','male'].includes(voice)){
@@ -204,6 +206,24 @@ async function makeVoice(text,voice,env,style){
   try{return await cloudflareVoice(text,voice,env);}
   catch(e){issues.push(readableError(e));}
   reject('No se pudo producir la voz: '+issues.join(' | '),503);
+}
+
+async function makeVoice(text,voice,env,style,language='es'){
+ const calls=[];
+ if(env.EASYVOICE_API_KEY)calls.push(['EasyVoice',()=>easyVoice(env,text,language,voice)]);
+ if(hfEnabled(env))calls.push(['Hugging Face',()=>hfSpeech(env,text)]);
+ calls.push(['Voz española existente',()=>legacyVoice(text,voice,env,style)]);
+ return withFallback(calls);
+}
+async function readAudio(request){
+ if(!(request.headers.get('content-type')||'').startsWith('audio/wav')){const e=new Error('Envía WAV PCM mono de 16 kHz.');e.httpStatus=415;throw e;}
+ const reader=request.body?.getReader();if(!reader)reject('Falta el audio.',400);
+ const chunks=[];let total=0;
+ try{while(true){const {done,value}=await reader.read();if(done)break;total+=value.length;if(total>19_200_044){await reader.cancel();reject('Usa un audio de hasta 10 minutos.',413);}chunks.push(value);}}finally{reader.releaseLock();}
+ const bytes=new Uint8Array(total);let at=0;for(const chunk of chunks){bytes.set(chunk,at);at+=chunk.length;}
+ const v=new DataView(bytes.buffer),tag=(o,n)=>String.fromCharCode(...bytes.subarray(o,o+n));
+ if(total<46||tag(0,4)!=='RIFF'||tag(8,4)!=='WAVE'||tag(12,4)!=='fmt '||v.getUint32(16,true)!==16||v.getUint16(20,true)!==1||v.getUint16(22,true)!==1||v.getUint32(24,true)!==16000||v.getUint16(34,true)!==16||tag(36,4)!=='data'||v.getUint32(40,true)!==total-44||(total-44)%2)reject('WAV inválido. Usa PCM mono de 16 kHz y 16 bits.',400);
+ return {bytes,duration:(total-44)/32000};
 }
 
 export default {
@@ -219,7 +239,7 @@ export default {
     };
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
     const path = new URL(request.url).pathname;
-    if (request.method !== 'POST' || !['/images','/voice','/script','/ideas','/transcribe'].includes(path)) {
+    if (request.method !== 'POST' || !['/images','/voice','/script','/ideas','/transcribe','/analyze'].includes(path)) {
       return reply({ error: 'Ruta no encontrada' }, 404, cors);
     }
     if (!env.APP_PASSCODE || env.APP_PASSCODE.length < 16) {
@@ -230,6 +250,10 @@ export default {
     }
     try {
 
+      if(path==='/analyze'){
+        const {bytes,duration}=await readAudio(request);
+        return reply(await analyzeAudio(env,bytes,'audio/wav',duration),200,cors);
+      }
       if(path==='/transcribe'){
         if(!env.AI)reject('El reconocimiento de voz no está disponible.',503);
         if(!(request.headers.get('content-type')||'').startsWith('audio/wav'))reject('Envía audio WAV mono de 16 kHz.',415);
@@ -272,7 +296,7 @@ export default {
         const voice=String(data?.voice||'Fola');
         const allowedStyles=['news','suspense','romantic','documentary','entertainment','energetic','neutral'];
         const style=allowedStyles.includes(data?.style)?data.style:'neutral';
-        const result=await makeVoice(spoken,voice,env,style);
+        const result=await makeVoice(spoken,voice,env,style,String(data?.language||'es'));
         return reply(result,200,cors);
       }
       const prompt = String(data?.prompt || '').trim().slice(0, 1800);

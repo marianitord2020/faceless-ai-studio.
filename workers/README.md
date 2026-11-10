@@ -1,3 +1,7 @@
+# Configuración vigente
+
+Consulta [la arquitectura y política gratuita](../docs/AI_ARCHITECTURE.md). `FREE_DAILY_ONLY=true` prevalece sobre las opciones de pago descritas más abajo. Deepgram y Hugging Face están preparados y desactivados; EasyVoice gratis no incluye español.
+
 # Faceless AI Studio — fotografías IA
 
 ## Implementado

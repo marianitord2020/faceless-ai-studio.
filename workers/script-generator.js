@@ -1,10 +1,11 @@
+import {hfEnabled,hfText} from './media-providers.js';
 // Guiones verificados. Ficción solo cuando el usuario la elige expresamente.
 const SCRIPT_MODEL='gemini-3.5-flash-lite';
 function scriptError(msg,status=502){const e=new Error(msg);e.httpStatus=status;throw e}
 const NEWS_TERMS=/(?:noticias?|actualidad|últimas?|recientes?|\bhoy\b|\bahora\b|\bmomento\b|esta semana|en vivo|última hora|breaking news|news today)/i;
 const FICTION_TERMS=/(?:historia ficticia|cuento ficticio|historia inventada|cuento inventado|ficción|ficcion|cuento de fantasía|invent[a-zá]* una historia|crea un cuento)/i;
 async function geminiOnlyCall(env,query,options={}){
-  const key=env.GEMINI_SCRIPT_API_KEY||env.GEMINI_TTS_API_KEY;
+  const key=env.GEMINI_SCRIPT_API_KEY||env.GEMINI_API_KEY||env.GEMINI_TTS_API_KEY;
   if(!key)scriptError('Falta conectar Gemini para crear guiones.',503);
   const model=String(env.GEMINI_SCRIPT_MODEL||SCRIPT_MODEL);
   if(!/^[\w.-]+$/.test(model))scriptError('Modelo de guion no válido.',500);
@@ -33,7 +34,7 @@ async function geminiOnlyCall(env,query,options={}){
   return {text,provider:'Gemini '+model,meta:candidate?.groundingMetadata||{},urlMeta:candidate?.urlContextMetadata||{}};
 }
 // Only generation may use Groq. Search and source extraction always require Gemini tools.
-async function geminiScriptCall(env,query,options={}){
+async function geminiGroqCall(env,query,options={}){
   try{return await geminiOnlyCall(env,query,options)}catch(error){
     if(options.search||options.url||!env.GROQ_API_KEY||error.httpStatus===500)throw error;
     const model=String(env.GROQ_TEXT_MODEL||'llama-3.3-70b-versatile');
@@ -50,6 +51,12 @@ async function geminiScriptCall(env,query,options={}){
     if(!text||data.choices[0].finish_reason==='length')scriptError('Groq devolvió contenido vacío o incompleto. Regenera.',502);
     return {text,provider:'Groq '+model,meta:{},urlMeta:{}};
   }
+}
+async function geminiScriptCall(env,query,options={}){
+ try{return await geminiGroqCall(env,query,options)}catch(error){
+  if(options.search||options.url||!hfEnabled(env)||[400,413,415,500].includes(error.httpStatus))throw error;
+  return hfText(env,query,Boolean(options.json));
+ }
 }
 function trustedSources(meta){
   const unique=new Set(),list=[];

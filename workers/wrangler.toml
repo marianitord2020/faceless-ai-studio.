@@ -10,3 +10,8 @@ binding = "AI"
 ALLOWED_ORIGIN = "https://marianitord2020.github.io"
 ENABLE_PAID_IMAGES = "false"
 GEMINI_IMAGE_MODEL = "gemini-3.1-flash-image"
+
+# Strict daily/free mode: no trial-credit or HF billed inference calls.
+FREE_DAILY_ONLY = "true"
+ENABLE_HF_INFERENCE = "false"
+ENABLE_DEEPGRAM_TRIAL = "false"

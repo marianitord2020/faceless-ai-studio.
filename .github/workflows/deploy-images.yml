@@ -26,6 +26,11 @@ jobs:
       GEMINI_TTS_API_KEY: ${{ secrets.GEMINI_TTS_API_KEY }}
       GEMINI_SCRIPT_API_KEY: ${{ secrets.GEMINI_SCRIPT_API_KEY }}
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_IMAGE_API_KEY: ${{ secrets.GEMINI_IMAGE_API_KEY }}
+      DEEPGRAM_API_KEY: ${{ secrets.DEEPGRAM_API_KEY }}
+      EASYVOICE_API_KEY: ${{ secrets.EASYVOICE_API_KEY }}
+      HF_API_KEY: ${{ secrets.HF_API_KEY }}
     steps:
       - name: Verificar las credenciales de Cloudflare
         run: |
@@ -43,6 +48,7 @@ jobs:
           node tests/media-timing.mjs
           node tests/transcribe-route.mjs
           node tests/text-fallback.mjs
+          node tests/media-providers.mjs
       - name: Publicar código, variables públicas y binding AI
         uses: cloudflare/wrangler-action@v4
         with:
@@ -74,6 +80,16 @@ jobs:
           if [ -n "$GROQ_API_KEY" ]; then
             printf '%s' "$GROQ_API_KEY" | npx --yes wrangler@4 secret put GROQ_API_KEY --config wrangler.toml
           fi
+
+      - name: Sincronizar claves privadas de los adaptadores multimedia
+        working-directory: workers
+        shell: bash
+        run: |
+          for key in GEMINI_API_KEY GEMINI_IMAGE_API_KEY DEEPGRAM_API_KEY EASYVOICE_API_KEY HF_API_KEY; do
+            if [ -n "${!key}" ]; then
+              printf '%s' "${!key}" | npx --yes wrangler@4 secret put "$key" --config wrangler.toml
+            fi
+          done
 
       - name: Comprobar que el servidor exige un código privado
         run: |
