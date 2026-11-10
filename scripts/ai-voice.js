@@ -154,6 +154,7 @@ function mountAIVoiceControls(project) {
     Historia:{voice:'Kore',mood:'documentary'},
     Romance:{voice:'Aoede',mood:'romantic'},
     Farándula:{voice:'Zephyr',mood:'entertainment'},
+    Deportes:{voice:'Charon',mood:'news'},
     Entretenimiento:{voice:'Zephyr',mood:'entertainment'},
     Curiosidades:{voice:'Puck',mood:'neutral'},
     Motivación:{voice:'Fola',mood:'energetic'},

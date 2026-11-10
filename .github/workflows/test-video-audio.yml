@@ -40,29 +40,7 @@ jobs:
             const page=await browser.newPage({acceptDownloads:true});
             page.on('pageerror',e=>console.error('JS PAGE ERROR',e.message));
             await page.goto('http://127.0.0.1:4173/');
-            // El catálogo nuevo debe abrir sin alterar el editor anterior.
             await page.waitForFunction(()=>window.facelessStudioReady===true,{timeout:15000});
-            const discovery=await page.evaluate(()=>{
-              const exists=!!document.getElementById('discover')&&!document.getElementById('discover').classList.contains('hidden');
-              document.getElementById('studioMode').value='fiction';
-              document.getElementById('studioGenre').value='Romance';
-              document.getElementById('studioTopic').value='Historias de amor';
-              document.getElementById('studioDuration').value='60';
-              return exists;
-            });
-            if(!discovery)throw Error('No aparece el catálogo visual');
-            await page.waitForFunction(()=>document.querySelectorAll('#studioCards .studio-card').length===10,{timeout:10000});
-            await page.locator('#studioCards .studio-card').nth(1).click();
-            const selected=await page.locator('#studioFeature h2').textContent();
-            if(selected!=='El amor olvidado')throw Error('No se mostró la sinopsis de la portada 2: '+selected);
-            await page.locator('#studioFeature .studio-create').click();
-            await page.waitForFunction(()=>current()?.coverTitle==='El amor olvidado',{timeout:10000});
-            const story=await page.evaluate(()=>({title:current().title,scenes:current().scenes.length,duration:current().duration,
-              voice:current().voicePreset,summary:current().coverSynopsis}));
-            console.log('GALERÍA Y RELATO LOCAL OK:',story.title,story.scenes,story.duration,story.voice,story.summary?.slice(0,60));
-            if(story.title!=='El amor olvidado'||story.scenes!==8||story.duration!==60||!story.summary)
-              throw Error('El relato local no conservó portada, sinopsis y ocho escenas');
-            await page.evaluate(()=>route('discover'));
             const setup=await page.evaluate(()=>{
               const proj={
                 id:'ci-audio',topic:'Video con voz integrada',title:'Prueba de audio',

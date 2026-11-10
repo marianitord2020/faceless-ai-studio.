@@ -26,6 +26,7 @@ function matchText(value){
   .replace(/\bdominican(?:o|os|as)\b/g,'dominicana').replace(/\bia\b/g,'inteligencia artificial')
   .replace(/\b(?:espectaculos|celebridades|famosos)\b/g,'farandula')
   .replace(/\bturistic[oa]s?\b/g,'turismo').replace(/\bmusical(?:es)?\b/g,'musica')
+  .replace(/\b(?:deportes|deportiv[oa]s?)\b/g,'deporte')
   .replace(/\beconomic[oa]s?\b/g,'economia').replace(/\btecnologic[oa]s?\b/g,'tecnologia');
 }
 function itemWords(item){

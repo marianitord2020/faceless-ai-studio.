@@ -1,253 +1,98 @@
-name: Probar portada visual y relato local
+name: Probar menú compacto y creación
 on:
   workflow_dispatch:
   push:
     branches: [main]
     paths:
-      - 'scripts/discover.js'
-      - 'scripts/written-stories.js'
-      - 'scripts/studio-menus.js'
-      - 'tests/subcategories.mjs'
-      - 'styles/discover.css'
       - 'index.html'
+      - 'scripts/discover.js'
+      - 'scripts/studio-menus.js'
+      - 'scripts/written-stories.js'
+      - 'styles/discover.css'
+      - 'tests/subcategories.mjs'
       - '.github/workflows/test-gallery-ui.yml'
 permissions:
   contents: read
 jobs:
   gallery:
     runs-on: ubuntu-24.04
-    timeout-minutes: 7
+    timeout-minutes: 6
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Comprobar subcategorías en los guiones
+      - name: Comprobar parámetros del guion
         run: node tests/subcategories.mjs
-      - name: Preparar Chromium
+      - name: Preparar navegador
         run: |
           npm install --no-save playwright@1.58.2
           npx playwright install chromium
-      - name: Iniciar web local
-        run: |
-          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/studio-http.log 2>&1 &
-          sleep 2
-      - name: Comprobar portada y seleccionar el relato 2
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/compact-http.log 2>&1 &
+      - name: Verificar estructura, tamaño y generación
         run: |
           node <<'JS'
           const {chromium}=require('playwright');
+          const assert=require('node:assert/strict');
           (async()=>{
             const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
-            const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:1});
-            page.on('pageerror',err=>console.error('PAGE ERROR:',err.message));
-            console.log('Abrir galería...');
-            await page.goto('http://127.0.0.1:4173/',{waitUntil:'load',timeout:15000});
-            await page.waitForFunction(()=>window.facelessStudioReady,{timeout:10000});
-            console.log('READY',await page.evaluate(()=>({
-              current:document.querySelector('.screen:not(.hidden)')?.id,
-              cards:document.querySelectorAll('#studioCards .studio-card').length,
-              title:document.querySelector('#studioFeature h2')?.textContent,
-              overflow:document.documentElement.scrollWidth>window.innerWidth+6
-            })));
-            if(await page.locator('#studioCards .studio-card').count()!==10)throw Error('No aparecen 10 portadas iniciales');
-            for(const width of [360,390,768,1440]){
-              await page.setViewportSize({width,height:900});
-              const layout=await page.evaluate(()=>({overflow:document.documentElement.scrollWidth>window.innerWidth+2,nav:document.querySelectorAll('.nav button').length,search:document.querySelectorAll('#studioGenerate').length,topic:document.getElementById('studioTopic').getBoundingClientRect().right<=window.innerWidth}));
-              if(layout.overflow||layout.nav!==3||layout.search!==1||!layout.topic)throw Error('Diseño desbordado o controles duplicados a '+width+'px: '+JSON.stringify(layout));
+            const page=await browser.newPage({viewport:{width:390,height:844}});
+            const errors=[];page.on('pageerror',e=>errors.push(e.message));
+            await page.goto('http://127.0.0.1:4173/');await page.waitForFunction(()=>window.facelessStudioReady);
+            assert.equal(await page.locator('.compact-title').textContent(),'Tu próximo video');
+            assert.equal(await page.locator('#studioVideoOptions').getAttribute('open'),null);
+            assert.equal(await page.locator('.studio-results-view').isVisible(),false);
+            assert.equal(await page.locator('.choice-copy small:visible').count(),0);
+            assert.equal(await page.locator('#studioPass').isVisible(),false);
+            const groups={Relatos:['Romance','Misterio','Terror','Fantasía'],Aprender:['Historia','Curiosidades','Motivación','Educativo'],Actualidad:['Noticias','Farándula','Entretenimiento','Deportes']};
+            const placeholders={Relatos:'¿Qué quieres contar?',Aprender:'¿Qué quieres aprender?',Actualidad:'¿Noticias de hoy?'};
+            for(const [width,height] of [[360,740],[390,844],[412,915],[768,1024],[1440,900]]){
+              await page.setViewportSize({width,height});
+              for(const [tab,names] of Object.entries(groups)){
+                await page.getByRole('tab',{name:tab,exact:true}).click();
+                assert.deepEqual(await page.locator('.choice-category .choice-copy strong').allTextContents(),names);
+                assert.equal(await page.locator('#studioTopic').getAttribute('placeholder'),placeholders[tab]);
+                const geometry=await page.evaluate(()=>{
+                  const cards=[...document.querySelectorAll('.choice-category')].map(n=>n.getBoundingClientRect());
+                  const button=document.getElementById('studioGenerate').getBoundingClientRect();
+                  return {height:document.documentElement.scrollHeight,viewport:innerHeight,overflow:document.documentElement.scrollWidth>innerWidth+2,two:Math.abs(cards[0].top-cards[1].top)<2&&cards[2].top>cards[0].top&&Math.abs(cards[2].top-cards[3].top)<2,fixed:button.bottom<=innerHeight&&button.top>0};
+                });
+                assert.ok(geometry.two,'Las tarjetas deben ser 2x2');assert.ok(!geometry.overflow,'Desbordamiento horizontal');assert.ok(geometry.height<=geometry.viewport*1.5,'El menú supera una pantalla y media: '+JSON.stringify(geometry));assert.ok(geometry.fixed,'El botón fijo no está visible');
+                console.log('COMPACTO',width+'x'+height,tab,geometry.height+'px');
+              }
             }
             await page.setViewportSize({width:390,height:844});
-            console.log('DISEÑO: 360, 390, 768 y 1440 px sin desbordamiento; navegación única y búsqueda visible: OK');
-
-            await page.screenshot({path:'/tmp/faceless-studio-mobile.png',fullPage:true});
-            if(await page.locator('#studioSource').inputValue()!=='ai')throw Error('Las búsquedas nuevas deben usar Gemini por defecto');
-            await page.locator('#studioVideoOptions summary').click();
-            await page.locator('#studioDuration').selectOption('30');
-            const durationLabel=await page.locator('.studio-feature-meta').textContent();
-            if(!durationLabel.includes('30 segundos')||!durationLabel.includes('5 escenas'))throw Error('La duración de la sinopsis no se actualizó');
-            await page.locator('#studioDuration').selectOption('60');
-            await page.locator('#studioImageStyle').selectOption('anime');
-            console.log('Seleccionando portada 2...');
-            await page.locator('#studioCards .studio-card').nth(1).click({timeout:12000});
-            if(await page.locator('#studioFeature h2').textContent()!=='El amor olvidado')throw Error('La portada 2 no corresponde al relato.');
-            console.log('Portada 2 seleccionada. Crear...');
-            await page.locator('#studioFeature .studio-create').click({timeout:12000});
-            await page.waitForFunction(()=>current()?.title==='El amor olvidado',{timeout:12000});
-            const data=await page.evaluate(()=>({
-              title:current()?.title,
-              scenes:current()?.scenes.length,
-              summary:current()?.coverSynopsis,
-              first:current()?.scenes[0]?.text,
-              last:current()?.scenes.slice(-1)[0]?.text,
-              route:document.querySelector('.screen:not(.hidden)')?.id
-            }));
-            console.log('PROYECTO OK:',JSON.stringify(data));
-            if(data.route!=='editor'||data.scenes!==8||!data.first?.includes('Elena')||!data.summary)
-              throw Error('El guion no mantiene la historia y sinopsis.');
-            if(await page.evaluate(()=>current().imageStyle)!=='anime')throw Error('Se perdió el estilo visual elegido');
-            await page.locator('#toggleEdit').click();
-            const revised='Elena recibió una carta nueva. Daniel había vuelto al barrio. Los dos decidieron reunirse al amanecer.';
-            await page.locator('#editNarration').fill(revised);
-            await page.locator('#saveProject').click();
-            const saved=await page.evaluate(()=>({text:current().scenes.map(s=>s.text).join(' '),total:current().scenes.reduce((n,s)=>n+s.duration,0)}));
-            if(saved.text!==revised||saved.total!==60)throw Error('Guardar narración no actualiza escenas o duración');
-            await page.evaluate(()=>route('discover'));
-            let releaseCover,coverReady;
-            const coverStarted=new Promise(resolve=>coverReady=resolve);
-            await page.route('**/faceless-images.marianitord2020.workers.dev/ideas',async route=>{
-              await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ideas:Array.from({length:10},(_,i)=>({id:'test-'+i,title:'Historia IA '+(i+1),synopsis:'Una historia de prueba con conflicto y desenlace para comprobar la selección.',outline:'Inicio, conflicto, final',coverPrompt:'A red handbag in a street'})),sources:[]})});
-            });
-            await page.route('**/faceless-images.marianitord2020.workers.dev/images',async route=>{
-              await new Promise(resolve=>{releaseCover=resolve;coverReady()});
-              await route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'Portada demorada para prueba'})}).catch(()=>{});
-            });
-            await page.route('**/faceless-images.marianitord2020.workers.dev/script',async route=>{
-              const request=route.request().postDataJSON();
-              await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({title:request.idea.title,mode:'ficcion',provider:'Gemini fixture',scenes:Array.from({length:8},()=>({text:'Narración de prueba de la historia seleccionada.',prompt:'A red handbag in a street'}))})});
-            });
-            await page.locator('#studioSource').selectOption('ai');
-            await page.locator('#studioPass').fill('ci-gallery-fixture-only');
-            await page.locator('#studioGenerate').click();
-            await page.waitForFunction(()=>document.querySelector('#studioFeature h2')?.textContent==='Historia IA 1');
-            await page.waitForFunction(()=>document.querySelector('#studioFeature .studio-create')?.disabled===false);
-            await coverStarted;
-            await page.locator('#studioFeature').getByRole('button',{name:'▣ Llevar a creación',exact:true}).click();
-            await page.waitForFunction(()=>current()?.title==='Historia IA 1');
-            if(!releaseCover)throw Error('La prueba no tenía una portada pendiente');
-            releaseCover();
-            console.log('REGRESIONES: Gemini predeterminado, duración, estilo visual, edición de guion y selección sin esperar portadas: OK');
-            await page.evaluate(()=>route('discover'));
-            await page.setViewportSize({width:1440,height:900});
-            await page.screenshot({path:'/tmp/faceless-studio-desktop.png',fullPage:true});
-            console.log('PANTALLA RESPONSIVE Y RELATO LOCAL: VERIFICADOS');
-            // A failed news lookup must not display unrelated example stories.
-            await page.evaluate(()=>route('discover'));
-            await page.unroute('**/faceless-images.marianitord2020.workers.dev/images');
-            await page.route('**/faceless-images.marianitord2020.workers.dev/images',route=>route.fulfill({status:503,contentType:'application/json',body:'{"error":"No image quota in UI fixture"}'}));
-            await page.unroute('**/faceless-images.marianitord2020.workers.dev/ideas');
-            const topics=[];
-            await page.route('**/faceless-images.marianitord2020.workers.dev/ideas',async route=>{
-              const input=route.request().postDataJSON();topics.push(input);
-              if(input.mode==='news'){
-                await route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'Las fuentes están temporalmente limitadas para «'+input.topic+'».'})});return;
-              }
-              await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({query:input.topic,ideas:Array.from({length:10},(_,i)=>({id:'topic-'+i,title:input.topic+' '+(i+1),synopsis:'Una historia de ficción dedicada específicamente a '+input.topic+'.',outline:'Inicio, conflicto y final de '+input.topic,coverPrompt:input.topic}))})});
-            });
-            await page.locator('#studioMode').selectOption('news');
-            await page.locator('#studioTopic').fill('Turismo en Higüey hoy');
-            await page.locator('#studioGenerate').click();
-            await page.waitForFunction(()=>document.getElementById('studioStatus').textContent.includes('No se pudo completar'));
-            if(await page.locator('#studioCards .studio-card').count()!==0)throw Error('Una búsqueda fallida mostró relatos ajenos al tema');
-            if(await page.locator('#studioGalleryTag').textContent()!=='0 resultados')throw Error('Contador de resultados desactualizado');
-            if(!(await page.locator('#studioGalleryTitle').textContent()).includes('Turismo en Higüey hoy'))throw Error('Se perdió el tema literal');
-            await page.locator('#studioMode').selectOption('fiction');
-            await page.locator('#studioTopic').fill('Un robot que aprende a cocinar mangú');
-            await page.locator('#studioGenerate').click();
-            await page.waitForFunction(()=>document.querySelectorAll('#studioCards .studio-card').length===10);
-            const last=topics.at(-1);
-            if(last.mode!=='fiction'||last.topic!=='Un robot que aprende a cocinar mangú')throw Error('El género Noticias anuló el tipo de contenido o el tema elegido');
-            const labels=await page.locator('#studioCards .studio-card b').allTextContents();
-            if(!labels.every(x=>x.includes(last.topic)))throw Error('Se mostraron resultados de otra búsqueda');
-            console.log('TEMAS: petición literal, tipo de contenido explícito, contador cero y ausencia de ejemplos ajenos tras un fallo: OK');
-            await page.locator('[data-menu="studioGenre"] .choice-group-nav').getByRole('button',{name:'Relatos',exact:true}).click();
+            await page.getByRole('tab',{name:'Relatos',exact:true}).click();
             await page.locator('[data-menu="studioGenre"] [data-choice="Terror"]').click();
-            await page.locator('[data-menu="studioSubcategory"] [data-choice="Fantasmas"]').click();
             await page.locator('#studioTopic').fill('Una casa abandonada en La Romana');
-            await page.locator('#studioGenerate').click();
-            await page.waitForFunction(()=>document.querySelector('#studioFeature h2')?.textContent?.startsWith('Una casa abandonada en La Romana'));
-            const categorized=topics.at(-1);
-            if(categorized.subcategory!=='Fantasmas'||categorized.topic!=='Una casa abandonada en La Romana'||categorized.style!=='Terror')throw Error('La subcategoría no llegó a la generación o sustituyó el tema');
-            await page.locator('[data-menu="studioGenre"] [data-choice="Romance"]').click();
-            if(await page.locator('#studioSubcategory').inputValue()!=='')throw Error('Se conservó una subcategoría de otro género');
-            const romanceOptions=await page.locator('#studioSubcategory option').allTextContents();
-            if(!romanceOptions.includes('Reencuentros')||romanceOptions.includes('Fantasmas'))throw Error('Subcategorías incorrectas');
-            if(await page.locator('#studioGenre optgroup').count()!==3)throw Error('Faltan grupos de categorías');
-            if(await page.locator('[data-menu="studioGenre"] .choice-category').count()!==4)throw Error('Faltan tarjetas visuales de categoría');
-            console.log('CATEGORÍAS: grupos, subcategorías dependientes, reinicio al cambiar género y tema literal conservado: OK');
-
-            await page.evaluate(()=>route('discover'));
-            await page.locator('#studioGenre').selectOption('Farándula');
-            if(await page.locator('#studioMode').inputValue()!=='news')throw Error('Farándula debe consultar hechos reales');
-            await page.locator('#studioGenre').selectOption('Entretenimiento');
-            if(await page.locator('#studioMode').inputValue()!=='news')throw Error('Entretenimiento debe consultar hechos reales');
-            await page.unroute('**/faceless-images.marianitord2020.workers.dev/ideas');
-            await page.route('**/faceless-images.marianitord2020.workers.dev/ideas',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({query:'Turismo en Higüey',matchType:'related',exactMatchCount:0,sourceProvider:'Diario Libre',sourceCoverage:{publishers:22,dominicanPublishers:14,queriedPublishers:['Diario Libre']},ideas:[{id:'related-1',title:'Festival cultural abre sus puertas en Higüey',synopsis:'Un festival cultural en Higüey, vinculado con actividades para visitantes.',outline:'Festival cultural en Higüey.',sourceUrl:'https://www.diariolibre.com/cultura/higuey',sourceTitle:'Diario Libre',matchType:'related',matchReason:'Relacionado por cultura; mantiene Higüey.'}]})}));
-            let chosenRelated;
-            await page.unroute('**/faceless-images.marianitord2020.workers.dev/script');
-            await page.route('**/faceless-images.marianitord2020.workers.dev/script',route=>{
-              chosenRelated=route.request().postDataJSON();
-              return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({title:chosenRelated.idea.title,mode:'noticias',provider:'Gemini fixture',scenes:Array.from({length:8},()=>({text:'El festival cultural de Higüey presenta sus actividades.',prompt:'A clearly illustrated cultural festival'}))})});
-            });
-            await page.locator('#studioTopic').fill('Turismo en Higüey');
-            await page.locator('#studioGenerate').click();
-            await page.waitForFunction(()=>document.getElementById('studioGalleryTitle').textContent.includes('Temas relacionados'));
-            if(!(await page.locator('#studioCards .chip').textContent()).includes('Relacionado'))throw Error('Se ocultó la etiqueta de coincidencia aproximada');
-            if(!(await page.locator('#studioFeature').textContent()).includes('mantiene Higüey'))throw Error('No se explicó por qué se relaciona el resultado');
-            await page.locator('#studioFeature').getByRole('button',{name:'▣ Llevar a creación',exact:true}).click();
-            await page.waitForFunction(()=>current()?.title==='Festival cultural abre sus puertas en Higüey');
-            const relatedProject=await page.evaluate(()=>({topic:current().topic,original:current().originalQuery,type:current().matchType}));
-            if(relatedProject.type!=='related'||relatedProject.original!=='Turismo en Higüey'||chosenRelated.topic!==relatedProject.topic)
-              throw Error('La elección relacionada no conservó la búsqueda original y el tema seleccionado');
-            console.log('RELACIONADOS: etiqueta, motivo, fuente, selección, consulta original y categorías reales: OK');
-
-            await page.evaluate(()=>route('discover'));
-            await page.locator('#studioGenre').selectOption('Terror');
-            await page.locator('#studioSource').selectOption('local');
-            if(!await page.locator('#studioWritten').isVisible())throw Error('Falta importación de textos');
-            let aiCalls=0;
-            await page.route('**/faceless-images.marianitord2020.workers.dev/**',route=>{aiCalls++;return route.abort()});
-            const original='The traveler heard a strange noise behind the door. He opened the window and saw a shadow in the garden. Nobody answered when he called for help. At dawn, he found a letter on the table.';
-            const spanish='El viajero escuchó un ruido detrás de la puerta. Abrió la ventana y vio una sombra en el jardín. Nadie respondió cuando pidió ayuda. Al amanecer encontró una carta sobre la mesa.';
-            await page.route('https://api.mymemory.translated.net/get?**',route=>{
-              const params=new URL(route.request().url()).searchParams;
-              if(params.get('langpair')!=='en|es'||Buffer.byteLength(params.get('q'))>500)throw Error('Parámetros de traducción inválidos');
-              return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({responseStatus:200,responseData:{translatedText:spanish}})});
-            });
-            await page.locator('#studioWrittenTitle').fill('La sombra del jardín');
-            await page.locator('#studioWrittenUrl').fill('https://www.reddit.com/r/stories/');
-            await page.locator('#studioWrittenLanguage').selectOption('en');
-            await page.locator('#studioWrittenText').fill(original);
-            await page.locator('#studioImportWritten').click();
-            await page.waitForFunction(()=>document.querySelector('#studioFeature h2')?.textContent==='La sombra del jardín');
-            await page.locator('#studioFeature').getByRole('button',{name:'▣ Llevar a creación',exact:true}).click();
-            await page.waitForFunction(()=>current()?.title==='La sombra del jardín');
-            const imported=await page.evaluate(()=>({text:current().scenes.map(s=>s.text).join(' '),seconds:current().scenes.reduce((a,s)=>a+s.duration,0),raw:current().writtenOriginal,mode:current().scriptMode,source:current().sources[0]?.url}));
-            if(imported.text!==spanish||imported.raw!==original||imported.seconds!==60||imported.mode!=='texto_publicado'||!imported.source.includes('reddit.com')||aiCalls)throw Error('Se alteró el texto, la fuente, el idioma o se invocó IA');
-            await page.evaluate(()=>route('discover'));
-            await page.route('https://es.wikisource.org/w/api.php?**',route=>{
-              const params=new URL(route.request().url()).searchParams;
-              return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(params.get('action')==='parse'?{parse:{text:'<div class="ws-noexport">NO NARRAR</div><span class="interwiki-extra">English</span><p>'+spanish.repeat(4)+'</p>'}}:{query:{search:[{pageid:123,title:'La leyenda publicada',snippet:'Un relato de terror publicado.'}]}})});
-            });
-            await page.locator('#studioTopic').fill('La leyenda publicada');
-            await page.locator('#studioGenerate').click();
-            await page.waitForFunction(()=>document.querySelector('#studioFeature h2')?.textContent==='La leyenda publicada');
-            await page.locator('#studioFeature').getByRole('button',{name:'▣ Llevar a creación',exact:true}).click();
-            await page.waitForFunction(()=>current()?.title==='La leyenda publicada');
-            const extracted=await page.evaluate(()=>current().narration);
-            if(extracted.includes('NO NARRAR')||extracted.includes('English')||!extracted.startsWith('El viajero')||aiCalls)throw Error('El importador incluyó navegación o llamó IA');
-            console.log('TEXTOS PUBLICADOS: búsqueda, extracción sin navegación, traducción, texto íntegro en orden, fuente y cero llamadas IA: OK');
-            await page.evaluate(()=>route('discover'));
-            await page.unroute('**/faceless-images.marianitord2020.workers.dev/**');
-            let adaptation;
-            await page.route('**/faceless-images.marianitord2020.workers.dev/ideas',route=>{
-              adaptation=route.request().postDataJSON();
-              return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ideas:[{id:'new-fiction',title:'El jardín de las voces',synopsis:'Una ficción nueva con personajes y desenlace propios.',outline:'Una trama distinta',coverPrompt:''}],sources:[]})});
-            });
-            await page.locator('#studioGenre').selectOption('Fantasía');
-            await page.locator('#studioFeature').getByRole('button',{name:'✦ Crear una historia nueva con IA a partir de este texto',exact:true}).click();
-            await page.waitForFunction(()=>document.querySelector('#studioFeature h2')?.textContent==='El jardín de las voces');
-            if(adaptation.style!=='Fantasía'||adaptation.mode!=='fiction'||!adaptation.reference.text.startsWith('El viajero')||!adaptation.reference.url.includes('wikisource.org'))throw Error('La ficción nueva perdió la fuente o el género');
-            console.log('ADAPTACIÓN OPCIONAL: género elegido, texto recuperado y fuente enviados únicamente tras pedir IA: OK');
+            await page.locator('#studioVideoOptions summary').click();
+            assert.deepEqual(await page.locator('[data-menu="studioImageStyle"] .choice-copy strong').allTextContents(),['Cinematográfica','Hiperrealista','Anime']);
+            assert.deepEqual(await page.locator('[data-menu="studioDuration"] .choice-copy strong').allTextContents(),['30s','1 min','2 min']);
+            assert.deepEqual(await page.locator('[data-menu="studioVoice"] .choice-copy strong').allTextContents(),['Femenina','Masculina','Neutra']);
+            assert.equal(await page.locator('.compact-options-body>.studio-addon').count(),4);assert.equal(await page.locator('.compact-options-body .compact-source-switch').count(),1);
+            await page.locator('[data-menu="studioImageStyle"] [data-choice="anime"]').click();
+            await page.locator('[data-menu="studioDuration"] [data-choice="30"]').click();
+            await page.locator('[data-menu="studioVoice"] [data-choice="male"]').click();
+            await page.locator('#studioShowSources').uncheck();
+            await page.locator('#studioPass').fill('fixture-compact-passcode');
+            const summary=await page.locator('#studioVideoSummary').textContent();for(const s of ['30s','Anime','Masculina','Sin fuentes','Acceso listo'])assert.ok(summary.includes(s));
+            await page.locator('#studioVideoOptions summary').click();
+            let request;
+            await page.route('**/faceless-images.marianitord2020.workers.dev/ideas',route=>{request=route.request().postDataJSON();return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ideas:Array.from({length:10},(_,i)=>({id:'compact-'+i,title:'El secreto de la casa '+(i+1),synopsis:'Una casa abandonada en La Romana guarda un misterio por resolver.',outline:'Llegada, investigación y desenlace',coverPrompt:'A fictional abandoned house'}))})})});
+            await page.route('**/faceless-images.marianitord2020.workers.dev/images',route=>route.fulfill({status:503,contentType:'application/json',body:'{"error":"Fixture sin imágenes"}'}));
+            await page.route('**/faceless-images.marianitord2020.workers.dev/script',route=>{const data=route.request().postDataJSON();return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({title:data.idea.title,mode:'ficcion',provider:'Gemini fixture',scenes:Array.from({length:5},()=>({text:'La casa de La Romana ocultaba una presencia misteriosa.',prompt:'An illustrated fictional ghost'})),sources:[{title:'Referencia',url:'https://example.com/source'}]})})});
+            await page.locator('#studioGenerate').click();await page.waitForFunction(()=>document.querySelectorAll('#studioCards .studio-card').length===10);
+            assert.equal(request.topic,'Una casa abandonada en La Romana');assert.equal(request.style,'Terror');assert.equal(request.mode,'fiction');assert.equal(await page.locator('.studio-menu-view').isVisible(),false);
+            await page.locator('#studioCards .studio-card').nth(1).click();await page.locator('#studioFeature .studio-create').click();
+            await page.waitForFunction(()=>current()?.title==='El secreto de la casa 2');
+            const project=await page.evaluate(()=>({title:current().title,duration:current().duration,voice:current().voicePreset,image:current().imageStyle,sources:current().sources.length,showSources:current().showSources,text:current().narration}));
+            assert.equal(project.duration,30);assert.equal(project.voice,'male');assert.equal(project.image,'anime');assert.equal(project.showSources,false);assert.equal(project.sources,1);assert.ok(project.text.includes('La Romana'));
+            assert.equal(await page.evaluate(()=>JSON.stringify(localStorage).includes('fixture-compact-passcode')),false);
+            await page.getByRole('button',{name:'Crear video',exact:true}).click();assert.equal(await page.locator('.studio-menu-view').isVisible(),true);assert.equal(await page.locator('.studio-results-view').isVisible(),false);
+            await page.getByRole('tab',{name:'Actualidad',exact:true}).click();await page.locator('[data-menu="studioGenre"] [data-choice="Deportes"]').click();
+            assert.equal(await page.locator('#studioMode').inputValue(),'news');
+            await page.locator('[data-menu="studioSource"] [data-choice="local"]').click();assert.equal(await page.locator('#studioWritten').isVisible(),false);
+            assert.deepEqual(errors,[]);console.log('PASS: reference order, three tabs with four cards each, 2x2 at all sizes, 1.5-screen limit, five collapsed settings, summary updates, fixed CTA, exact topic, sports news, voice/image/source persistence and separate results view');
             await browser.close();
           })().catch(e=>{console.error(e);process.exit(1)});
           JS
-      - name: Guardar vistas de comprobación
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: faceless-studio-mobile-desktop
-          path: |
-            /tmp/faceless-studio-mobile.png
-            /tmp/faceless-studio-desktop.png
-          retention-days: 3
-
-

@@ -4,7 +4,7 @@
   'use strict';
   const API='https://faceless-images.marianitord2020.workers.dev';
   const styles=['Romance','Misterio','Terror','Fantasía','Historia','Curiosidades','Noticias','Farándula','Entretenimiento','Motivación','Educativo'];
-  const categoryGroups=[['Ficción y relatos',['Romance','Misterio','Terror','Fantasía']],['Aprender e inspirar',['Historia','Curiosidades','Motivación','Educativo']],['Actualidad y cultura',['Noticias','Farándula','Entretenimiento']]];
+  const categoryGroups=[['Ficción y relatos',['Romance','Misterio','Terror','Fantasía']],['Aprender e inspirar',['Historia','Curiosidades','Motivación','Educativo']],['Actualidad y cultura',['Noticias','Farándula','Entretenimiento','Deportes']]];
   const subcategories={
     Romance:['Reencuentros','Amor imposible','Segundas oportunidades','Amor y traición','Historias de pareja'],
     Misterio:['Secretos familiares','Enigmas','Desapariciones ficticias','Investigación','Suspenso psicológico'],
@@ -18,7 +18,7 @@
     Farándula:['Música','Cine','Televisión','Celebridades','Redes sociales'],
     Entretenimiento:['Cine','Series','Música','Eventos','Videojuegos','Humor']
   };
-  const categoryTopics={Romance:'Historias de amor',Misterio:'Misterios y secretos',Terror:'Historias de terror',Fantasía:'Aventuras de fantasía',Historia:'Historia de República Dominicana',Curiosidades:'Curiosidades del mundo',Motivación:'Historias de superación',Educativo:'Aprender algo nuevo',Noticias:'Noticias de República Dominicana hoy',Farándula:'Farándula hoy',Entretenimiento:'Entretenimiento hoy'};
+  const categoryTopics={Romance:'Historias de amor',Misterio:'Misterios y secretos',Terror:'Historias de terror',Fantasía:'Aventuras de fantasía',Historia:'Historia de República Dominicana',Curiosidades:'Curiosidades del mundo',Motivación:'Historias de superación',Educativo:'Aprender algo nuevo',Noticias:'Noticias de República Dominicana hoy',Farándula:'Farándula hoy',Entretenimiento:'Entretenimiento hoy',Deportes:'Deportes de República Dominicana hoy'};
   let subcategoryGenre='';
   const imageStyles=[
     ['cinematic','Fotografía cinematográfica'],
@@ -36,6 +36,7 @@
     Curiosidades:{emoji:'🧠',colors:['#203e53','#3281a3','#121a40']},
     Noticias:{emoji:'📰',colors:['#093a66','#266da0','#07172e']},
     Farándula:{emoji:'🌟',colors:['#69315d','#ac4691','#30215d']},
+    Deportes:{emoji:'🏆',colors:['#142344','#35499a','#181636']},
     Entretenimiento:{emoji:'🎬',colors:['#69315d','#ac4691','#30215d']},
     Motivación:{emoji:'✨',colors:['#5b355e','#cc7054','#192b62']},
     Educativo:{emoji:'🎓',colors:['#134e58','#248487','#15254b']}
@@ -124,25 +125,22 @@
   function shell(){
     const root=$id('discover');if(!root)return;
     root.innerHTML=
-    '<div class="studio-layout">'+
-    '<div class="studio-center">'+
-    '<div class="studio-title"><div><span class="studio-eyebrow">TU ESPACIO CREATIVO</span><h1>Una idea. <span class="sparkle">Tu próximo video.</span></h1>'+
-    '<p>Encuentra una historia, elige tu favorita y dale vida.</p></div></div>'+
-    '<div class="studio-settings">'+
-    '<div class="studio-fields">'+
-    '<div class="studio-field"><label for="studioGenre">Categoría</label><select id="studioGenre"></select></div>'+
-    '<div class="studio-field"><label for="studioTopic">¿Qué quieres contar?</label><input id="studioTopic" type="text" maxlength="220" placeholder="Ej.: Historias de amor"></div>'+
-    '<div class="studio-field"><label for="studioSubcategory">Subcategoría</label><select id="studioSubcategory"></select></div>'+
-    '<div class="studio-field"><label for="studioMode">Tipo de contenido</label><select id="studioMode">'+
-    '<option value="fiction">Relatos creativos</option><option value="news">Noticias reales y actuales</option><option value="factual">Documentales / hechos reales</option></select></div>'+
-    '<div class="studio-field"><button class="studio-generate" type="button" id="studioGenerate">⌕ Generar 10 propuestas</button></div></div>'+
-    '<div class="studio-addons">'+
-    '<div class="studio-addon"><label for="studioSource">Cómo quieres empezar</label><select id="studioSource"><option value="ai">Crear con IA · Gemini</option><option value="local">Buscar textos publicados</option></select></div>'+
-    '<div class="studio-addon"><label for="studioImageStyle">Estilo de imágenes</label><select id="studioImageStyle"></select></div>'+
-    '<div class="studio-addon"><label for="studioDuration">Duración</label><select id="studioDuration"><option value="30">30 segundos</option><option value="60" selected>60 segundos</option><option value="120">120 segundos</option></select></div>'+
-    '<div class="studio-addon pass"><label for="studioPass">Código de acceso</label><input id="studioPass" type="password" autocomplete="new-password" placeholder="Tu código privado"></div>'+
-    '<div class="studio-helper" id="studioCoverage">Noticias de República Dominicana y medios en español, con enlace a su fuente. Las imágenes generadas son ilustraciones editoriales.</div></div>'+
-    '</div>'+
+    '<div class="studio-layout"><div class="studio-center">'+
+    '<div class="studio-menu-view">'+
+    '<h1 class="compact-title">Tu próximo video</h1>'+
+    '<section class="compact-story"><h2><span>01</span> Encuentra tu historia</h2><div class="compact-search"><input id="studioTopic" type="text" maxlength="220" placeholder="¿Qué quieres contar?" aria-label="Tema de tu video"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10" cy="10" r="7"/><path d="m15 15 6 6"/></svg></div></section>'+
+    '<div class="compact-category"><select id="studioGenre" aria-label="Categoría"></select></div>'+
+    '<div hidden class="studio-models"><select id="studioSubcategory" aria-label="Subcategoría"><option value="">Todos los temas</option></select><select id="studioMode" aria-label="Tipo de contenido"><option value="fiction">Relatos creativos</option><option value="news">Noticias reales</option><option value="factual">Documentales</option></select></div>'+
+    '<section class="compact-origin"><h2><span>02</span> Cómo quieres empezar</h2><select id="studioSource" aria-label="Cómo quieres empezar"><option value="ai">Crear con IA</option><option value="local">Explorar relatos</option></select></section>'+
+    '<details class="studio-video-options compact-options" id="studioVideoOptions"><summary><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m10 2-1 3-3 1-3-1-2 4 2 2v3l-2 2 2 4 3-1 3 1 1 3h4l1-3 3-1 3 1 2-4-2-2v-3l2-2-2-4-3 1-3-1-1-3h-4Z"/><circle cx="12" cy="12" r="3"/></svg><span id="studioVideoSummary">Ajustes opcional • 60s • Cinematográfica</span></summary><div class="compact-options-body">'+
+    '<div class="studio-addon"><label for="studioImageStyle">Estilo de imagen</label><select id="studioImageStyle"></select></div>'+
+    '<div class="studio-addon"><label for="studioDuration">Duración</label><select id="studioDuration"><option value="30">30s</option><option value="60" selected>1 min</option><option value="120">2 min</option></select></div>'+
+    '<div class="studio-addon"><label for="studioVoice">Voz</label><select id="studioVoice"><option value="female">Femenina</option><option value="male">Masculina</option><option value="neutral">Neutra</option></select></div>'+
+    '<div class="compact-source-switch"><label for="studioShowSources">Fuentes</label><input type="checkbox" id="studioShowSources" role="switch" checked></div>'+
+    '<div class="studio-addon studio-access"><label for="studioPass">Código de acceso</label><input id="studioPass" type="password" autocomplete="new-password" placeholder="Tu código privado"></div>'+
+    '</div></details>'+
+    '</div><div class="studio-fixed-action"><button class="studio-generate" type="button" id="studioGenerate">Generar 10 propuestas</button></div>'+
+    '<div class="studio-results-view" hidden><button id="studioBackToMenu" class="btn small outline" type="button">← Volver</button><p id="studioCoverage" hidden></p>'+
     '<div id="studioWritten" class="studio-settings" hidden>'+
     '<p>Busca obras en Wikisource o importa un relato de otra página.</p>'+
     '<a id="studioReddit" class="studio-source" href="https://www.reddit.com/search/" target="_blank" rel="noopener noreferrer">↗ Buscar relatos en Reddit</a>'+
@@ -158,31 +156,22 @@
     '<p id="studioStatus" class="studio-status" aria-live="polite"></p>'+
     '<div class="studio-results-layout"><div id="studioCards" class="studio-cards"></div>'+
     '<aside class="studio-feature" id="studioFeature" aria-label="Relato seleccionado"></aside></div>'+
-    '</div></div>';
-    // One primary navigation; no duplicate sidebar links or placeholder media shortcuts.
-    const panel=root.querySelector('.studio-settings');panel.classList.add('studio-search-panel');
-    const heading=e('div','studio-panel-heading');
-    heading.append(e('span','studio-step','01'),e('div',null,'Encuentra tu historia'));
-    panel.prepend(heading);
-    const fields=panel.querySelector('.studio-fields'),addons=panel.querySelector('.studio-addons');
-    const topicField=$id('studioTopic').parentElement;topicField.classList.add('studio-topic');fields.prepend(topicField);
-    const sourceField=$id('studioSource').parentElement;sourceField.classList.add('studio-field','studio-origin');fields.appendChild(sourceField);
-    sourceField.appendChild(e('p','studio-field-hint',''));
-    const action=$id('studioGenerate').parentElement;action.className='studio-search-action';
-    const helper=$id('studioCoverage'),sourceInfo=e('details','studio-source-info');
-    sourceInfo.append(e('summary',null,'Fuentes y cobertura'),helper);
-    const searchFooter=e('div','studio-search-footer');searchFooter.append(sourceInfo,action);panel.append(searchFooter);
-    const preferences=e('details','studio-video-options');preferences.id='studioVideoOptions';
-    const preferencesSummary=e('summary');const preferencesTitle=e('span','studio-options-title','Imagen y duración');
-    const preferencesValue=e('span','studio-options-value','60 s · Cinematográfica');preferencesValue.id='studioVideoSummary';
-    preferencesSummary.append(preferencesTitle,preferencesValue);preferences.append(preferencesSummary,addons);
-    const access=addons.querySelector('#studioPass').parentElement;access.classList.add('studio-access');
-    panel.insertBefore(preferences,searchFooter);panel.insertBefore(access,searchFooter);
-    function updateVideoSummary(){const names={cinematic:'Cinematográfica',hyperreal:'Hiperrealista','3d':'Animación 3D','2d':'Ilustración 2D',anime:'Anime',cartoon:'Caricatura',historical:'Recreación histórica'};$id('studioVideoSummary').textContent=$id('studioDuration').value+' s · '+names[$id('studioImageStyle').value]}
-    $id('studioDuration').addEventListener('change',updateVideoSummary);$id('studioImageStyle').addEventListener('change',updateVideoSummary);
-    const writtenHeading=e('div','studio-panel-heading');writtenHeading.append(e('span','studio-step','↳'),e('div',null,'Importa un relato'));
-    $id('studioWritten').prepend(writtenHeading);
-    const resultsHeading=root.querySelector('.studio-results-head');resultsHeading.prepend(e('span','studio-step','02'));
+    '</div></div></div>';
+    function showMenu(){root.querySelector('.studio-menu-view').hidden=false;root.querySelector('.studio-results-view').hidden=true;root.classList.remove('studio-show-results');window.scrollTo({top:0,behavior:'instant'})}
+    function showResults(){root.querySelector('.studio-menu-view').hidden=true;root.querySelector('.studio-results-view').hidden=false;root.classList.add('studio-show-results');window.scrollTo({top:0,behavior:'instant'})}
+    window.facelessShowStudioMenu=showMenu;window.facelessShowStudioResults=showResults;
+    $id('studioBackToMenu').onclick=showMenu;
+    function updateVideoSummary(){
+      const names={cinematic:'Cinematográfica',hyperreal:'Hiperrealista',anime:'Anime'};
+      let text='Ajustes opcional • '+$id('studioDuration').value+'s • '+names[$id('studioImageStyle').value];
+      if($id('studioVoice').value!=='female')text+=' • '+($id('studioVoice').value==='male'?'Masculina':'Neutra');
+      if(!$id('studioShowSources').checked)text+=' • Sin fuentes';
+      if($id('studioPass').value.trim())text+=' • Acceso listo';
+      $id('studioVideoSummary').textContent=text;
+    }
+    for(const key of ['studioDuration','studioImageStyle','studioVoice','studioShowSources'])$id(key).addEventListener('change',updateVideoSummary);
+    $id('studioPass').addEventListener('input',()=>{$id('studioPass').setCustomValidity('');updateVideoSummary()});
+    $id('studioShowSources').addEventListener('change',renderFeature);
     const genre=$id('studioGenre');
     for(const [label,names] of categoryGroups){const group=e('optgroup');group.label=label;for(const name of names)group.append(new Option(name,name));genre.append(group)}
     function refreshSubcategories(){
@@ -191,16 +180,16 @@
       for(const name of subcategories[genre.value]||[])sub.add(new Option(name,name));
     }
     genre.value='Romance';refreshSubcategories();
-    const image=$id('studioImageStyle');for(const [key,name] of imageStyles)image.add(new Option(name,key));
-    $id('studioTopic').value='Historias de amor';
-    $id('studioTopic').addEventListener('input',()=>{$id('studioTopic').dataset.edited='true'});
+    const image=$id('studioImageStyle');for(const [key,name] of imageStyles)if(['cinematic','hyperreal','anime'].includes(key))image.add(new Option(name,key));
+    $id('studioTopic').value='';
+    $id('studioTopic').addEventListener('input',()=>{$id('studioTopic').dataset.edited='true';$id('studioTopic').setCustomValidity('')});
     genre.onchange=()=>{
       refreshSubcategories();
-      if(!$id('studioTopic').dataset.edited)$id('studioTopic').value=categoryTopics[genre.value]||'';
-      if(['Noticias','Farándula','Entretenimiento'].includes(genre.value)){
+
+      if(['Noticias','Farándula','Entretenimiento','Deportes'].includes(genre.value)){
         $id('studioMode').value='news';
         $id('studioSource').value='ai';
-      }else if($id('studioMode').value==='news')$id('studioMode').value='fiction';
+      }else $id('studioMode').value=['Historia','Curiosidades','Motivación','Educativo'].includes(genre.value)?'factual':'fiction';
       $id('studioSource').onchange();
       if(state.source==='demo'){
         state.ideas=[];state.topic=$id('studioTopic').value;state.style=genre.value;state.mode=$id('studioMode').value;state.epoch++;
@@ -208,7 +197,7 @@
       }
     };
     $id('studioMode').onchange=()=>{
-      if($id('studioMode').value==='news'&&!['Noticias','Farándula','Entretenimiento'].includes(genre.value)){genre.value='Noticias';if(!$id('studioTopic').dataset.edited)$id('studioTopic').value=categoryTopics.Noticias}
+      if($id('studioMode').value==='news'&&!['Noticias','Farándula','Entretenimiento','Deportes'].includes(genre.value)){genre.value='Noticias';}
       refreshSubcategories();
       if($id('studioMode').value!=='fiction')$id('studioSource').value='ai';
       $id('studioSource').onchange();
@@ -216,11 +205,9 @@
     $id('studioSource').onchange=()=>{
       const local=$id('studioSource').value==='local';
       $id('studioWritten').hidden=!local;
-      $id('studioPass').parentElement.hidden=local;
-      const mode=$id('studioMode').value;
-      sourceField.querySelector('.studio-field-hint').textContent=local?'Busca relatos publicados o importa un texto para traducirlo.':mode==='news'?'Consulta noticias con fuentes reales y elige una para crear el guion.':mode==='factual'?'Consulta información documentada y prepara un guion con sus fuentes.':'Crea propuestas originales sobre el tema que escribas.';
-      $id('studioGenerate').textContent=local?'⌕ Buscar textos publicados':'⌕ Generar 10 propuestas';
-      if(local)$id('studioMode').value='fiction';
+
+      $id('studioGenerate').textContent='Generar 10 propuestas';
+      $id('studioMode').value=local?'fiction':['Noticias','Farándula','Entretenimiento','Deportes'].includes(genre.value)?'news':['Historia','Curiosidades','Motivación','Educativo'].includes(genre.value)?'factual':'fiction';
       $id('studioReddit').href='https://www.reddit.com/search/?'+new URLSearchParams({q:$id('studioTopic').value});
     };
     $id('studioImportWritten').onclick=importWritten;
@@ -228,14 +215,11 @@
     $id('studioDuration').onchange=renderFeature;
     $id('studioGenerate').onclick=generateIdeas;
     $id('studioTopic').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();generateIdeas()}});
-    // Portadas de demostración visibles al abrir, igual que el diseño aprobado.
-    state.ideas=localIdeas('Historias de amor','Romance');
-    state.topic='Historias de amor';
-    state.style='Romance';state.source='demo';state.mode='fiction';
+    state.ideas=[];state.topic='';state.style='Romance';state.source='ai';state.mode='fiction';
     $id('studioSource').value='ai';$id('studioSource').onchange();
-    renderCards();renderFeature();
-    setStatus('Relatos de ejemplo · Escribe tu tema para encontrar o crear otra historia.');
+    updateVideoSummary();showMenu();
   }
+
   function initialState(){
     $id('studioGalleryTitle').textContent=state.mode==='news'?'Noticias sobre «'+state.topic+'»':'Resultados de «'+state.topic+'»';
     $id('studioGalleryTag').textContent='0 resultados';
@@ -299,7 +283,7 @@
       :'Selecciona una portada, lee la sinopsis y luego llévala a creación.';
   }
   function renderFeature(){
-    const feature=$id('studioFeature');feature.replaceChildren();
+    const feature=$id('studioFeature');feature.replaceChildren();feature.classList.toggle('studio-hide-sources',!$id('studioShowSources').checked);
     const idea=selectedIdea();if(!idea){initialState();return}
     const picture=e('div','studio-feature-picture');visual(picture,idea,state.selected,true);
     const text=e('div','studio-feature-text');
@@ -394,14 +378,17 @@
   }
   async function generateIdeas(){
     if(state.busy||state.building)return;
-    const topic=$id('studioTopic').value.trim().replace(/\s+/g,' ');
+    const topic=($id('studioTopic').value.trim()||categoryTopics[$id('studioGenre').value]||'Historias de amor').replace(/\s+/g,' ');
     const style=$id('studioGenre').value;
     const subcategory=$id('studioSubcategory').value;
     const requestedMode=$id('studioMode').value;
     const local=$id('studioSource').value==='local';
     const mode=requestedMode;
-    if(topic.length<5){setStatus('Escribe un tema de al menos cinco caracteres.');$id('studioTopic').focus();return}
+    if(topic.length<5){$id('studioTopic').setCustomValidity('Escribe un tema de al menos cinco caracteres.');$id('studioTopic').reportValidity();return}
+    $id('studioTopic').setCustomValidity('');
+    if(!local&&($id('studioPass').value.trim()||state.pass).length<16){$id('studioVideoOptions').open=true;$id('studioPass').setCustomValidity('Introduce tu código de acceso (mínimo 16 caracteres).');$id('studioPass').reportValidity();return}
     if(local&&mode!=='fiction'){setStatus('Las noticias y los documentales reales requieren IA y fuentes actuales. Cambia el origen a «IA — Gemini».');return}
+    window.facelessShowStudioResults();
     state.busy=true;state.epoch++;const epoch=state.epoch;
     state.pass=$id('studioPass').value.trim()||state.pass;
     state.topic=topic;state.style=style;state.subcategory=subcategory;state.mode=mode;state.source=local?'local':'ai';
@@ -608,7 +595,8 @@
         coverTitle:idea.title,coverSynopsis:idea.synopsis,coverPrompt:idea.coverPrompt,
         imageStyle:state.imageStyle,scriptMode:data.mode,
         writtenOriginal:written?(idea.importedOriginal||writtenData.originalText):'',writtenSpanish:writtenData?.originalText||'',writtenExcerpt:writtenData?.excerpt||false,
-        voicePreset:'automatic',
+        voicePreset:$id('studioVoice').value==='neutral'?'automatic':$id('studioVoice').value,
+        voiceMood:$id('studioVoice').value==='neutral'?'neutral':'automatic',showSources:$id('studioShowSources').checked,
         aiProvider:data.provider||'Gemini',sources,inspirationSources:state.mode==='fiction'?validSources(state.sources):[],
         sourceCheckedAt:data.checkedAt||state.checkedAt,searchQuery:state.topic
       };
