@@ -447,7 +447,7 @@
         setStatus('✓ '+state.ideas.length+' textos publicados'+(state.matchType==='related'?' relacionados con el género elegido':'')+'. La descripción es un fragmento de la fuente, sin reescritura con IA.');
       }else{
         setStatus(mode==='news'?'Consultando GDELT para noticias reales y fuentes actuales…':
-          'Gemini está preparando 10 títulos y sinopsis sobre «'+topic+'»…');
+          'La IA está preparando 10 títulos y sinopsis sobre «'+topic+'»…');
         const result=await callEndpoint('/ideas',{topic,style,mode,subcategory});
         if(epoch!==state.epoch)return;
         if(!Array.isArray(result.ideas)||!result.ideas.length)throw Error('La búsqueda no devolvió propuestas verificables.');
@@ -602,7 +602,7 @@
     const local=written||state.source==='demo';
     const creationTopic=idea.matchType==='related'?idea.title:state.topic;
     setStatus(local?'Creando proyecto con el relato local seleccionado…':
-      'Gemini está escribiendo el guion completo de «'+idea.title+'» sin cambiar su trama…');
+      'La IA está escribiendo el guion completo de «'+idea.title+'» sin cambiar su trama…');
     try{
       let writtenData;
       if(written){

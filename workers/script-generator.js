@@ -3,8 +3,11 @@ const SCRIPT_MODEL='gemini-3.5-flash-lite';
 function scriptError(msg,status=502){const e=new Error(msg);e.httpStatus=status;throw e}
 const NEWS_TERMS=/(?:noticias?|actualidad|últimas?|recientes?|\bhoy\b|\bahora\b|\bmomento\b|esta semana|en vivo|última hora|breaking news|news today)/i;
 const FICTION_TERMS=/(?:historia ficticia|cuento ficticio|historia inventada|cuento inventado|ficción|ficcion|cuento de fantasía|invent[a-zá]* una historia|crea un cuento)/i;
-async function geminiScriptCall(env,query,options={}){
-  if(!env.GEMINI_TTS_API_KEY)scriptError('Falta conectar Gemini para crear guiones.',503);
+async function geminiOnlyCall(env,query,options={}){
+  const key=env.GEMINI_SCRIPT_API_KEY||env.GEMINI_TTS_API_KEY;
+  if(!key)scriptError('Falta conectar Gemini para crear guiones.',503);
+  const model=String(env.GEMINI_SCRIPT_MODEL||SCRIPT_MODEL);
+  if(!/^[\w.-]+$/.test(model))scriptError('Modelo de guion no válido.',500);
   const generationConfig={temperature:options.search?0.05:0.15,maxOutputTokens:options.search?2800:5000};
   if(options.json)generationConfig.responseMimeType='application/json';
   const request={contents:[{role:'user',parts:[{text:query}]}],generationConfig};
@@ -12,8 +15,8 @@ async function geminiScriptCall(env,query,options={}){
   if(options.url)request.tools=[{url_context:{}}];
   let res;
   for(let attempt=0;attempt<2;attempt++){
-    res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+SCRIPT_MODEL+':generateContent',{
-      method:'POST',headers:{'content-type':'application/json','x-goog-api-key':env.GEMINI_TTS_API_KEY},
+    res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent',{
+      method:'POST',headers:{'content-type':'application/json','x-goog-api-key':key},
       body:JSON.stringify(request),signal:AbortSignal.timeout(45000)
     });
     if(![502,503,504].includes(res.status)||attempt===1)break;
@@ -27,7 +30,26 @@ async function geminiScriptCall(env,query,options={}){
   const candidate=data?.candidates?.[0];
   const text=(candidate?.content?.parts||[]).map(p=>p.text||'').join('\n').trim();
   if(!text)scriptError('Gemini no devolvió datos. Revisa los límites de uso.');
-  return {text,meta:candidate?.groundingMetadata||{},urlMeta:candidate?.urlContextMetadata||{}};
+  return {text,provider:'Gemini '+model,meta:candidate?.groundingMetadata||{},urlMeta:candidate?.urlContextMetadata||{}};
+}
+// Only generation may use Groq. Search and source extraction always require Gemini tools.
+async function geminiScriptCall(env,query,options={}){
+  try{return await geminiOnlyCall(env,query,options)}catch(error){
+    if(options.search||options.url||!env.GROQ_API_KEY||error.httpStatus===500)throw error;
+    const model=String(env.GROQ_TEXT_MODEL||'llama-3.3-70b-versatile');
+    if(!/^[\w./-]+$/.test(model))scriptError('Modelo Groq no válido.',500);
+    let response;
+    try{response=await fetch('https://api.groq.com/openai/v1/chat/completions',{
+      method:'POST',headers:{'content-type':'application/json','authorization':'Bearer '+env.GROQ_API_KEY},
+      body:JSON.stringify({model,messages:[{role:'system',content:options.json?'Responde exclusivamente un objeto JSON válido. Conserva los datos y restricciones del usuario.':'Responde en español respetando las fuentes y restricciones.'},{role:'user',content:query}],temperature:0.15,max_completion_tokens:5000,...(options.json?{response_format:{type:'json_object'}}:{})}),
+      signal:AbortSignal.timeout(45000)
+    })}catch{scriptError('Gemini y el respaldo Groq no están disponibles. Reintenta más tarde.',503)}
+    let data;try{data=await response.json()}catch{scriptError('Groq no devolvió una respuesta válida.',502)}
+    if(!response.ok)scriptError('Gemini falló y Groq no está disponible (HTTP '+response.status+'). Revisa cuota y configuración.',response.status);
+    const text=data?.choices?.[0]?.message?.content?.trim();
+    if(!text||data.choices[0].finish_reason==='length')scriptError('Groq devolvió contenido vacío o incompleto. Regenera.',502);
+    return {text,provider:'Groq '+model,meta:{},urlMeta:{}};
+  }
 }
 function trustedSources(meta){
   const unique=new Set(),list=[];
@@ -135,7 +157,7 @@ export async function generateVerifiedScript(input,env){
   return {
     title:idea?.title||String(data.title||topic).slice(0,140),scenes,mode,query:topic,sources,
     checkedAt:mode==='ficcion'?null:new Date().toISOString(),
-    provider:'Gemini '+SCRIPT_MODEL+(mode==='ficcion'?'':idea?.sourceUrl?' + fuente original':' + Google Search')
+    provider:out.provider+(mode==='ficcion'?'':idea?.sourceUrl?' + fuente original':' + Google Search')
   };
 }
 

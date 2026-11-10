@@ -52,6 +52,6 @@ export async function generateCoverIdeas(input,env){
   if(ideas.length!==10)ideasError('Gemini no preparó diez historias diferentes; intenta regenerar las propuestas.');
   let referenceUrl='';
   try{const u=new URL(reference?.url);if(u.protocol==='https:')referenceUrl=u.href}catch{}
-  return {query:topic,style,subcategory,mode,ideas,checkedAt:null,sources:referenceUrl?[{title:reference.title,url:referenceUrl}]:[]};
+  return {query:topic,style,subcategory,mode,ideas,provider:generated.provider,checkedAt:null,sources:referenceUrl?[{title:reference.title,url:referenceUrl}]:[]};
  }
 }

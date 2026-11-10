@@ -24,6 +24,8 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       APP_PASSCODE: ${{ secrets.APP_PASSCODE }}
       GEMINI_TTS_API_KEY: ${{ secrets.GEMINI_TTS_API_KEY }}
+      GEMINI_SCRIPT_API_KEY: ${{ secrets.GEMINI_SCRIPT_API_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
     steps:
       - name: Verificar las credenciales de Cloudflare
         run: |
@@ -40,6 +42,7 @@ jobs:
         run: |
           node tests/media-timing.mjs
           node tests/transcribe-route.mjs
+          node tests/text-fallback.mjs
       - name: Publicar código, variables públicas y binding AI
         uses: cloudflare/wrangler-action@v4
         with:
@@ -60,6 +63,16 @@ jobs:
             echo "Gemini TTS habilitado sin exponer la clave."
           else
             echo "Sin GEMINI_TTS_API_KEY: se utiliza voz Cloudflare Aura-2-es."
+          fi
+
+      - name: Conectar proveedores de texto sin exponer claves
+        working-directory: workers
+        run: |
+          if [ -n "$GEMINI_SCRIPT_API_KEY" ]; then
+            printf '%s' "$GEMINI_SCRIPT_API_KEY" | npx --yes wrangler@4 secret put GEMINI_SCRIPT_API_KEY --config wrangler.toml
+          fi
+          if [ -n "$GROQ_API_KEY" ]; then
+            printf '%s' "$GROQ_API_KEY" | npx --yes wrangler@4 secret put GROQ_API_KEY --config wrangler.toml
           fi
 
       - name: Comprobar que el servidor exige un código privado
