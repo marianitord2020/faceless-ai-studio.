@@ -106,7 +106,7 @@ export async function generateVerifiedScript(input,env){
     'FECHA: '+date+'. MODO: '+mode+'. DURACIÓN: '+duration+' s. ESCENAS EXACTAS: '+count+'. PLATAFORMA: '+platform+'. ESTILO: '+style+'.',
     rules,
     'No cambies ni amplíes el tema: responde SOLO a lo que el usuario pidió.',
-    'Título específico, fiel a la búsqueda. Cada texto escena 20–270 caracteres, narración natural en español.',
+    'Título específico, fiel a la búsqueda. Máximo '+Math.floor(duration/count*2.1)+' palabras por escena para que la narración quepa sin correr ni cortar palabras. Total aproximado: '+Math.floor(duration*2.1)+' palabras. Narración natural en español.',
     'Los prompts visuales describen esa escena sin simular fotografías documentales de hechos no probados.',
     'Devuelve exclusivamente JSON {"title":"...","scenes":[{"text":"...","prompt":"..."},...]} con exactamente '+count+' escenas.',
     mode==='ficcion'?'':'INFORMACIÓN DE LA FUENTE ORIGINAL VERIFICADA (ÚNICA BASE PARA LAS AFIRMACIONES):\n'+proof
@@ -126,8 +126,9 @@ export async function generateVerifiedScript(input,env){
   return {
     title:idea?.title||String(data.title||topic).slice(0,140),scenes,mode,query:topic,sources,
     checkedAt:mode==='ficcion'?null:new Date().toISOString(),
-    provider:'Gemini 2.5 Flash-Lite'+(mode==='ficcion'?'':' + Google Search')
+    provider:'Gemini '+SCRIPT_MODEL+(mode==='ficcion'?'':idea?.sourceUrl?' + fuente original':' + Google Search')
   };
 }
 
 export { geminiScriptCall, trustedSources };
+
