@@ -18,6 +18,7 @@ async function facelessFetchPhoto(passcode, prompt, format, generationId) {
   try {
     response = await fetch(FACELESS_IMAGE_API, {
       method: 'POST',
+      signal: typeof AbortSignal.timeout==='function'?AbortSignal.timeout(90000):undefined,
       headers: { 'content-type': 'application/json', 'x-app-token': passcode },
       body: JSON.stringify({ prompt: prompt, format: format, ...(generationId ? { generationId: generationId } : {}) })
     });
@@ -50,6 +51,7 @@ async function facelessFetchPhotoPoll(passcode, prompt, format, generationId) {
   try {
     response = await fetch(FACELESS_IMAGE_API, {
       method: 'POST',
+      signal: typeof AbortSignal.timeout==='function'?AbortSignal.timeout(90000):undefined,
       headers: { 'content-type': 'application/json', 'x-app-token': passcode },
       body: JSON.stringify({ prompt: prompt, format: format, generationId: generationId })
     });
