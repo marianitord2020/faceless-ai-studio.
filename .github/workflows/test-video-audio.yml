@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - 'index.html'
+      - 'scripts/editor-layout.js'
+      - 'styles/editor.css'
       - 'scripts/ai-voice.js'
       - 'scripts/ai-photos.js'
       - 'scripts/discover.js'
@@ -39,6 +41,7 @@ jobs:
             const browser=await chromium.launch({headless:true,args:['--no-sandbox','--autoplay-policy=no-user-gesture-required']});
             const page=await browser.newPage({acceptDownloads:true});
             page.on('pageerror',e=>console.error('JS PAGE ERROR',e.message));
+            const reveal=async selector=>{await page.locator(selector).evaluate(el=>{for(let parent=el.parentElement;parent;parent=parent.parentElement)if(parent.tagName==='DETAILS')parent.open=true;});await page.waitForTimeout(30);};
             await page.goto('http://127.0.0.1:4173/');
             await page.waitForFunction(()=>window.facelessStudioReady===true,{timeout:15000});
             const setup=await page.evaluate(()=>{
@@ -70,7 +73,7 @@ jobs:
                  hasAudio:!!audioFile};
             });
             console.log('SETUP:',setup);
-            if(!setup.button.includes('CON VOZ')||!setup.hasAudio)throw Error('La voz no está integrada en el botón');
+            if(setup.button!=='Crear y descargar video'||!setup.hasAudio)throw Error('La voz no está integrada en el botón');
             const voiceChange=await page.evaluate(()=>{
               const old=audioFile;
               const area=document.getElementById('aiVoiceAudioArea');
@@ -89,7 +92,7 @@ jobs:
               return {ok,button:document.getElementById('renderVideo').textContent};
             });
             console.log('CAMBIO DE VOZ:',voiceChange);
-            if(!voiceChange.ok||!voiceChange.button.includes('CON VOZ'))throw Error('La voz anterior no se reemplazó correctamente');
+            if(!voiceChange.ok||voiceChange.button!=='Crear y descargar video')throw Error('La voz anterior no se reemplazó correctamente');
             await page.locator('#renderVideo').click();
             await page.waitForFunction(()=>!rendering,{timeout:30000});
             const result=await page.evaluate(()=>({
@@ -138,6 +141,7 @@ jobs:
                   {time:2,duration:2,text:'Dos.',prompt:'The same red handbag at home'}]};
               projects.unshift(p);persist();activeId=p.id;tab='video';resetMedia();route('editor');
             });
+            await reveal('#productionPass');
             await page.locator('#productionPass').fill('ci-fixture-passcode-only');
             await page.locator('#productionStart').click();
             await page.waitForFunction(()=>!window.facelessProductionBusy && document.getElementById('productionStatus').textContent.includes('reutilizarán'));
@@ -159,6 +163,7 @@ jobs:
             await page.waitForFunction(()=>window.facelessStudioReady===true);
             await page.evaluate(()=>{activeId='ci-complete';tab='video';route('editor')});
             await page.waitForFunction(()=>facelessProjectPhotos('ci-complete').size===2 && audioFile?.size>1000);
+            await reveal('#aiVoiceAudioArea audio');
             await page.locator('#aiVoiceAudioArea audio').waitFor({state:'visible'});
             if(!await page.locator('#aiVoiceAudioArea a').isVisible())throw Error('La voz recuperada no tiene descarga');
             const privateLeak=await page.evaluate(async()=>{
@@ -168,6 +173,7 @@ jobs:
               return JSON.stringify(entries).includes('ci-fixture-passcode-only');
             });
             if(privateLeak)throw Error('Se guardó el código privado');
+            await reveal('#productionPass');
             await page.locator('#productionPass').fill('ci-fixture-passcode-only');
             await page.locator('#productionStart').click();
             await page.waitForFunction(()=>document.getElementById('productionStatus').textContent.includes('3 de 3'));
@@ -175,6 +181,7 @@ jobs:
             await page.waitForFunction(()=>!window.facelessProductionBusy);
             if(imageCalls!==3||voiceCalls!==3)throw Error('Recargar provocó nuevas llamadas a la IA');
             if(!await page.locator('#productionStart').isEnabled())throw Error('El botón quedó bloqueado tras detener');
+            await reveal('#aiVoiceOption');
             await page.locator('#aiVoiceOption').selectOption('male');
             await page.waitForFunction(()=>!audioFile);
             await page.reload();
@@ -206,7 +213,8 @@ jobs:
                 date:new Date().toISOString(),scenes:[{time:0,duration:1,text:'Texto completo.',prompt:'A red handbag'}]};
               projects.unshift(p);activeId=p.id;tab='video';resetMedia();route('editor');
             });
-            await page.locator('#aiVoicePasscode').fill('ci-fixture-passcode-only');
+            await reveal('#productionPass');
+            await page.locator('#productionPass').fill('ci-fixture-passcode-only');
             await page.locator('#aiVoiceGenerate').click();
             await Promise.race([voiceStarted,new Promise((_,reject)=>{
               voiceTimer=setTimeout(async()=>{
