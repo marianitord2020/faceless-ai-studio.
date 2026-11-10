@@ -39,6 +39,17 @@ async function cloudflareImage(prompt, env) {
   if (!result?.image) reject('Cloudflare Workers AI no devolvió imagen');
   return { provider: 'Cloudflare Workers AI', dataURI: 'data:image/jpeg;base64,' + result.image };
 }
+async function cloudflareBackupImage(prompt,format,env){
+  const form=new FormData();form.append('prompt',prompt);
+  form.append('width',format==='16:9'?'1024':'576');
+  form.append('height',format==='16:9'?'576':'1024');
+  const payload=new Response(form);
+  const result=await env.AI.run('@cf/black-forest-labs/flux-2-klein-4b',{
+    multipart:{body:payload.body,contentType:payload.headers.get('content-type')}
+  });
+  if(!result?.image)reject('El modelo de respaldo no devolvió imagen');
+  return {provider:'Cloudflare Workers AI / FLUX.2 klein (respaldo)',dataURI:'data:image/jpeg;base64,'+result.image};
+}
 async function leonardoStart(prompt, format, env) {
   const wide = format === '16:9';
   const config = { prompt, num_images: 1, alchemy: false, width: wide ? 1024 : 768, height: wide ? 576 : 1360 };
@@ -123,6 +134,8 @@ async function generate(prompt, format, env, skipLeonardo = false) {
   }
   if (env.AI) {
     options.push(['Cloudflare Workers AI', () => cloudflareImage(prompt, env)]);
+    // Same account and daily allocation. This cannot bypass an account quota.
+    options.push(['Cloudflare FLUX.2 klein', () => cloudflareBackupImage(prompt,format,env)]);
   }
   if (!options.length) reject('No hay proveedor habilitado. Configura el binding AI de Cloudflare.', 503);
   const failures = [];
@@ -258,3 +271,4 @@ export default {
     }
   }
 };
+
