@@ -144,8 +144,8 @@ async function geminiVoice(text,voice,env){
     method:'POST',
     headers:{'content-type':'application/json','x-goog-api-key':env.GEMINI_TTS_API_KEY},
     body:JSON.stringify({
-      contents:[{parts:[{text:'Lee el siguiente texto exactamente en español claro y natural, con ritmo de narrador: '+text}]}],
-      generationConfig:{responseModalities:['AUDIO'],speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:safeVoice}}}}
+      contents:[{parts:[{text,speechMetadata:{style:'Narración clara, expresiva y natural en español latinoamericano'}}]}],
+      generationConfig:{responseModalities:['AUDIO'],speechConfig:{voiceConfig:{voice:safeVoice}}}
     })
   });
   const result=await parsed(response,'Google AI Studio TTS');
