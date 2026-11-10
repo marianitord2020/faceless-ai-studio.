@@ -41,6 +41,13 @@ export async function generateVerifiedScript(input,env){
   const fiction=selected==='ficcion'||(selected==='informativo'&&FICTION_TERMS.test(topic));
   const mode=fiction?'ficcion':(selected==='noticias'||style==='Noticias'||NEWS_TERMS.test(topic)?'noticias':'informativo');
   const count=duration===30?5:duration===60?8:12;
+  const idea=input.idea&&typeof input.idea==='object'?{
+    title:String(input.idea.title||'').trim().slice(0,140),
+    synopsis:String(input.idea.synopsis||'').trim().slice(0,500),
+    outline:String(input.idea.outline||'').trim().slice(0,700),
+    sourceUrl:String(input.idea.sourceUrl||'').trim().slice(0,1500)
+  }:null;
+  if(idea&&(!idea.title||!idea.synopsis))scriptError('La portada elegida necesita título y sinopsis.',400);
   const date=new Date().toISOString().slice(0,10);
   let proof='',sources=[];
   if(mode!=='ficcion'){
@@ -49,6 +56,10 @@ export async function generateVerifiedScript(input,env){
       :'Investiga la consulta EXACTA usando Google Search. Prioriza fuentes primarias o contrastadas y datos corroborados. Di si algún detalle está sin verificar. NUNCA inventes hechos.';
     const research=await geminiScriptCall(env,[
       'CONSULTA LITERAL DEL USUARIO: '+JSON.stringify(topic),
+      ...(idea?['PORTADA SELECCIONADA: '+JSON.stringify(idea.title),
+        'SINOPSIS ESPECÍFICA DE LA PORTADA: '+idea.synopsis,
+        idea.sourceUrl?'FUENTE ORIGINAL DE LA NOTICIA SELECCIONADA: '+idea.sourceUrl:'',
+        'Investiga SOLAMENTE el suceso o ángulo de esta portada. No mezcles con otros titulares de la búsqueda general.']:[]),
       'FECHA DE HOY: '+date,
       instruction,
       'Entrega únicamente hechos comprobados y sus fechas, sin cuentos o dramatizaciones.',
@@ -68,6 +79,11 @@ export async function generateVerifiedScript(input,env){
     :'Solo información REAL del resumen verificado. Prohibido inventar nombres, fechas, cifras, citas, sucesos o fuentes. Reparte los hechos confirmados entre escenas sin añadir material no confirmado. No confundas fechas de publicación con fechas de hechos.';
   const prompt=[
     'Crea guion para video EN ESPAÑOL sobre la búsqueda literal '+JSON.stringify(topic)+'.',
+    ...(idea?['PORTADA ELEGIDA POR EL USUARIO: '+JSON.stringify(idea.title),
+      'SINOPSIS FIJA: '+idea.synopsis,
+      idea.outline?'TRAMA O ENFOQUE FIJO: '+idea.outline:'',
+      idea.sourceUrl?'ARTÍCULO ORIGINAL DE LA PORTADA: '+idea.sourceUrl:'',
+      'OBLIGATORIO: la narración desarrolla esta portada precisa; conserva personajes, sucesos y enfoque. No cambies de historia ni inventes otra noticia.']:[]),
     'FECHA: '+date+'. MODO: '+mode+'. DURACIÓN: '+duration+' s. ESCENAS EXACTAS: '+count+'. PLATAFORMA: '+platform+'. ESTILO: '+style+'.',
     rules,
     'No cambies ni amplíes el tema: responde SOLO a lo que el usuario pidió.',
@@ -89,8 +105,10 @@ export async function generateVerifiedScript(input,env){
     return {text,prompt};
   });
   return {
-    title:String(data.title||topic).slice(0,140),scenes,mode,query:topic,sources,
+    title:idea?.title||String(data.title||topic).slice(0,140),scenes,mode,query:topic,sources,
     checkedAt:mode==='ficcion'?null:new Date().toISOString(),
     provider:'Gemini 2.5 Flash-Lite'+(mode==='ficcion'?'':' + Google Search')
   };
 }
+
+export { geminiScriptCall, trustedSources };
