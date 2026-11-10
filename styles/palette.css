@@ -1,0 +1,62 @@
+/* Color-only alignment with Inicio. Layout and behavior remain in their own stylesheets. */
+:root {
+  --app-surface: #101023;
+  --app-input: #0a1022;
+  --app-border: #33204f;
+  --app-accent: #bc92ff;
+  --app-copy: #bfc6dc;
+  --app-card: radial-gradient(ellipse at 47% 0%, #46115d33, transparent 65%), radial-gradient(ellipse at 87% 100%, #052f7438, transparent 65%), #101023;
+}
+body.editor-mode, body.studio-mode { background: var(--bg); color: var(--text); }
+body.editor-mode .topbar { background: #090c18f2; border-color: #26223b; }
+:is(#create, #discover, #projects, #editor) :is(.card, .form-card, .detail, .notice, .studio-settings, .compact-story, .studio-card, .studio-feature, .editor-video-card) {
+  background: var(--app-card); border-color: var(--app-border); color: var(--text);
+}
+:is(#create, #discover, #projects, #editor) :is(input, textarea, select) {
+  background: var(--app-input); border-color: #47305d; color: var(--text);
+}
+:is(#create, #discover, #projects, #editor) :is(input, textarea)::placeholder { color: #8591b1; }
+:is(#create, #discover, #projects, #editor) :is(input, textarea, select, button):focus-visible { outline-color: #a86bff; }
+:is(#create, #projects, #editor) :is(.smalltext, .screen-head p, .detail p, .project p, .editor-card-caption, .editor-tooltip, .status, #editorPills) { color: var(--app-copy); }
+:is(#create, #projects, #editor) :is(.btn:not(.primary), .option, .tabs button, .media-photo-slot, .audio-attachment, .upload, .editbox, .project .excerpt) {
+  background: #171d30; border-color: #47305d; color: var(--text);
+}
+:is(#create, #projects, #editor) :is(.btn.primary, .option.on, .tabs button.on) { background: var(--grad); color: #fff; }
+#editor .editor-video-card > .btn.outline { background: transparent; border-color: var(--app-accent); color: var(--text); }
+#editor :is(.editor-card-icon, .editor-personalize > summary, .editor-advanced > summary, .editor-help, .time, .media-photo-slot b, .media-photo-download) { color: var(--app-accent); }
+#editor .editor-personalize[open] > summary { color: #d1afe8; }
+#editor .editor-help { border-color: #66347f; background: #41105c55; }
+#editor .tabs button.on::after { background: var(--app-accent); }
+#editor .editor-export-bar { background: #101023f7; border-color: var(--app-border); }
+#editor .editor-export-bar #previewVideo { background: transparent; color: #d1afe8; }
+#editor .editor-export-bar #renderVideo { background: var(--grad); color: #fff; }
+#editor .detail .quote { background: #41105c55; border-color: #66347f; color: var(--text); }
+#editor :is(.media-frame, .media-photo-empty) { background: #090c18; border-color: var(--app-border); }
+#editor .media-upload-trigger { background: linear-gradient(115deg, #251035, #101b36); border-color: #66347f; color: var(--text); }
+#editor .media-upload-trigger:hover { background: linear-gradient(115deg, #351342, #122549); border-color: var(--app-accent); }
+#editor .media-upload-icon { background: #41105c55; border-color: #66347f; color: var(--app-accent); }
+#discover :is(.choice-group-nav, .compact-options, .studio-video-options) { background: var(--app-surface); border-color: var(--app-border); }
+#discover .choice-group-nav button { color: var(--app-copy); }
+#discover .choice-group-nav button[aria-selected=true] { background: var(--grad); color: #fff; }
+#discover .choice-category { background: var(--app-card); border-color: var(--app-border); color: var(--text); }
+#discover .choice-category[aria-pressed=true] { background: linear-gradient(130deg, #46115d99, #18325788), #101023; border-color: #bc92ff; }
+#discover .choice-category .choice-icon { background: #41105c55; color: var(--app-accent); }
+#discover .compact-origin .choice-source { background: #171d30; border-color: #47305d; color: var(--text); }
+#discover .compact-origin .choice-source[aria-pressed=true] { background: #25103e; border-color: #bc92ff; }
+#discover .compact-origin .choice-source .choice-icon { color: var(--app-accent); }
+#discover :is(.compact-options > summary > span, .compact-options-body label, .studio-field label, .studio-addon label, .studio-feature-text p, .studio-card-text small, .studio-status) { color: var(--app-copy); }
+#discover .compact-options > summary > svg { color: var(--app-accent); }
+#discover .compact-options-body :is(.choice-image, .choice-duration) { background: transparent; border-color: #66347f; color: var(--text); }
+#discover .compact-options-body .friendly-choice[aria-pressed=true] { background: var(--grad); border-color: #ad17f8; color: #fff; }
+#discover .compact-options-body .studio-access input { background: var(--app-input); border-color: #47305d; color: var(--text); }
+#discover #studioShowSources { background: #171d30; border-color: #66347f; }
+#discover #studioShowSources:checked { background: var(--grad); border-color: #ad17f8; }
+#discover #studioShowSources::before { background: #bc92ff; }
+#discover #studioShowSources:checked::before { background: #f5f6ff; }
+#discover .studio-fixed-action .studio-generate, #discover .studio-generate, #discover .studio-create { background: var(--grad); color: #fff; border-color: #ad17f8; }
+#discover .studio-create + .studio-create { background: transparent; border-color: #66347f; color: #d1afe8; }
+#discover :is(.studio-state, .studio-results-tag) { background: var(--app-surface); border-color: var(--app-border); color: var(--app-copy); }
+#discover :is(.studio-source, .studio-sources a, .studio-step) { color: var(--app-accent); }
+#discover .studio-step { background: #41105c55; border-color: #66347f; }
+#projects .project-bottom, #editor .scene-line { border-color: #33204f; }
+#discover .compact-search input, #discover .studio-fields input, #discover .studio-fields select, #discover .studio-addon input, #discover .studio-addon select { background: var(--app-input); border-color: #47305d; color: var(--text); }
