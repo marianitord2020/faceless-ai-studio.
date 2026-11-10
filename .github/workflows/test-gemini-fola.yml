@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/test-gemini-fola.yml'
+      - 'workers/script-generator.js'
+      - 'workers/ideas-generator.js'
+      - 'workers/news-search.js'
 
 permissions:
   contents: read
