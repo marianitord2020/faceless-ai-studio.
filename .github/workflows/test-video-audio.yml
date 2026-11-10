@@ -219,6 +219,7 @@ jobs:
             await page.unroute('**/faceless-images.marianitord2020.workers.dev/voice');
             let releaseVoice,voiceReady;
             const voiceStarted=new Promise(resolve=>voiceReady=resolve);
+            let voiceTimer;
             await page.route('**/faceless-images.marianitord2020.workers.dev/voice',async route=>{
               await new Promise(resolve=>{releaseVoice=resolve;voiceReady()});
               await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({provider:'CI long fixture',dataURI:longVoice})});
@@ -231,7 +232,12 @@ jobs:
             });
             await page.locator('#aiVoicePasscode').fill('ci-fixture-passcode-only');
             await page.locator('#aiVoiceGenerate').click();
-            await voiceStarted;
+            await Promise.race([voiceStarted,new Promise((_,reject)=>{
+              voiceTimer=setTimeout(async()=>{
+                console.log('VOICE DIAGNOSTIC',await page.evaluate(()=>({busy:facelessVoiceBusy,status:document.getElementById('aiVoiceStatus')?.textContent,project:current()?.id,button:document.getElementById('aiVoiceGenerate')?.disabled})));
+                reject(new Error('La prueba no inició la petición de voz en 15 segundos'));
+              },15000);
+            })]);clearTimeout(voiceTimer);
             await page.locator('[data-route="projects"]').first().click();
             await page.locator('[data-tab="scenes"]').click();
             if(await page.evaluate(()=>document.querySelector('.screen:not(.hidden)').id!=='editor'||tab!=='video'))
