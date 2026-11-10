@@ -69,6 +69,7 @@ function facelessRemovePriorVoice(project, panel) {
   // La generación siempre SUSTITUYE la narración anterior, nunca las mezcla.
   const oldGenerated = generatedVoiceByProject.get(project.id);
   generatedVoiceByProject.delete(project.id);
+  facelessMediaDelete(project.id+':voice');
   if (audioFileProjectId === project.id && oldGenerated && audioFile === oldGenerated) {
     audioFile = null;
   }
@@ -120,7 +121,7 @@ function mountAIVoiceControls(project) {
     '<button type="button" class="btn small" id="aiVoiceCancel" style="display:none;margin-top:8px">Detener después de esta escena</button>' +
     '<p id="aiVoiceStatus" class="status" role="status" aria-live="polite"></p>' +
     '<div id="aiVoiceAudioArea"></div>' +
-    '<p class="smalltext">Los audios solo se conservan mientras la página esté abierta. La voz de Google usa su cuota gratuita cuando tengas una API Key habilitada; Cloudflare es la alternativa. Ninguna suscripción se activa automáticamente.</p>';
+    '<p class="smalltext">Los audios se guardan en este navegador; descárgalos como respaldo. La voz de Google usa su cuota gratuita cuando tengas una API Key habilitada; Cloudflare es la alternativa. Ninguna suscripción se activa automáticamente.</p>';
   const photosPanel = root.querySelector('#aiPhotosStart');
   if (photosPanel) photosPanel.closest('section').insertAdjacentElement('afterend', panel);
   else root.insertAdjacentElement('afterbegin', panel);
@@ -184,6 +185,8 @@ function mountAIVoiceControls(project) {
   cancel.onclick = () => { facelessVoiceCancel = true; status.textContent = 'Deteniendo después de esta escena…'; };
   start.onclick = async () => {
     if (facelessVoiceBusy) return;
+    await facelessRestoreMedia(project);
+    if (facelessVoiceBusy) return;
     const pass = passwordInput.value.trim();
     if (pass) facelessVoicePassword = pass;
     if (!facelessVoicePassword || facelessVoicePassword.length < 16) {
@@ -206,7 +209,7 @@ function mountAIVoiceControls(project) {
     let completed = 0;
     try {
       const segments = [];
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      audioCtx = window.facelessProductionAudioContext || new (window.AudioContext || window.webkitAudioContext)();
       await audioCtx.resume();
       for (const [index, scene] of project.scenes.entries()) {
         if (facelessVoiceCancel) throw new Error('Generación cancelada, sin modificar el audio anterior.');
@@ -242,6 +245,9 @@ function mountAIVoiceControls(project) {
       audioFile = new File([blob], 'faceless-voz-' + project.id + '.wav', {type:'audio/wav'});
       audioFileProjectId = project.id;
       generatedVoiceByProject.set(project.id, audioFile);
+      audioFile.facelessSignature=facelessVoiceSignature(project);
+      if(!await facelessMediaPut(project.id+':voice',{signature:audioFile.facelessSignature,blob:audioFile,name:audioFile.name}))
+        toast('No se pudo guardar la voz en el dispositivo. Descárgala antes de cerrar.');
       updateAudioAttachmentUI();
       // Si el video ya estaba exportado, marcarlo como anterior a la nueva voz.
       const oldVideo = document.getElementById('videoResult');
@@ -275,11 +281,12 @@ function mountAIVoiceControls(project) {
         status.textContent = 'Código privado incorrecto. Usa el APP_PASSCODE de las fotos, no tu API Key.';
       } else status.textContent = 'Voz no generada: ' + msg;
     } finally {
-      if (audioCtx) await audioCtx.close().catch(()=>{});
-      start.disabled = false;
-      voiceSelect.disabled = false;
+      if (audioCtx && audioCtx!==window.facelessProductionAudioContext) await audioCtx.close().catch(()=>{});
+      start.disabled = Boolean(window.facelessProductionBusy);
+      voiceSelect.disabled = Boolean(window.facelessProductionBusy);
       cancel.style.display = 'none';
       facelessVoiceBusy = false;
     }
   };
 }
+
