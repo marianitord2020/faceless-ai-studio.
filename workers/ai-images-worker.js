@@ -1,3 +1,4 @@
+import { generateVerifiedScript } from './script-generator.js';
 /**
  * Faceless AI Studio - generador de fotografías seguro.
  *
@@ -196,7 +197,7 @@ export default {
     };
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
     const path = new URL(request.url).pathname;
-    if (request.method !== 'POST' || !['/images','/voice'].includes(path)) {
+    if (request.method !== 'POST' || !['/images','/voice','/script'].includes(path)) {
       return reply({ error: 'Ruta no encontrada' }, 404, cors);
     }
     if (!env.APP_PASSCODE || env.APP_PASSCODE.length < 16) {
@@ -210,6 +211,10 @@ export default {
         return reply({ error: 'Solicitud demasiado larga.' }, 413, cors);
       }
       const data = await request.json();
+      if(path==='/script'){
+        const result = await generateVerifiedScript(data,env);
+        return reply(result,200,cors);
+      }
       if(path==='/voice'){
         const spoken=String(data?.text||'').trim();
         if(spoken.length<2||spoken.length>650){
