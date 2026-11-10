@@ -136,8 +136,17 @@ function mountAIVoiceControls(project) {
       const mixed = await offline.startRendering();
       const blob = facelessAudioToWAV(mixed);
       audioFile = new File([blob], 'faceless-voz-' + project.id + '.wav', {type:'audio/wav'});
-      const oldCount = document.getElementById('audioCount');
-      if (oldCount) oldCount.textContent = 'Voz IA lista: ' + audioFile.name;
+      audioFileProjectId = project.id;
+      generatedVoiceByProject.set(project.id, audioFile);
+      updateAudioAttachmentUI();
+      // Si el video ya estaba exportado, marcarlo como anterior a la nueva voz.
+      const oldVideo = document.getElementById('videoResult');
+      if (oldVideo) { oldVideo.pause(); oldVideo.classList.add('hidden'); oldVideo.removeAttribute('src'); oldVideo.load(); }
+      const canvasPreview = document.getElementById('previewCanvas');
+      if (canvasPreview) canvasPreview.classList.remove('hidden');
+      const downloadOld = document.getElementById('downloadArea');
+      if (downloadOld) downloadOld.replaceChildren();
+      if (previewURL) { URL.revokeObjectURL(previewURL); previewURL = null; }
       if (facelessVoiceURL) URL.revokeObjectURL(facelessVoiceURL);
       facelessVoiceURL = URL.createObjectURL(blob);
       audioArea.replaceChildren();
@@ -151,7 +160,7 @@ function mountAIVoiceControls(project) {
       link.textContent = '↓ Descargar narración WAV';
       link.className = 'btn small';
       audioArea.append(player, link);
-      status.textContent = '¡Voz lista! Ya está añadida al montaje. ' +
+      status.textContent = '✓ Voz lista e incorporada al proyecto. Pulsa «Crear y descargar video CON VOZ» para exportar el video narrado. ' +
         (clipped ? 'Aviso: ' + clipped + ' escenas tenían voz más larga que su tiempo asignado y se recortaron. Ajusta el guion para sincronizar.' : 'Las escenas respetan sus tiempos.') +
         ' Fuente: ' + [...new Set(segments.map(s=>s.provider))].join(', ');
     } catch (error) {
