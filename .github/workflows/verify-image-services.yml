@@ -1,0 +1,26 @@
+name: Comprobar bancos e imágenes reales
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'tests/image-services-live.mjs'
+      - '.github/workflows/verify-image-services.yml'
+permissions:
+  contents: read
+jobs:
+  live:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Buscar descargar y generar imágenes reales
+        env:
+          APP_PASSCODE: ${{ secrets.APP_PASSCODE }}
+          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          AI_HORDE_API_KEY: ${{ secrets.AI_HORDE_API_KEY }}
+        run: node tests/image-services-live.mjs
