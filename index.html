@@ -152,13 +152,16 @@ function renderVideoTab(p){
  $('previewVideo').onclick=()=>{
    if(previewTimer){stopPreview();$('previewVideo').textContent='Vista previa';return}
    stopPreview();
+   $('videoResult').pause();
+   $('videoResult').classList.add('hidden');
+   view.classList.remove('hidden');
    if(audioFile){
      previewAudioURL=URL.createObjectURL(audioFile);
      previewAudio=new Audio(previewAudioURL);
      previewAudio.play().catch(()=>{const el=$('renderStatus');if(el)el.textContent='El navegador bloqueó el sonido. Escucha la narración desde el reproductor de voz.';stopPreview();$('previewVideo').textContent='Vista previa'});
    }
    const start=performance.now(),duration=p.duration*1000;
-   const tick=()=>{const elapsed=performance.now()-start,sec=Math.min(p.duration-0.01,previewAudio?previewAudio.currentTime:elapsed/1000);const i=p.scenes.findIndex(sc=>sec>=sc.time&&sec<sc.time+sc.duration);drawFrame(Math.max(i,0),sec);view.getContext('2d').drawImage(canvas,0,0);if(elapsed<duration&&(!previewAudio||!previewAudio.ended)){previewTimer=requestAnimationFrame(tick)}else{stopPreview();$('previewVideo').textContent='Vista previa'}};
+   const tick=()=>{const elapsed=performance.now()-start,sec=Math.min(p.duration-0.01,previewAudio?previewAudio.currentTime:elapsed/1000);const i=p.scenes.findIndex(sc=>sec>=sc.time&&sec<sc.time+sc.duration);drawFrame(Math.max(i,0),sec);view.getContext('2d').drawImage(canvas,0,0);if(previewAudio?!previewAudio.ended:elapsed<duration){previewTimer=requestAnimationFrame(tick)}else{stopPreview();$('previewVideo').textContent='Vista previa'}};
    previewTimer=requestAnimationFrame(tick);
    $('previewVideo').textContent='Detener vista previa';
  };
@@ -180,7 +183,7 @@ async function startMicrophoneRecording(){
 }
 function stopMicTracks(){if(micStream){micStream.getTracks().forEach(t=>t.stop());micStream=null}const a=$('startMic'),b=$('stopMic');if(a)a.disabled=false;if(b)b.disabled=true}
 function stopMicrophoneRecording(){if(micRecorder?.state==='recording'){micRecorder.stop();$('micStatus').textContent='Procesando grabación...';}else stopMicTracks()}
-function stopPreview(){if(previewTimer)cancelAnimationFrame(previewTimer);previewTimer=null;if(previewAudio){previewAudio.pause();previewAudio.src='';previewAudio=null}if(previewAudioURL){URL.revokeObjectURL(previewAudioURL);previewAudioURL=null}}
+function stopPreview(){const previewButton=$('previewVideo');if(previewButton)previewButton.textContent='▶ Vista previa';if(previewTimer)cancelAnimationFrame(previewTimer);previewTimer=null;if(previewAudio){previewAudio.pause();previewAudio.src='';previewAudio=null}if(previewAudioURL){URL.revokeObjectURL(previewAudioURL);previewAudioURL=null}}
 async function renderVideo(){
  if(rendering)return;
  const p=current(),withAudio=Boolean(audioFile),mime=safeMime(withAudio),status=$('renderStatus'),btn=$('renderVideo');
