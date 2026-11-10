@@ -12,7 +12,7 @@
  function captionState(cues,seconds){
   const cue=cues.find(c=>seconds>=c.start&&seconds<c.end);if(!cue)return null;
   const words=Array.isArray(cue.words)&&cue.words.length?cue.words:String(cue.text).split(/\s+/).filter(Boolean).map((text,i,all)=>({text,start:cue.start+(cue.end-cue.start)*i/all.length,end:cue.start+(cue.end-cue.start)*(i+1)/all.length}));
-  return {cue,words,active:words.findIndex(w=>seconds>=w.start&&seconds<w.end),entrance:ease((seconds-cue.start)/.16)};
+  return {cue,words,active:cue.manual?-1:words.findIndex(w=>seconds>=w.start&&seconds<w.end),entrance:ease((seconds-cue.start)/.16)};
  }
  function background(ctx,p,index,seconds,image){
   const w=ctx.canvas.width,h=ctx.canvas.height,s=p.scenes[index]||p.scenes[0];
