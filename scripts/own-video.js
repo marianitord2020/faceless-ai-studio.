@@ -6,7 +6,7 @@
  window.facelessStopOwnVideo=()=>source?.pause();
  window.facelessMountOwnVideo=(p,host)=>{
   const status=host.querySelector('#ownVideoStatus'),remove=host.querySelector('#removeOwnVideo');
-  const refresh=()=>{const video=window.facelessOwnVideo();status.textContent=video?'✓ Video añadido · '+fmt(video.duration)+' · añade tu audio con «Añadir mi audio».':'Selecciona un clip. Su imagen se usará en todo el montaje; añade la pista de sonido como audio propio.';remove.hidden=!video;};
+  const refresh=()=>{const video=window.facelessOwnVideo();status.textContent=video?'✓ Video añadido · '+fmt(video.duration)+' · añade tu audio con «Añadir mi audio».':'MP4 o WebM. Añade la pista de sonido en Audio.';remove.hidden=!video;};
   host.querySelector('input').onchange=async event=>{
    const file=event.target.files[0];if(!file||facelessIsWorking())return;
    const candidate=document.createElement('video'),candidateURL=URL.createObjectURL(file);candidate.muted=true;candidate.playsInline=true;candidate.preload='auto';
