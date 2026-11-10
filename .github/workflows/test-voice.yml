@@ -16,7 +16,7 @@ jobs:
     env:
       APP_PASSCODE: ${{ secrets.APP_PASSCODE }}
     steps:
-      - name: Generar prueba real con Aura-2 español
+      - name: Comprobar voz seleccionada y respaldo real en español
         run: |
           set -euo pipefail
           test -n "$APP_PASSCODE"
@@ -25,7 +25,7 @@ jobs:
             -H 'Origin: https://marianitord2020.github.io' \
             -H 'Content-Type: application/json' \
             -H "x-app-token: $APP_PASSCODE" \
-            --data '{"text":"Hola, bienvenidos a Faceless AI Studio. Ya tenemos voz en español.","voice":"female"}')
+            --data '{"text":"Hola, bienvenidos a Faceless AI Studio. Ya tenemos voz en español.","voice":"Fola"}')
           if [ "$status" != "200" ]; then
             echo "::error::Falló generación de voz HTTP $status"
             jq -r '.error // "Error sin detalles"' "$RUNNER_TEMP/voice.json" | head -c 500
