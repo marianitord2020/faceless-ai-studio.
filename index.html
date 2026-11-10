@@ -258,49 +258,78 @@ route('home');
   const panel = document.createElement('div');
   panel.className = 'notice';
   panel.style.marginTop = '18px';
-  panel.innerHTML = '<h3>🤖 Generación con Gemini</h3><p>Usa el código privado de Cloudflare, no tu API Key.</p><input id="geminiPass" type="password" autocomplete="off" placeholder="APP_PASSCODE privado" style="width:100%;padding:12px;margin:8px 0;background:#101527;color:white;border:1px solid #544477;border-radius:8px"><button id="geminiButton" class="btn primary full generate">✧ Generar con Gemini</button><p id="geminiStatus" role="status"></p>';
+  panel.innerHTML =
+    '<h3>🤖 Buscar y crear guiones con Gemini</h3>' +
+    '<p>Gemini respetará exactamente los términos que escribas. Las noticias e información real requieren fuentes de Google Search; solo inventará historias cuando selecciones ficción.</p>' +
+    '<label class="group-label" for="scriptMode">Tipo de guion</label>' +
+    '<select id="scriptMode" style="width:100%;padding:12px;margin:8px 0;background:#101527;color:white;border:1px solid #544477;border-radius:8px">' +
+    '<option value="informativo">Información real con fuentes (detecta noticias automáticamente)</option>' +
+    '<option value="noticias">Noticias actuales verificadas</option>' +
+    '<option value="ficcion">Historia ficticia (permitir imaginación)</option>' +
+    '</select>' +
+    '<label class="group-label" for="geminiPass">Código privado de la aplicación</label>' +
+    '<input id="geminiPass" type="password" autocomplete="new-password" placeholder="El mismo APP_PASSCODE que usas para las fotos" style="width:100%;padding:12px;margin:8px 0;background:#101527;color:white;border:1px solid #544477;border-radius:8px">' +
+    '<button id="geminiButton" class="btn primary full generate">🔎 Buscar y generar guion</button>' +
+    '<p class="smalltext">Para noticias, Gemini consultará Google Search. Si no se encuentran fuentes verificables, mostrará un error en vez de fabricar sucesos. La consulta literal se conserva.</p>' +
+    '<p id="geminiStatus" role="status" aria-live="polite"></p>';
   original.insertAdjacentElement('afterend', panel);
   document.getElementById('geminiButton').onclick = async () => {
     const status = document.getElementById('geminiStatus');
     const button = document.getElementById('geminiButton');
     const topic = document.getElementById('topic').value.trim();
-    const pass = document.getElementById('geminiPass').value;
-    if (topic.length < 5) { status.textContent = 'Escribe primero un tema.'; return; }
-    if (pass.length < 16) { status.textContent = 'Escribe tu APP_PASSCODE de Cloudflare.'; return; }
-    button.disabled = true; status.textContent = 'Consultando Gemini…';
+    const pass = document.getElementById('geminiPass').value.trim();
+    const mode = document.getElementById('scriptMode').value;
+    if (topic.length < 5) { status.textContent = 'Escribe primero una consulta específica.'; return; }
+    if (pass.length < 16) { status.textContent = 'Escribe el mismo APP_PASSCODE que utilizas para fotos y voces.'; return; }
+    button.disabled = true;
+    status.textContent = mode==='ficcion'
+      ? 'Preparando la historia ficticia…'
+      : 'Buscando fuentes reales sobre: «'+topic+'». Comprobando fechas y datos…';
     try {
-      const response = await fetch('https://faceless-gemini.marianitord2020.workers.dev', {
+      const response = await fetch('https://faceless-images.marianitord2020.workers.dev/script', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-app-token': pass },
-        body: JSON.stringify({ topic, duration: choice.duration, style: choice.style, platform: choice.platform })
+        body: JSON.stringify({
+          topic,mode,duration:choice.duration,style:choice.style,platform:choice.platform
+        })
       });
-      const data = await response.json();
+      let data;
+      try { data = await response.json(); }
+      catch { throw Error('El servidor no devolvió un guion válido.'); }
       if (!response.ok) throw Error(data.error || 'Error del servidor');
-      if (!Array.isArray(data.scenes) || data.scenes.length < 2) throw Error('Respuesta sin escenas');
-      const source = data.scenes.filter(s => String(s.text || '').trim()).slice(0, 12);
-      if (source.length < 2) throw Error('Escenas vacías');
-      generate();
-      const project = current();
-      if (!project) throw Error('No se pudo crear el proyecto');
-      const base = Math.floor(project.duration / source.length);
-      const extra = project.duration % source.length;
-      let time = 0;
-      project.scenes = source.map((s, i) => {
-        const duration = base + (i < extra ? 1 : 0);
-        const scene = { time, duration, text: String(s.text), prompt: String(s.prompt || '') };
-        time += duration;
-        return scene;
-      });
-      project.title = String(data.title || topic).slice(0, 120);
-      project.narration = project.scenes.map(s => s.text).join('\n');
-      project.hook = project.scenes[0].text;
-      project.aiProvider = 'Gemini';
-      persist(); renderEditor();
-      toast('¡Guion creado con Gemini! Revisa las escenas.');
-    } catch (error) {
-      status.textContent = 'Error: ' + error.message;
-    } finally { button.disabled = false; }
+      if (String(data.query||'') !== topic.replace(/\s+/g,' ')) throw Error('La respuesta no corresponde a los términos solicitados.');
+      const expected = choice.duration===30?5:choice.duration===60?8:12;
+      if (!Array.isArray(data.scenes)||data.scenes.length!==expected) throw Error('Gemini no devolvió las escenas solicitadas.');
+      const source = data.scenes.map(s=>({
+        text:String(s.text||'').trim(),prompt:String(s.prompt||'').trim()
+      }));
+      if(source.some(s=>!s.text||!s.prompt))throw Error('Gemini devolvió una escena incompleta.');
+      const sources=Array.isArray(data.sources)?data.sources.filter(s=>{
+        try{return new URL(s.url).protocol==='https:'}catch{return false}
+      }).slice(0,10):[];
+      if(data.mode!=='ficcion'&&!sources.length)throw Error('Faltan fuentes verificadas: no generaré un guion inventado.');
+      const duration=Number(choice.duration),base=Math.floor(duration/source.length),extra=duration%source.length;
+      let time=0;
+      const project={
+        id:String(Date.now())+Math.random().toString(36).slice(2,7),
+        topic,title:String(data.title||topic).slice(0,140),
+        ...choice,date:new Date().toISOString(),scenes:source.map((scene,i)=>{
+          const seconds=base+(i<extra?1:0),result={...scene,time,duration:seconds};
+          time+=seconds;return result;
+        }),
+        narration:source.map(s=>s.text).join('\n'),hook:source[0].text,
+        aiProvider:data.provider||'Gemini',
+        sources,scriptMode:data.mode,sourceCheckedAt:data.checkedAt,searchQuery:topic
+      };
+      projects.unshift(project);
+      if(!persist())return;
+      activeId=project.id;tab='summary';showEditor=false;
+      resetMedia();route('editor');
+      toast(data.mode==='ficcion'?'¡Historia ficticia creada!':'¡Guion basado en fuentes reales! Revísalas.');
+    }catch(error){
+      status.textContent='No se creó el guion: '+String(error.message||error);
+    }finally{button.disabled=false}
   };
-})();
+})();;
  
-</script><script src="scripts/ai-photos.js?v=2"></script><script src="scripts/ai-voice.js?v=2"></script></body></html>
+</script><script src="scripts/ai-photos.js?v=2"></script><script src="scripts/ai-voice.js?v=3"></script></body></html>
