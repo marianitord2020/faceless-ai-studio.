@@ -6,6 +6,7 @@ on:
     paths:
       - 'scripts/discover.js'
       - 'styles/discover.css'
+      - 'index.html'
       - '.github/workflows/test-gallery-ui.yml'
 permissions:
   contents: read
@@ -45,6 +46,12 @@ jobs:
             })));
             if(await page.locator('#studioCards .studio-card').count()!==10)throw Error('No aparecen 10 portadas iniciales');
             await page.screenshot({path:'/tmp/faceless-studio-mobile.png',fullPage:true});
+            if(await page.locator('#studioSource').inputValue()!=='ai')throw Error('Las búsquedas nuevas deben usar Gemini por defecto');
+            await page.locator('#studioDuration').selectOption('30');
+            const durationLabel=await page.locator('.studio-feature-meta').textContent();
+            if(!durationLabel.includes('30 segundos')||!durationLabel.includes('5 escenas'))throw Error('La duración de la sinopsis no se actualizó');
+            await page.locator('#studioDuration').selectOption('60');
+            await page.locator('#studioImageStyle').selectOption('anime');
             console.log('Seleccionando portada 2...');
             await page.locator('#studioCards .studio-card').nth(1).click({timeout:12000});
             if(await page.locator('#studioFeature h2').textContent()!=='El amor olvidado')throw Error('La portada 2 no corresponde al relato.');
@@ -62,6 +69,38 @@ jobs:
             console.log('PROYECTO OK:',JSON.stringify(data));
             if(data.route!=='editor'||data.scenes!==8||!data.first?.includes('Elena')||!data.summary)
               throw Error('El guion no mantiene la historia y sinopsis.');
+            if(await page.evaluate(()=>current().imageStyle)!=='anime')throw Error('Se perdió el estilo visual elegido');
+            await page.locator('#toggleEdit').click();
+            const revised='Elena recibió una carta nueva. Daniel había vuelto al barrio. Los dos decidieron reunirse al amanecer.';
+            await page.locator('#editNarration').fill(revised);
+            await page.locator('#saveProject').click();
+            const saved=await page.evaluate(()=>({text:current().scenes.map(s=>s.text).join(' '),total:current().scenes.reduce((n,s)=>n+s.duration,0)}));
+            if(saved.text!==revised||saved.total!==60)throw Error('Guardar narración no actualiza escenas o duración');
+            await page.evaluate(()=>route('discover'));
+            let releaseCover,coverReady;
+            const coverStarted=new Promise(resolve=>coverReady=resolve);
+            await page.route('**/faceless-images.marianitord2020.workers.dev/ideas',async route=>{
+              await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ideas:Array.from({length:10},(_,i)=>({id:'test-'+i,title:'Historia IA '+(i+1),synopsis:'Una historia de prueba con conflicto y desenlace para comprobar la selección.',outline:'Inicio, conflicto, final',coverPrompt:'A red handbag in a street'})),sources:[]})});
+            });
+            await page.route('**/faceless-images.marianitord2020.workers.dev/images',async route=>{
+              await new Promise(resolve=>{releaseCover=resolve;coverReady()});
+              await route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'Portada demorada para prueba'})}).catch(()=>{});
+            });
+            await page.route('**/faceless-images.marianitord2020.workers.dev/script',async route=>{
+              const request=route.request().postDataJSON();
+              await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({title:request.idea.title,mode:'ficcion',provider:'Gemini fixture',scenes:Array.from({length:8},()=>({text:'Narración de prueba de la historia seleccionada.',prompt:'A red handbag in a street'}))})});
+            });
+            await page.locator('#studioSource').selectOption('ai');
+            await page.locator('#studioPass').fill('ci-gallery-fixture-only');
+            await page.locator('#studioGenerate').click();
+            await page.waitForFunction(()=>document.querySelector('#studioFeature h2')?.textContent==='Historia IA 1');
+            await page.waitForFunction(()=>document.querySelector('#studioFeature .studio-create')?.disabled===false);
+            await coverStarted;
+            await page.locator('#studioFeature .studio-create').click();
+            await page.waitForFunction(()=>current()?.title==='Historia IA 1');
+            if(!releaseCover)throw Error('La prueba no tenía una portada pendiente');
+            releaseCover();
+            console.log('REGRESIONES: Gemini predeterminado, duración, estilo visual, edición de guion y selección sin esperar portadas: OK');
             await page.evaluate(()=>route('discover'));
             await page.setViewportSize({width:1440,height:900});
             await page.screenshot({path:'/tmp/faceless-studio-desktop.png',fullPage:true});
@@ -78,3 +117,4 @@ jobs:
             /tmp/faceless-studio-mobile.png
             /tmp/faceless-studio-desktop.png
           retention-days: 3
+
