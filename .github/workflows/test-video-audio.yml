@@ -68,6 +68,25 @@ jobs:
             });
             console.log('SETUP:',setup);
             if(!setup.button.includes('CON VOZ')||!setup.hasAudio)throw Error('La voz no está integrada en el botón');
+            const voiceChange=await page.evaluate(()=>{
+              const old=audioFile;
+              const area=document.getElementById('aiVoiceAudioArea');
+              const oldPlayer=document.createElement('audio');
+              oldPlayer.src='data:audio/wav;base64,UklGRg==';
+              area.appendChild(oldPlayer);
+              const selector=document.getElementById('aiVoiceOption');
+              selector.value='Kore';
+              selector.dispatchEvent(new Event('change'));
+              const ok=!audioFile && !generatedVoiceByProject.has('ci-audio') &&
+                !area.querySelector('audio') && !oldPlayer.src;
+              audioFile=old;
+              audioFileProjectId='ci-audio';
+              generatedVoiceByProject.set('ci-audio',old);
+              updateAudioAttachmentUI();
+              return {ok,button:document.getElementById('renderVideo').textContent};
+            });
+            console.log('CAMBIO DE VOZ:',voiceChange);
+            if(!voiceChange.ok||!voiceChange.button.includes('CON VOZ'))throw Error('La voz anterior no se reemplazó correctamente');
             await page.locator('#renderVideo').click();
             await page.waitForFunction(()=>!rendering,{timeout:30000});
             const result=await page.evaluate(()=>({
