@@ -200,6 +200,20 @@
       for(const name of subcategories[genre.value]||[])sub.add(new Option(name,name));
     }
     genre.value='Romance';refreshSubcategories();
+    // Selectores visibles del dashboard de escritorio: sincronizados con los controles originales.
+    const quickGenre=e('select','studio-desktop-select');
+    quickGenre.id='studioGenreQuick';quickGenre.setAttribute('aria-label','Estilo narrativo');
+    for(const option of genre.querySelectorAll('option'))quickGenre.add(new Option(option.textContent,option.value));
+    quickGenre.value=genre.value;
+    $id('studioGenre').parentElement.appendChild(quickGenre);
+    quickGenre.onchange=()=>{genre.value=quickGenre.value;genre.dispatchEvent(new Event('change',{bubbles:true}))};
+    genre.addEventListener('change',()=>{quickGenre.value=genre.value});
+    const quickSource=e('select','studio-desktop-select');
+    quickSource.id='studioSourceQuick';quickSource.setAttribute('aria-label','Origen de las propuestas');
+    quickSource.add(new Option('Crear con IA','ai'));quickSource.add(new Option('Explorar relatos locales','local'));
+    $id('studioSource').parentElement.appendChild(quickSource);
+    quickSource.onchange=()=>{$id('studioSource').value=quickSource.value;$id('studioSource').dispatchEvent(new Event('change',{bubbles:true}))};
+    $id('studioSource').addEventListener('change',()=>{quickSource.value=$id('studioSource').value});
     const image=$id('studioImageStyle');for(const [key,name] of imageStyles)image.add(new Option(name,key));
     $id('studioTopic').value='';
     $id('studioTopic').addEventListener('input',()=>{$id('studioTopic').dataset.edited='true';$id('studioTopic').setCustomValidity('')});
