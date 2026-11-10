@@ -89,3 +89,7 @@ Orden gratuito: Cloudflare FLUX.1 → Cloudflare FLUX.2 → ImageRouter si tiene
 - `node tests/free-image-providers.mjs` verifica el catálogo gratuito, las claves ausentes, la cola, la cancelación y el respaldo tras agotar la cuota de Cloudflare con respuestas simuladas. Una prueba simulada no acredita una generación real.
 
 Registro: https://aihorde.net/register y https://imagerouter.io/ (API Keys en su panel).
+
+### Resultado de activación real de ImageRouter — 10 de noviembre de 2026
+
+La clave se sincronizó en Cloudflare. La API respondió HTTP 403: los modelos gratuitos están disponibles en la web, pero el uso por API requiere un depósito inicial contra abuso. No se realizó ningún depósito. `ENABLE_IMAGEROUTER=false` conserva la política de no pagar. Cloudflare y AI Horde siguen habilitados. El adaptador y la clave se conservan preparados; su futura activación requiere una decisión explícita sobre ese depósito. La prueba real permanece como script manual y no bloquea despliegues posteriores.

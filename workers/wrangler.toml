@@ -17,5 +17,5 @@ ENABLE_HF_INFERENCE = "false"
 ENABLE_DEEPGRAM_TRIAL = "false"
 
 ENABLE_AI_HORDE = "true"
-ENABLE_IMAGEROUTER = "true"
+ENABLE_IMAGEROUTER = "false" # API requires a one-time deposit; disabled under no-payment policy.
 IMAGEROUTER_MODEL = "Tongyi-MAI/Z-Image-Turbo:free"

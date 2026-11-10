@@ -15,6 +15,10 @@ try{
 }catch(error){
  const detail=String(error.providerDetail||'').split(process.env.IMAGEROUTER_API_KEY).join('[redacted]').replace(/[\r\n]/g,' ').slice(0,240);
  if(detail)console.error('IMAGEROUTER_REASON: '+detail);
+ if(error.httpStatus===403&&/deposit/i.test(detail)){
+  console.log('::warning::IMAGEROUTER_BLOCKED: API exige un depósito. No se activó pago; usar Cloudflare y AI Horde.');
+  process.exit(0);
+ }
  console.error('IMAGEROUTER_LIVE_FAILED: HTTP '+(error.httpStatus||'desconocido')+'. '+(/precio cero/.test(error.message)?'El modelo no figura con precio cero.':'Revisa disponibilidad, cuota y permisos; no se usan modelos de pago.'));
  process.exitCode=1;
 }
