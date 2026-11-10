@@ -151,8 +151,16 @@
     $id('studioSideOld').onclick=()=>route('create');
     $id('studioSideVoices').onclick=()=>{toast('Selecciona un relato. En 🎬 Video podrás elegir voz automática o manual.')};
     $id('studioSidePhotos').onclick=()=>{toast('Selecciona un relato para abrir el generador de imágenes de escenas.')};
-    genre.onchange=()=>{if(genre.value==='Noticias')$id('studioMode').value='news';else if($id('studioMode').value==='news')$id('studioMode').value='fiction'};
-    $id('studioMode').onchange=()=>{if($id('studioMode').value==='news')genre.value='Noticias'};
+    genre.onchange=()=>{
+      if(genre.value==='Noticias'){
+        $id('studioMode').value='news';
+        $id('studioSource').value='ai';
+      }else if($id('studioMode').value==='news')$id('studioMode').value='fiction';
+    };
+    $id('studioMode').onchange=()=>{
+      if($id('studioMode').value==='news')genre.value='Noticias';
+      if($id('studioMode').value!=='fiction')$id('studioSource').value='ai';
+    };
     $id('studioSource').onchange=()=>{
       const local=$id('studioSource').value==='local';
       if(local&&$id('studioMode').value!=='fiction'){
@@ -162,7 +170,13 @@
     };
     $id('studioGenerate').onclick=generateIdeas;
     $id('studioTopic').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();generateIdeas()}});
-    initialState();
+    // Portadas de demostración visibles al abrir, igual que el diseño aprobado.
+    state.ideas=localIdeas('Historias de amor','Romance');
+    state.topic='Historias de amor';
+    state.style='Romance';state.source='local';state.mode='fiction';
+    $id('studioSource').value='local';
+    renderCards();renderFeature();
+    setStatus('✦ Catálogo local de ejemplo. Puedes elegir El amor olvidado o escribir otro tema y generar 10 propuestas con Gemini.');
   }
   function initialState(){
     $id('studioCards').replaceChildren();
@@ -181,9 +195,17 @@
   function selectedIdea(){return state.ideas[state.selected]||null}
   function visual(container,idea,index,large){
     container.replaceChildren();
-    if(state.covers.has(idea.id)){
-      const pic=e('img');pic.alt='Portada de '+idea.title;
-      pic.src=state.covers.get(idea.id);pic.loading='lazy';
+    const publisherPhoto=state.mode==='news'&&idea.sourceImageUrl?idea.sourceImageUrl:null;
+    if(state.covers.has(idea.id)||publisherPhoto){
+      const pic=e('img');pic.alt=publisherPhoto?'Vista previa ofrecida por el medio enlazado':'Portada de '+idea.title;
+      pic.src=publisherPhoto||state.covers.get(idea.id);pic.loading='lazy';
+      pic.referrerPolicy='no-referrer';
+      pic.onerror=()=>{
+        if(!pic.isConnected)return;
+        const fallback=e('div','illustration');fallback.style.background=bg(state.style,index);
+        fallback.appendChild(e('span',null,styleVisual(state.style).emoji));
+        pic.replaceWith(fallback);
+      };
       container.appendChild(pic);
     }else{
       const fallback=e('div','illustration');fallback.style.background=bg(state.style,index);
@@ -223,6 +245,7 @@
     const meta=e('div','studio-feature-meta');
     meta.append(e('span',null,'◷ '+$id('studioDuration').value+' segundos'),
       e('span',null,'▱ '+(Number($id('studioDuration').value)===30?5:Number($id('studioDuration').value)===60?8:12)+' escenas'));
+    if(idea.sourceSeenAt)meta.append(e('span',null,'Detectada por GDELT: '+idea.sourceSeenAt));
     text.appendChild(meta);
     const button=e('button','studio-create',state.building?'Preparando guion…':'▣ Llevar a creación');
     button.type='button';button.disabled=state.building;button.onclick=createProject;
@@ -232,6 +255,13 @@
       a.href=idea.sourceUrl;a.target='_blank';a.rel='noopener noreferrer';text.appendChild(a);
     }
     feature.append(picture,text);
+    if(state.mode==='news'){
+      const credit=e('p','studio-limit','Noticias detectadas por GDELT Project. La fecha corresponde a observación, no necesariamente al hecho. Verifica la noticia en el medio antes de publicar. Las fotografías del medio no se incorporan al video sin permiso.');
+      feature.appendChild(credit);
+      const attribution=e('a','studio-source','Datos: GDELT Project');
+      attribution.href='https://www.gdeltproject.org/';attribution.rel='noopener noreferrer';attribution.target='_blank';
+      feature.appendChild(attribution);
+    }
     if(state.mode!=='fiction'&&state.sources.length){
       const details=e('details','studio-sources'),sum=e('summary',null,'Fuentes consultadas ('+state.sources.length+')');
       details.appendChild(sum);
