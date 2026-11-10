@@ -172,7 +172,7 @@ function mountAIVoiceControls(project) {
   voiceSelect.insertAdjacentElement('afterend',note);
 
   const stopVoiceOnChange=()=>{
-    if (facelessVoiceBusy) { facelessVoiceCancel=true; return; }
+    if (window.facelessMediaBusy||facelessVoiceBusy) { facelessVoiceCancel=true; return; }
     facelessRemovePriorVoice(project,panel);
     status.textContent='El audio anterior fue eliminado. Genera la nueva voz para sustituirlo.';
   };
@@ -189,7 +189,7 @@ function mountAIVoiceControls(project) {
   voiceSelect.onchange = () => {
     project.voicePreset=voiceSelect.value;
     if(typeof persist==='function')persist();
-    if (facelessVoiceBusy) {
+    if (window.facelessMediaBusy||facelessVoiceBusy) {
       facelessVoiceCancel = true;
       status.textContent = 'Cambio de voz solicitado: cancelando generación anterior…';
       return;
@@ -199,7 +199,7 @@ function mountAIVoiceControls(project) {
   };
   cancel.onclick = () => { facelessVoiceCancel = true; status.textContent = 'Deteniendo después de esta escena…'; };
   start.onclick = async () => {
-    if (facelessVoiceBusy) return;
+    if (window.facelessMediaBusy||facelessVoiceBusy) return;
     const pass = passwordInput.value.trim();
     if (pass) facelessVoicePassword = pass;
     if (!facelessVoicePassword || facelessVoicePassword.length < 16) {
@@ -266,6 +266,7 @@ function mountAIVoiceControls(project) {
       }
       const mixed = await offline.startRendering();
       const blob = facelessAudioToWAV(mixed);
+      delete project.subtitleCues;delete project.subtitleTextSignature;delete project.audioAlignment;delete project.audioBaseTimeline;persist();
       audioFile = new File([blob], 'faceless-voz-' + project.id + '.wav', {type:'audio/wav'});
       audioFileProjectId = project.id;
       generatedVoiceByProject.set(project.id, audioFile);

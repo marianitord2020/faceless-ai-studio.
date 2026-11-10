@@ -219,7 +219,7 @@ export default {
     };
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
     const path = new URL(request.url).pathname;
-    if (request.method !== 'POST' || !['/images','/voice','/script','/ideas'].includes(path)) {
+    if (request.method !== 'POST' || !['/images','/voice','/script','/ideas','/transcribe'].includes(path)) {
       return reply({ error: 'Ruta no encontrada' }, 404, cors);
     }
     if (!env.APP_PASSCODE || env.APP_PASSCODE.length < 16) {
@@ -229,6 +229,25 @@ export default {
       return reply({ error: 'Código privado incorrecto.' }, 401, cors);
     }
     try {
+
+      if(path==='/transcribe'){
+        if(!env.AI)reject('El reconocimiento de voz no está disponible.',503);
+        if(!(request.headers.get('content-type')||'').startsWith('audio/wav'))reject('Envía audio WAV mono de 16 kHz.',415);
+        const limit=960044,reader=request.body?.getReader(),parts=[];let total=0;
+        if(!reader)reject('Falta el audio.',400);
+        try{
+          while(true){const {done,value}=await reader.read();if(done)break;total+=value.length;if(total>limit){await reader.cancel();reject('Cada fragmento debe durar como máximo 30 segundos.',413)}parts.push(value)}
+        }finally{reader.releaseLock()}
+        const bytes=new Uint8Array(total);let offset=0;for(const part of parts){bytes.set(part,offset);offset+=part.length}
+        const view=new DataView(bytes.buffer);
+        const tag=(start,count)=>String.fromCharCode(...bytes.subarray(start,start+count));
+        if(total<46||tag(0,4)!=='RIFF'||tag(8,4)!=='WAVE'||tag(12,4)!=='fmt '||view.getUint32(16,true)!==16||view.getUint16(20,true)!==1||view.getUint16(22,true)!==1||view.getUint32(24,true)!==16000||view.getUint16(34,true)!==16||tag(36,4)!=='data'||view.getUint32(40,true)!==total-44)reject('Formato de audio no válido: usa WAV PCM mono, 16 kHz, 16 bits.',400);
+        const duration=(total-44)/32000;
+        const result=await env.AI.run('@cf/openai/whisper',{audio:Array.from(bytes)});
+        const words=(result?.words||[]).map(w=>({word:String(w.word||'').trim().slice(0,180),start:Number(w.start),end:Number(w.end)})).filter(w=>w.word&&Number.isFinite(w.start)&&Number.isFinite(w.end)&&w.start>=0&&w.end>w.start&&w.end<=duration+.2).slice(0,1000);
+        if(!words.length)reject('No se detectó voz con tiempos. Comprueba que la grabación contenga narración clara.',422);
+        return reply({words,provider:'Cloudflare Whisper',duration},200,cors);
+      }
       if (Number(request.headers.get('content-length') || 0) > 9_000) {
         return reply({ error: 'Solicitud demasiado larga.' }, 413, cors);
       }
@@ -271,4 +290,5 @@ export default {
     }
   }
 };
+
 

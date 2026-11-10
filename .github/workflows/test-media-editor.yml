@@ -1,0 +1,94 @@
+name: Verificar fotos individuales y sincronización de audio
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'scripts/media-*.js'
+      - 'scripts/ai-photos.js'
+      - 'scripts/ai-voice.js'
+      - 'workers/ai-images-worker.js'
+      - 'tests/media-timing.mjs'
+      - 'tests/transcribe-route.mjs'
+      - '.github/workflows/test-media-editor.yml'
+permissions:
+  contents: read
+jobs:
+  media:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verificar alineación y protección del reconocimiento
+        run: |
+          node tests/media-timing.mjs
+          node tests/transcribe-route.mjs
+      - name: Preparar navegador
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install chromium
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/media-http.log 2>&1 &
+      - name: Verificar cargas, eliminación, persistencia y subtítulos
+        run: |
+          node <<'JS'
+          const {chromium}=require('playwright');
+          const assert=require('node:assert/strict');
+          function wav(seconds){const b=Buffer.alloc(44+seconds*32000);b.write('RIFF');b.writeUInt32LE(b.length-8,4);b.write('WAVE',8);b.write('fmt ',12);b.writeUInt32LE(16,16);b.writeUInt16LE(1,20);b.writeUInt16LE(1,22);b.writeUInt32LE(16000,24);b.writeUInt32LE(32000,28);b.writeUInt16LE(2,32);b.writeUInt16LE(16,34);b.write('data',36);b.writeUInt32LE(seconds*32000,40);return b}
+          (async()=>{
+            const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+            const page=await browser.newPage({viewport:{width:390,height:844}});
+            const errors=[];page.on('pageerror',e=>errors.push(e.message));
+            await page.goto('http://127.0.0.1:4173/');
+            await page.waitForFunction(()=>window.facelessStudioReady);
+            await page.evaluate(()=>{const p={id:'media-fixture',title:'Fotos y voz',topic:'Lola',style:'Misterio',duration:12,platform:'TikTok',format:'9:16',date:new Date().toISOString(),scenes:[{time:0,duration:4,text:'Hola esta es la primera escena.',prompt:'Scene one'},{time:4,duration:4,text:'Ahora contamos una historia sobre Lola.',prompt:'Scene two'},{time:8,duration:4,text:'Al final todos regresan a casa.',prompt:'Scene three'}]};p.narration=p.scenes.map(s=>s.text).join('\n');projects.unshift(p);persist();activeId=p.id;tab='video';route('editor')});
+            const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a6d8AAAAASUVORK5CYII=','base64');
+            const photo=name=>({name,mimeType:'image/png',buffer:png});
+            await page.locator('#images').setInputFiles([photo('primera.png'),photo('segunda.png')]);
+            await page.waitForFunction(()=>!window.facelessMediaBusy&&facelessProjectPhotos('media-fixture').size===2);
+            assert.equal(await page.locator('#manualPhotoSlots .media-photo-slot img').count(),2);
+            await page.getByRole('button',{name:'Quitar foto de escena 1',exact:true}).click();
+            await page.waitForFunction(()=>!window.facelessMediaBusy&&!facelessProjectPhotos('media-fixture').has(0));
+            assert.equal(await page.evaluate(()=>facelessProjectPhotos('media-fixture').has(1)),true);
+            await page.locator('.media-photo-slot[data-scene="0"] input').setInputFiles(photo('nueva.png'));
+            await page.waitForFunction(()=>!window.facelessMediaBusy&&facelessProjectPhotos('media-fixture').has(0));
+            await page.locator('.media-photo-slot[data-scene="1"] input').setInputFiles(photo('reemplazo.png'));
+            await page.waitForFunction(()=>!window.facelessMediaBusy&&facelessProjectPhotos('media-fixture').get(1)?.facelessFilename==='reemplazo.png');
+            await page.reload();await page.waitForFunction(()=>window.facelessStudioReady);
+            await page.evaluate(()=>{activeId='media-fixture';tab='video';route('editor')});
+            await page.waitForFunction(()=>facelessProjectPhotos('media-fixture').size===2);
+            assert.equal(await page.evaluate(()=>facelessProjectPhotos('media-fixture').get(0).facelessFilename),'nueva.png');
+            let mismatch=false,transcriptions=0;
+            await page.route('**/faceless-images.marianitord2020.workers.dev/transcribe',route=>{
+              transcriptions++;assert.ok(route.request().postDataBuffer().length>44);
+              const groups=['Hola esta es la primera escena','Ahora contamos una historia sobre Lola','Al final todos regresan a casa'];
+              const words=mismatch?[{word:'Completamente',start:1,end:2},{word:'distinto',start:3,end:4}]:groups.flatMap((s,i)=>s.split(' ').map((word,j)=>({word,start:[.5,3,5][i]+j*.2,end:[.5,3,5][i]+j*.2+.15})));
+              return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({words})});
+            });
+            await page.locator('#productionPass').fill('fixture-media-passcode-only');
+            await page.locator('#audio').setInputFiles({name:'narracion.wav',mimeType:'audio/wav',buffer:wav(8)});
+            await page.waitForFunction(()=>!window.facelessMediaBusy&&current().audioAlignment?.method==='speech');
+            const aligned=await page.evaluate(()=>({duration:current().duration,times:current().scenes.map(s=>s.time),text:current().narration,captions:FacelessTiming.cues(current()).map(c=>c.text).join(' '),caption:facelessCaptionAt(current(),3.1)}));
+            assert.equal(aligned.duration,8);assert.deepEqual(aligned.times,[0,3,5]);assert.equal(aligned.captions,aligned.text.replaceAll('\n',' '));assert.equal(aligned.caption,'Ahora contamos una historia sobre Lola.');assert.equal(transcriptions,1);
+            await page.reload();await page.waitForFunction(()=>window.facelessStudioReady);await page.evaluate(()=>{activeId='media-fixture';tab='video';route('editor')});
+            await page.waitForFunction(()=>audioFile?.facelessManual&&current().audioAlignment?.method==='speech');
+            assert.equal(await page.locator('#uploadedAudioPlayer').isVisible(),true);
+            mismatch=true;await page.locator('#productionPass').fill('fixture-media-passcode-only');
+            await page.locator('#audio').setInputFiles({name:'otro.wav',mimeType:'audio/wav',buffer:wav(9)});
+            await page.waitForFunction(()=>!window.facelessMediaBusy&&document.getElementById('audioSyncStatus').textContent.includes('no coincide'));
+            assert.equal(await page.evaluate(()=>current().audioAlignment.method),'estimated');assert.equal(await page.evaluate(()=>current().duration),9);
+            await page.getByRole('button',{name:'Quitar audio',exact:true}).click();
+            await page.waitForFunction(()=>!window.facelessMediaBusy&&!audioFile);
+            assert.equal(await page.evaluate(()=>current().duration),12);
+            await page.getByRole('button',{name:'Quitar foto de escena 1',exact:true}).click();await page.waitForFunction(()=>!window.facelessMediaBusy);
+            await page.reload();await page.waitForFunction(()=>window.facelessStudioReady);await page.evaluate(()=>{activeId='media-fixture';tab='video';route('editor')});
+            await page.waitForFunction(()=>facelessProjectPhotos('media-fixture').has(1));
+            assert.equal(await page.evaluate(()=>Boolean(audioFile)),false);assert.equal(await page.evaluate(()=>facelessProjectPhotos('media-fixture').has(0)),false);
+            assert.equal(await page.evaluate(()=>JSON.stringify(localStorage).includes('fixture-media-passcode-only')),false);assert.deepEqual(errors,[]);
+            console.log('PASS: individual photo add/replace/remove, append without loss, reload persistence, removed assets stay deleted, uploaded audio playback, duration fit, speech-matched subtitles, mismatched voice rejection, audio replacement/removal and no stored credentials');
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          JS

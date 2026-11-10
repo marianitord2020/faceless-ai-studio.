@@ -102,13 +102,15 @@ function mountAIPhotoControls(project, updatePreview) {
   imageStyleSelect.value=project.imageStyle||'cinematic';
   imageStyleSelect.onchange=()=>{
     project.imageStyle=imageStyleSelect.value;
-    photoMap.clear();refreshGallery();updatePreview();
+    for(const [index,photo] of photoMap)if(!photo.facelessManual)photoMap.delete(index);refreshGallery();updatePreview();
     if(typeof persist==='function')persist();
   };
 
 
   function refreshGallery() {
     results.innerHTML = '';
+    results.hidden=Boolean(document.getElementById('manualPhotoSlots'));
+    window.facelessRefreshPhotoSlots?.(project.id);
     for (let i = 0; i < project.scenes.length; i++) {
       const photo = photoMap.get(i);
       if (!photo) continue;
@@ -139,7 +141,7 @@ function mountAIPhotoControls(project, updatePreview) {
   };
   start.onclick = async function () {
     await hydration;
-    if (facelessImageRunning) return;
+    if (facelessImageRunning||window.facelessMediaBusy) return;
     // IMPORTANTE: el Worker de guiones y el de fotos tienen códigos distintos.
     // Nunca reutilizar geminiPass ni una clave API de otro servicio.
     const passInput = panel.querySelector('#aiPhotosPasscode');
@@ -274,25 +276,25 @@ async function facelessRestoreMedia(p){
     const map=facelessProjectPhotos(p.id);
     for(let i=0;i<p.scenes.length;i++){
       const signature=facelessImageSignature(p,i),existing=map.get(i);
-      if(existing?.facelessSignature===signature)continue;
+      if(existing?.facelessManual||existing?.facelessSignature===signature)continue;
       if(existing)map.delete(i);
       const stored=await facelessMediaGet(p.id+':image:'+i);
-      if(!stored||stored.signature!==signature)continue;
+      if(!stored||(!stored.manual&&stored.signature!==signature))continue;
       const photo=new Image();
       await new Promise((resolve,reject)=>{photo.onload=resolve;photo.onerror=reject;photo.src=stored.dataURI});
-      photo.facelessSignature=signature;
+      photo.facelessSignature=signature;photo.facelessManual=Boolean(stored.manual);photo.facelessFilename=stored.name||'';
       if(facelessImageSignature(p,i)===signature)map.set(i,photo);
     }
     const signature=facelessVoiceSignature(p),cached=generatedVoiceByProject.get(p.id);
-    if(cached?.facelessSignature&&cached.facelessSignature!==signature){
+    if(cached?.facelessSignature&&!cached.facelessManual&&cached.facelessSignature!==signature){
       generatedVoiceByProject.delete(p.id);
       if(audioFile===cached){audioFile=null;updateAudioAttachmentUI()}
     }
     if(!generatedVoiceByProject.has(p.id)){
       const stored=await facelessMediaGet(p.id+':voice');
-      if(stored?.signature===signature && stored.blob instanceof Blob && facelessVoiceSignature(p)===signature){
+      if((stored?.manual||stored?.signature===signature) && stored.blob instanceof Blob && facelessVoiceSignature(p)===signature){
         const file=new File([stored.blob],stored.name||'faceless-voz-'+p.id+'.wav',{type:stored.blob.type});
-        file.facelessSignature=signature;generatedVoiceByProject.set(p.id,file);
+        file.facelessSignature=signature;file.facelessManual=Boolean(stored.manual);generatedVoiceByProject.set(p.id,file);
       }
     }
     if(current()?.id===p.id && (!audioFile || audioFileProjectId!==p.id)){
@@ -319,7 +321,7 @@ function mountFacelessProduction(project){
     status.textContent='Deteniendo… Los medios terminados quedan guardados para retomar.';
   };
   start.onclick=async()=>{
-    if(window.facelessProductionBusy||facelessImageRunning||facelessVoiceBusy||rendering)return;
+    if(window.facelessMediaBusy||window.facelessProductionBusy||facelessImageRunning||facelessVoiceBusy||rendering)return;
     const pass=panel.querySelector('#productionPass').value.trim()||window.facelessProductionPasscode||facelessImagePasscode||facelessVoicePassword;
     if(!pass||pass.length<16){status.textContent='Introduce tu código privado de mínimo 16 caracteres.';panel.querySelector('#productionPass').focus();return}
     if(!safeMime(true)){status.textContent='Este navegador no permite exportar video con voz. Abre la página en Chrome actualizado.';return}

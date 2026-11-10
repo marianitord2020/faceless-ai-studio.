@@ -36,6 +36,10 @@ jobs:
             exit 1
           fi
       - uses: actions/checkout@v4
+      - name: Verificar ruta de voz y alineación antes de publicar
+        run: |
+          node tests/media-timing.mjs
+          node tests/transcribe-route.mjs
       - name: Publicar código, variables públicas y binding AI
         uses: cloudflare/wrangler-action@v4
         with:
@@ -81,3 +85,32 @@ jobs:
             echo "::error::La protección del Worker no respondió como se esperaba (HTTP $status)."
           fi
           exit 1
+
+      - name: Comprobar reconocimiento real de voz en español
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v ffmpeg >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
+          python3 <<'PY'
+          import base64,io,json,os,subprocess,wave
+          endpoint='https://faceless-images.marianitord2020.workers.dev'
+          def call(path,payload,kind):
+              result=subprocess.run(['curl','--silent','--show-error','--max-time','110','-X','POST',endpoint+path,'-H','Origin: https://marianitord2020.github.io','-H','x-app-token: '+os.environ['APP_PASSCODE'],'-H','Content-Type: '+kind,'--data-binary','@-','-w','\\n%{http_code}'],input=payload,capture_output=True,check=True)
+              body,status=result.stdout.rsplit(bytes([10]),1)
+              if status!=b'200': raise RuntimeError('La comprobación de '+path+' falló: HTTP '+status.decode()+' '+body.decode()[:180])
+              return json.loads(body)
+          voice=call('/voice',json.dumps({'text':'Hola, esta es una prueba de sincronización. Lola encontró una carta en el jardín.','voice':'female'}).encode(),'application/json')
+          data=base64.b64decode(voice['dataURI'].split(',',1)[1])
+          pcm=subprocess.run(['ffmpeg','-v','error','-i','pipe:0','-f','s16le','-ac','1','-ar','16000','pipe:1'],input=data,capture_output=True,check=True).stdout
+          output=io.BytesIO()
+          with wave.open(output,'wb') as wav:
+              wav.setnchannels(1);wav.setsampwidth(2);wav.setframerate(16000);wav.writeframes(pcm)
+          recognized=call('/transcribe',output.getvalue(),'audio/wav')
+          words=recognized.get('words',[])
+          assert len(words)>=8,'No se recuperaron suficientes palabras'
+          assert all(w['end']>w['start']>=0 for w in words),'Tiempos no válidos'
+          text=' '.join(w['word'] for w in words).lower()
+          assert 'carta' in text and 'jard' in text,'No coincide la voz española reconocida'
+          print('RECONOCIMIENTO REAL: voz española, '+str(len(words))+' palabras con tiempos; ruta protegida y audio WAV verificados.')
+          PY
+

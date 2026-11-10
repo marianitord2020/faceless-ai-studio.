@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import worker from '../workers/ai-images-worker.js';
+const token='fixture-transcription-passcode',origin='https://marianitord2020.github.io';
+const wav=new Uint8Array(32044),v=new DataView(wav.buffer),tag=(o,s)=>[...s].forEach((c,i)=>v.setUint8(o+i,c.charCodeAt(0)));
+tag(0,'RIFF');v.setUint32(4,wav.length-8,true);tag(8,'WAVE');tag(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,16000,true);v.setUint32(28,32000,true);v.setUint16(32,2,true);v.setUint16(34,16,true);tag(36,'data');v.setUint32(40,32000,true);
+let calls=0;const env={APP_PASSCODE:token,AI:{run:async(model,input)=>{calls++;assert.equal(model,'@cf/openai/whisper');assert.equal(input.audio.length,wav.length);return {words:[{word:'Hola',start:.1,end:.8},{word:'invalid',start:9,end:10}]}}}};
+const request=(body=wav,pass=token,type='audio/wav')=>new Request('https://example.com/transcribe',{method:'POST',headers:{origin,'x-app-token':pass,'content-type':type},body});
+assert.equal((await worker.fetch(request(wav,'bad'),env)).status,401);
+assert.equal((await worker.fetch(request(wav,token,'application/json'),env)).status,415);
+assert.equal((await worker.fetch(request(new Uint8Array(960045)),env)).status,413);
+const broken=wav.slice();broken[0]=0;assert.equal((await worker.fetch(request(broken),env)).status,400);
+assert.equal(calls,0);const response=await worker.fetch(request(),env);assert.equal(response.status,200);assert.deepEqual((await response.json()).words,[{word:'Hola',start:.1,end:.8}]);assert.equal(calls,1);
+console.log('PASS: protected audio route, bounded input, WAV validation, timestamp sanitizing and real AI call shape');
