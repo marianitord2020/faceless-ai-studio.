@@ -306,7 +306,7 @@ function mountFacelessProduction(project){
   panel.innerHTML='<h3>🎬 Crear el video completo</h3><p>Genera las fotos que faltan, añade la voz y monta el video. Puedes retomar si una etapa falla.</p>'+ 
     '<label class="group-label" for="productionPass">Código privado</label><input type="password" id="productionPass" autocomplete="off" placeholder="Tu código privado" style="width:100%;margin-bottom:12px">'+
     '<button type="button" class="btn primary full" id="productionStart">✦ Generar video completo</button>'+
-    '<button type="button" class="btn small" id="productionStop" hidden style="margin-top:10px">Detener</button>'+
+    '<button type="button" class="btn small" id="productionStop" style="display:none;margin-top:10px">Detener</button>'+
     '<p id="productionStatus" role="status" aria-live="polite">Fotos y voz se guardan en este navegador. Mantén la página abierta durante el montaje.</p>';
   root.prepend(panel);
   const start=panel.querySelector('#productionStart'),stop=panel.querySelector('#productionStop'),status=panel.querySelector('#productionStatus');
@@ -321,7 +321,7 @@ function mountFacelessProduction(project){
     if(!safeMime(true)){status.textContent='Este navegador no permite exportar video con voz. Abre la página en Chrome actualizado.';return}
     window.facelessProductionBusy=true;window.facelessProductionCancelled=false;
     const controls=[...document.querySelectorAll('button,input,select,textarea')].filter(el=>el!==stop).map(el=>[el,el.disabled]);
-    controls.forEach(([el])=>el.disabled=true);stop.hidden=false;
+    controls.forEach(([el])=>el.disabled=true);stop.style.display='';
     let wakeLock;
     try{
       // Start audio in the original tap, before network requests, for Android.
@@ -355,7 +355,7 @@ function mountFacelessProduction(project){
       if(window.facelessProductionAudioContext)await window.facelessProductionAudioContext.close().catch(()=>{});
       window.facelessProductionAudioContext=null;
       if(wakeLock)await wakeLock.release().catch(()=>{});
-      window.facelessProductionBusy=false;stop.hidden=true;
+      window.facelessProductionBusy=false;stop.style.display='none';
       controls.forEach(([el,disabled])=>el.disabled=disabled);
       updateAudioAttachmentUI();
     }
