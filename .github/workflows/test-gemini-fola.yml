@@ -15,6 +15,7 @@ jobs:
     timeout-minutes: 6
     env:
       GEMINI_TTS_API_KEY: ${{ secrets.GEMINI_TTS_API_KEY }}
+      APP_PASSCODE: ${{ secrets.APP_PASSCODE }}
     steps:
       - name: Probar acceso directo seguro a Fola
         shell: bash
@@ -69,4 +70,39 @@ jobs:
           blob=base64.b64decode(audio['data'],validate=True)
           assert blob.startswith(b'RIFF') and len(blob)>1000,'La respuesta no es un archivo WAV válido'
           print('VOZ FOLA REAL VERIFICADA: audio WAV generado, bytes:',len(blob))
+          PY
+      - name: Verificar Fola desde Cloudflare y la pagina
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$APP_PASSCODE"
+          status=$(curl --silent --show-error --max-time 110 \
+            --output "$RUNNER_TEMP/worker-fola.json" --write-out '%{http_code}' \
+            -X POST 'https://faceless-images.marianitord2020.workers.dev/voice' \
+            -H 'Origin: https://marianitord2020.github.io' \
+            -H 'Content-Type: application/json' \
+            -H "x-app-token: $APP_PASSCODE" \
+            --data '{"text":"Hola. Fola ahora narra nuestros videos en español.","voice":"Fola"}')
+          if [ "$status" != "200" ]; then
+            echo "::error::La ruta Cloudflare de voz falló (HTTP $status)"
+            python3 - "$RUNNER_TEMP/worker-fola.json" <<'PY'
+          import json,sys
+          try: print(str(json.load(open(sys.argv[1])).get('error','Error sin detalle'))[:280])
+          except Exception: print('Sin detalle de error.')
+          PY
+            exit 1
+          fi
+          python3 - "$RUNNER_TEMP/worker-fola.json" <<'PY'
+          import json,sys,base64
+          obj=json.load(open(sys.argv[1]))
+          provider=obj.get("provider","")
+          print("Proveedor real de voz:",provider)
+          if "Gemini TTS" not in provider or "Fola" not in provider:
+            print("AVISO: Se usó voz de respaldo, no Fola.",flush=True)
+            raise SystemExit(1)
+          uri=obj.get("dataURI","")
+          assert uri.startswith("data:audio/wav;base64,"),"Google debe devolver WAV"
+          audio=base64.b64decode(uri.split(",",1)[1],validate=True)
+          assert audio.startswith(b"RIFF") and len(audio)>1000,"WAV inválido"
+          print("FOLA ACTIVA EN FACELESS AI STUDIO: WAV válido, bytes",len(audio))
           PY
