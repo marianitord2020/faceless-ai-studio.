@@ -132,7 +132,7 @@
     '<div class="studio-addon"><label for="studioImageStyle">Estilo de imágenes</label><select id="studioImageStyle"></select></div>'+
     '<div class="studio-addon"><label for="studioDuration">Duración</label><select id="studioDuration"><option value="30">30 segundos</option><option value="60" selected>60 segundos</option><option value="120">120 segundos</option></select></div>'+
     '<div class="studio-addon pass"><label for="studioPass">Código APP_PASSCODE</label><input id="studioPass" type="password" autocomplete="new-password" placeholder="Solo para IA; no es tu API Key"></div>'+
-    '<div class="studio-helper">Para noticias se usa Google Search. Se muestran solo fuentes recuperadas, nunca noticias inventadas. Las portadas visuales de noticias son ilustraciones editoriales.</div></div>'+
+    '<div class="studio-helper">Para noticias se consulta GDELT y se enlaza al medio original. Se muestran solo fuentes recuperadas, nunca noticias inventadas. Las portadas visuales de noticias son ilustraciones editoriales.</div></div>'+
     '</div>'+
     '<div class="studio-results-head"><div><h2>✦ <span id="studioGalleryTitle">10 propuestas de historias</span></h2>'+
     '<p id="studioGallerySubtitle">Selecciona un relato, lee su sinopsis y llévalo a creación.</p></div>'+
@@ -495,7 +495,8 @@
         await saveCover(id,cover);
       }
       activeId=id;tab='summary';showEditor=false;
-      resetMedia();route('editor');
+      resetMedia();tab='video';route('editor');
+      window.facelessProductionPasscode=state.pass;
       toast('✓ '+idea.title+' está en creación, con su propio guion.');
     }catch(error){setStatus('No se pudo llevar a creación: '+String(error?.message||error))}
     finally{state.building=false;if($id('studioFeature'))renderFeature()}
@@ -503,3 +504,4 @@
   shell();
   window.facelessStudioReady=true;
 })();
+
