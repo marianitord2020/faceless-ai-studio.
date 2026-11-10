@@ -108,12 +108,13 @@ jobs:
             await page.waitForFunction(()=>facelessProjectPhotos('media-fixture').size===2);
             assert.equal(await page.evaluate(()=>facelessProjectPhotos('media-fixture').get(0).facelessFilename),'nueva.png');
             let mismatch=false,transcriptions=0;
-            await page.route('**/faceless-images.marianitord2020.workers.dev/transcribe',route=>{
-              transcriptions++;assert.ok(route.request().postDataBuffer().length>44);
+            await page.exposeFunction('fixtureRecognize',()=>{
+              transcriptions++;
               const groups=['Hola esta es la primera escena','Ahora contamos una historia sobre Lola','Al final todos regresan a casa'];
-              const words=mismatch?[{word:'Completamente',start:1,end:2},{word:'distinto',start:3,end:4}]:groups.flatMap((s,i)=>s.split(' ').map((word,j)=>({word,start:[.5,3,5][i]+j*.2,end:[.5,3,5][i]+j*.2+.15})));
-              return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({words})});
+              return mismatch?[{word:'Completamente',start:1,end:2},{word:'distinto',start:3,end:4}]:groups.flatMap((s,i)=>s.split(' ').map((word,j)=>({word,start:[.5,3,5][i]+j*.2,end:[.5,3,5][i]+j*.2+.15})));
             });
+            await page.addInitScript(()=>addEventListener('DOMContentLoaded',()=>{window.facelessRecognizeLocal=()=>window.fixtureRecognize();}));
+            await page.evaluate(()=>{window.facelessRecognizeLocal=()=>window.fixtureRecognize();});
             await reveal('#productionPass');
             await page.locator('#productionPass').fill('fixture-media-passcode-only');
             await reveal('#pickOwnAudio');
