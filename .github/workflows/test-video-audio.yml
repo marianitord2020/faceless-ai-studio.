@@ -183,6 +183,8 @@ jobs:
             await page.waitForFunction(()=>window.facelessStudioReady===true);
             await page.evaluate(()=>{activeId='ci-complete';tab='video';route('editor')});
             await page.waitForFunction(()=>facelessProjectPhotos('ci-complete').size===2 && audioFile?.size>1000);
+            await page.locator('#aiVoiceAudioArea audio').waitFor({state:'visible'});
+            if(!await page.locator('#aiVoiceAudioArea a').isVisible())throw Error('La voz recuperada no tiene descarga');
             const privateLeak=await page.evaluate(async()=>{
               if(JSON.stringify(localStorage).includes('ci-fixture-passcode-only'))return true;
               const db=await facelessOpenMedia();
@@ -208,6 +210,42 @@ jobs:
               if(facelessProjectPhotos(current().id).size)throw Error('Se reutilizaron imágenes de otro estilo');
             });
             console.log('PRODUCCIÓN COMPLETA: fallo y reanudación, video con voz, recarga sin llamadas IA, cancelación, invalidación y privacidad: OK');
+            const longVoice=await page.evaluate(async()=>{
+              const ctx=new OfflineAudioContext(1,72000,24000),osc=ctx.createOscillator();
+              osc.connect(ctx.destination);osc.start(2.4);osc.stop(2.9);
+              const wav=facelessAudioToWAV(await ctx.startRendering());
+              return new Promise(resolve=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.readAsDataURL(wav)});
+            });
+            await page.unroute('**/faceless-images.marianitord2020.workers.dev/voice');
+            let releaseVoice,voiceReady;
+            const voiceStarted=new Promise(resolve=>voiceReady=resolve);
+            await page.route('**/faceless-images.marianitord2020.workers.dev/voice',async route=>{
+              await new Promise(resolve=>{releaseVoice=resolve;voiceReady()});
+              await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({provider:'CI long fixture',dataURI:longVoice})});
+            });
+            await page.evaluate(()=>{
+              const p={id:'ci-fit',topic:'Prueba de voz completa',title:'Voz completa',style:'Romance',
+                duration:1,format:'9:16',voicePreset:'female',platform:'TikTok',narration:'Texto completo.',
+                date:new Date().toISOString(),scenes:[{time:0,duration:1,text:'Texto completo.',prompt:'A red handbag'}]};
+              projects.unshift(p);activeId=p.id;tab='video';resetMedia();route('editor');
+            });
+            await page.locator('#aiVoicePasscode').fill('ci-fixture-passcode-only');
+            await page.locator('#aiVoiceGenerate').click();
+            await voiceStarted;
+            await page.locator('[data-route="projects"]').first().click();
+            await page.locator('[data-tab="scenes"]').click();
+            if(await page.evaluate(()=>document.querySelector('.screen:not(.hidden)').id!=='editor'||tab!=='video'))
+              throw Error('La navegación interrumpió una generación de voz activa');
+            releaseVoice();
+            await page.waitForFunction(()=>!facelessVoiceBusy&&audioFileProjectId==='ci-fit'&&audioFile?.size>1000);
+            const tail=await page.evaluate(async()=>{
+              const ctx=new AudioContext(),audio=await ctx.decodeAudioData(await audioFile.arrayBuffer());
+              const samples=audio.getChannelData(0);let peak=0;
+              for(let i=Math.floor(audio.sampleRate*0.8);i<samples.length;i++)peak=Math.max(peak,Math.abs(samples[i]));
+              await ctx.close();return peak;
+            });
+            if(tail<0.1)throw Error('Se cortó el final de la narración larga');
+            console.log('VOZ: reproductor recuperado, navegación protegida y final de narración sin cortes: OK');
             await browser.close();
           })().catch(e=>{console.error(e);process.exit(1)});
           JS
