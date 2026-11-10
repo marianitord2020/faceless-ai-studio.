@@ -195,7 +195,7 @@
   function selectedIdea(){return state.ideas[state.selected]||null}
   function visual(container,idea,index,large){
     container.replaceChildren();
-    const publisherPhoto=state.mode==='news'&&idea.sourceImageUrl?idea.sourceImageUrl:null;
+    const publisherPhoto=(state.mode==='news'||state.mode==='factual')&&idea.sourceImageUrl?idea.sourceImageUrl:null;
     if(state.covers.has(idea.id)||publisherPhoto){
       const pic=e('img');pic.alt=publisherPhoto?'Vista previa ofrecida por el medio enlazado':'Portada de '+idea.title;
       pic.src=publisherPhoto||state.covers.get(idea.id);pic.loading='lazy';
@@ -255,6 +255,13 @@
       a.href=idea.sourceUrl;a.target='_blank';a.rel='noopener noreferrer';text.appendChild(a);
     }
     feature.append(picture,text);
+    if(state.mode==='factual'){
+      const wikiInfo=e('p','studio-limit','Artículos e imágenes de Wikipedia/Wikimedia como referencia; cada archivo puede requerir atribución y licencia específica. Las imágenes de personas históricas pueden ser retratos artísticos, no fotografías.');
+      feature.appendChild(wikiInfo);
+      const wiki=e('a','studio-source','Consultar Wikipedia y créditos');
+      wiki.href='https://es.wikipedia.org/';wiki.target='_blank';wiki.rel='noopener noreferrer';
+      feature.appendChild(wiki);
+    }
     if(state.mode==='news'){
       const credit=e('p','studio-limit','Noticias detectadas por GDELT Project. La fecha corresponde a observación, no necesariamente al hecho. Verifica la noticia en el medio antes de publicar. Las fotografías del medio no se incorporan al video sin permiso.');
       feature.appendChild(credit);
