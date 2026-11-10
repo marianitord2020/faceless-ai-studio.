@@ -2,7 +2,7 @@
 (() => {
  let source=null,sourceProject='',url='';
  window.facelessOwnVideo=()=>window.facelessFlow==='manual'&&sourceProject===activeId?source:null;
- window.facelessPlayOwnVideo=async()=>{const video=window.facelessOwnVideo();if(video){video.currentTime=0;await video.play();}};
+ window.facelessPlayOwnVideo=async(seconds=0)=>{const video=window.facelessOwnVideo();if(video){video.currentTime=Math.min(seconds,Math.max(0,video.duration-.01));await video.play();}};
  window.facelessStopOwnVideo=()=>source?.pause();
  window.facelessMountOwnVideo=(p,host)=>{
   const status=host.querySelector('#ownVideoStatus'),remove=host.querySelector('#removeOwnVideo');
@@ -32,7 +32,7 @@
   if(!window.facelessOwnVideo())facelessMediaGet(p.id+':own-video').then(async saved=>{
    if(!saved?.blob||!host.isConnected||activeId!==p.id)return;
    const restored=document.createElement('video'),restoredURL=URL.createObjectURL(saved.blob);restored.muted=true;restored.playsInline=true;
-   restored.onloadeddata=()=>{if(!host.isConnected){URL.revokeObjectURL(restoredURL);return;}source?.pause();if(url)URL.revokeObjectURL(url);source=restored;url=restoredURL;sourceProject=p.id;refresh();drawFrame(0);const view=document.getElementById('previewCanvas');view?.getContext('2d').drawImage(canvas,0,0,view.width,view.height);};restored.src=restoredURL;
+   restored.onloadeddata=()=>{if(!host.isConnected){URL.revokeObjectURL(restoredURL);return;}source?.pause();if(url)URL.revokeObjectURL(url);source=restored;url=restoredURL;sourceProject=p.id;restored.onseeked=()=>{if(!previewTimer&&current()?.id===p.id){drawFrame(0);const preview=document.getElementById('previewCanvas');preview?.getContext('2d').drawImage(canvas,0,0,preview.width,preview.height);}};restored.currentTime=.001;refresh();document.dispatchEvent(new CustomEvent('faceless-media-updated',{detail:p.id}));drawFrame(0);const view=document.getElementById('previewCanvas');view?.getContext('2d').drawImage(canvas,0,0,view.width,view.height);};restored.src=restoredURL;
   }).catch(()=>{});
  };
 })();

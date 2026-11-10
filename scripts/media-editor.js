@@ -25,7 +25,7 @@
     if(photo){const remove=el('button','Quitar foto','btn small outline');remove.type='button';remove.setAttribute('aria-label','Quitar foto de escena '+(i+1));remove.disabled=Boolean(window.facelessMediaBusy);remove.onclick=async()=>{if(facelessIsWorking())return;busy(true);try{await facelessRestoreMedia(p);photos.delete(i);delete p.scenes[i].stockCredit;persist();window.facelessRefreshStockCredits?.();await facelessMediaDelete(p.id+':image:'+i);invalidateVideo();photoRefresh(p.id);updatePreview()}finally{busy(false);photoRefresh(p.id)}};const download=el('a','Descargar','media-photo-download');download.href=photo.src;download.download=photo.facelessFilename||'faceless-escena-'+(i+1)+'.png';card.append(remove,download)}photoRoot.append(card);
    });
    photoRoot.hidden=count===0;id('imageCount').hidden=count===0;
-   id('imageCount').textContent=count+' de '+p.scenes.length+' escenas con foto. Las escenas vacías usan fondos animados.';
+   id('imageCount').textContent=count+' de '+p.scenes.length+' escenas con foto. Las escenas vacías usan fondos animados.';document.dispatchEvent(new CustomEvent('faceless-media-updated',{detail:p.id}));
   }
   window.facelessRefreshPhotoSlots=photoRefresh;
   async function addPhotos(files,start){
@@ -46,6 +46,7 @@
     imgs=[];invalidateVideo();photoRefresh(p.id);updatePreview();
    }catch(error){toast(String(error.message||'No se pudo cargar la imagen.'))}finally{id('images').value='';busy(false);photoRefresh(p.id);if(audioFile)try{await window.facelessEnsureAudioSync?.();}catch(error){status.textContent=error.message;}}
   }
+  window.facelessReplaceScenePhoto=(projectId,index,file)=>{if(projectId===p.id&&index>=0&&index<p.scenes.length)return addPhotos([file],index);};
   id('images').onchange=event=>addPhotos([...event.target.files]);
   id('pickOwnPhotos').onclick=()=>{if(!facelessIsWorking())id('images').click()};
   id('pickOwnAudio').onclick=()=>{if(!facelessIsWorking())id('audio').click()};

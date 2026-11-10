@@ -42,7 +42,7 @@
  window.facelessMountCaptionStyle=(p,host)=>{
   const panel=document.createElement('section');panel.className='editor-video-card caption-style';
   panel.innerHTML='<label class="group-label" for="captionStyle">Estilo de subtítulos</label><select id="captionStyle"><option value="highlight">Palabra resaltada · amarillo</option><option value="purple">Palabra resaltada · violeta</option><option value="classic">Clásico · blanco</option></select>';
-  const select=panel.querySelector('select');select.value=p.captionStyle||'highlight';select.onchange=()=>{p.captionStyle=select.value;persist();drawFrame(0);const view=document.getElementById('previewCanvas');view?.getContext('2d').drawImage(canvas,0,0,view.width,view.height);};host.append(panel);
+  const select=panel.querySelector('select');select.replaceChildren(...Object.entries(FacelessCinema.captionStyles).map(([value,theme])=>{const option=document.createElement('option');option.value=value;option.textContent=theme.name;return option;}));select.value=p.captionStyle||'highlight';select.onchange=()=>{p.captionStyle=select.value;persist();drawFrame(0);const view=document.getElementById('previewCanvas');view?.getContext('2d').drawImage(canvas,0,0,view.width,view.height);};host.append(panel);
  };
  window.facelessManualLayout=(p,root)=>{
   const byId=id=>document.getElementById(id),shell=root.parentElement;
@@ -90,7 +90,7 @@
   move('previewVideo',toolbar);move('renderVideo',toolbar);byId('renderVideo').textContent='Exportar mi video';
   const previewButton=byId('previewVideo'),originalPreview=previewButton.onclick;
   previewButton.onclick=function(event){if(!previewTimer)frame.scrollIntoView({block:'center',behavior:'smooth'});return originalPreview.call(this,event);};
-  shell.className='compact-video-editor manual-video-editor';shell.replaceChildren(cards,status,toolbar);
+  shell.className='compact-video-editor manual-video-editor';shell.replaceChildren(cards,status,toolbar);window.facelessMountManualStudio?.(p,cards,preview);
  };
  const requested=new URLSearchParams(location.search).get('mode');
  if(requested){history.replaceState({},'',path(requested==='manual'?'manual':'ai'));enter(requested==='manual'?'manual':'ai',false);}else route('home');
