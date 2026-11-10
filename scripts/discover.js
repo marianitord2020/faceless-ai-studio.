@@ -154,9 +154,9 @@
     '<p>Busca obras en Wikisource o importa un relato de otra página.</p>'+
     '<a id="studioReddit" class="studio-source" href="https://www.reddit.com/search/" target="_blank" rel="noopener noreferrer">↗ Buscar relatos en Reddit</a>'+
     '<label for="studioWrittenTitle">Título del texto</label><input id="studioWrittenTitle" maxlength="120" placeholder="Título del relato publicado">'+
-    '<label for="studioWrittenUrl">Enlace original (opcional)</label><input id="studioWrittenUrl" type="url" maxlength="1000" placeholder="https://…">'+
+    '<label for="studioWrittenUrl">Enlace del relato · carga automática</label><input id="studioWrittenUrl" type="url" maxlength="1000" placeholder="https://…">'+
     '<label for="studioWrittenLanguage">Idioma del texto original</label><select id="studioWrittenLanguage"><option value="es">Español</option><option value="en">Inglés</option><option value="fr">Francés</option><option value="pt">Portugués</option><option value="it">Italiano</option><option value="de">Alemán</option></select>'+
-    '<label for="studioWrittenText">Texto publicado (hasta 5.000 caracteres)</label><textarea id="studioWrittenText" maxlength="5000" rows="6" placeholder="Pega aquí el relato. No lo sustituiremos por una historia inventada."></textarea>'+
+    '<label for="studioWrittenText">Texto publicado (hasta 100.000 caracteres)</label><textarea id="studioWrittenText" maxlength="100000" rows="6" placeholder="El texto del enlace aparecerá aquí. También puedes pegarlo manualmente."></textarea>'+
     '<p class="studio-limit">Si eliges otro idioma, se enviará el texto a MyMemory para traducirlo. Su cuota gratuita anónima es de 5.000 caracteres al día. Conserva autor, enlace y permisos de uso.</p>'+
     '<button id="studioImportWritten" class="studio-create" type="button">Importar texto / traducir al español</button></div>'+
     '<div class="studio-results-head"><div><h2>✦ <span id="studioGalleryTitle">10 propuestas de historias</span></h2>'+
@@ -246,6 +246,7 @@
       $id('studioMode').value=local?'fiction':['Noticias','Farándula','Entretenimiento','Deportes'].includes(genre.value)?'news':['Historia','Curiosidades','Motivación','Educativo'].includes(genre.value)?'factual':'fiction';
       $id('studioReddit').href='https://www.reddit.com/search/?'+new URLSearchParams({q:$id('studioTopic').value});
     };
+    window.facelessMountUrlReader?.({read:async url=>{state.pass=$id('studioPass').value.trim()||state.pass||window.facelessProductionPasscode||'';return callEndpoint('/read-url',{url});},busy:()=>state.busy||state.building});
     $id('studioImportWritten').onclick=importWritten;
     $id('studioTopic').addEventListener('input',()=>{$id('studioReddit').href='https://www.reddit.com/search/?'+new URLSearchParams({q:$id('studioTopic').value})});
     $id('studioDuration').onchange=renderFeature;
@@ -488,7 +489,9 @@
   }
   async function importWritten(){
     if(state.busy||state.building)return;
+    if(!$id('studioWrittenText').value.trim()&&$id('studioWrittenUrl').value.trim()){if(!await window.facelessReadWrittenURL?.())return;}
     const text=$id('studioWrittenText').value.trim(),title=$id('studioWrittenTitle').value.trim();
+    if($id('studioWrittenLanguage').value!=='es'&&text.length>5000){setStatus('El relato se cargó completo. La traducción gratuita admite hasta 5.000 caracteres por vez: selecciona un fragmento antes de traducir. El original permanece en el campo.');return;}
     if(text.length<100||!title){setStatus('Escribe un título y pega al menos 100 caracteres del relato.');return}
     let url=$id('studioWrittenUrl').value.trim();
     try{if(url&&new URL(url).protocol!=='https:')throw Error()}catch{setStatus('El enlace original debe empezar con https://');return}
@@ -500,7 +503,7 @@
       const translated=await window.facelessWrittenStories.translate(text,$id('studioWrittenLanguage').value);
       state.topic=title;state.style=$id('studioGenre').value;state.subcategory=$id('studioSubcategory').value;state.source='local';state.mode='fiction';state.selected=0;
       state.sources=url?[{title,url}]:[];state.matchType='exact';state.sourceProvider='Texto importado';state.covers.clear();
-      state.ideas=[{id:'imported-'+Date.now(),title,synopsis:translated.slice(0,400)+(translated.length>400?'…':''),writtenText:translated,importedOriginal:text,sourceUrl:url,sourceTitle:title,outline:'Texto publicado importado por el usuario.',coverPrompt:''}];
+      state.ideas=[{id:'imported-'+Date.now(),title,synopsis:translated.slice(0,400)+(translated.length>400?'…':''),writtenText:translated,importedOriginal:text,sourceAuthor:$id('studioWrittenText').dataset.sourceAuthor||'',sourceUrl:url,sourceTitle:title,outline:'Texto publicado importado por el usuario.',coverPrompt:''}];
       setStatus('✓ Texto preparado en español. Revisa la traducción y la fuente antes de crear el video.');
       state.busy=false;renderCards();renderFeature();
     }catch(error){setStatus(String(error.message||error))}

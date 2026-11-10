@@ -123,3 +123,15 @@ Esta sección abre las páginas de los proveedores. No presenta sus catálogos c
 “3D animado (tipo Pixar)” es una categoría visual de búsqueda. No indica que el material pertenezca a Pixar ni garantiza personajes o franquicias licenciadas.
 
 Se valida que el enlace de procedencia pertenezca al proveedor elegido. Los créditos introducidos por el usuario no verifican por sí mismos una licencia: deben copiarse de la descarga original y conservarse al publicar.
+
+## Lectura del relato al pegar una URL
+
+El campo Enlace del relato ahora solicita `/read-url` al pegar o terminar de escribir un enlace HTTPS válido. También existe Leer relato desde el enlace para reintentar y Copiar texto cargado. El lector rellena título, texto original y, cuando puede determinarlo, idioma y autor. Si se edita el campo mientras llega una respuesta, esa respuesta no borra la edición.
+
+El servidor descarga HTML público con un límite de 2 MB, obtiene el contenido de article/main o contenedores de relato comunes y elimina scripts, navegación y formularios. No usa Gemini ni Groq para inventar, completar o resumir el texto. No accede a sesiones privadas ni evita muros de pago o bloqueos. Las páginas dinámicas o sin contenido principal identificable pueden necesitar copia manual.
+
+El texto original admite hasta 100.000 caracteres. MyMemory conserva su límite separado de 5.000 caracteres por traducción: si el relato es mayor, se carga completo y se informa del límite sin recortarlo. La creación de un video conserva su política existente de usar un fragmento que cabe en la duración elegida y guardar el original.
+
+La ruta exige APP_PASSCODE. Solo admite HTTPS público por el puerto estándar; rechaza credenciales, hosts locales, IPs literales y resoluciones DNS privadas, y vuelve a comprobar cada redirección. La extracción conserva la referencia del sitio y autor detectado; eso no concede por sí mismo permisos de reutilización.
+
+Pruebas: `node tests/url-reader.mjs` y el workflow Verificar lectura automática de relatos por URL. La prueba de interfaz usa un relato sintético; una prueba de extracción real confirmó el título, autor y 12.348 caracteres del enlace de Ciudad Seva solicitado, sin incluir menús ni publicidad.

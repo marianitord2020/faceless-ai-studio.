@@ -1,0 +1,31 @@
+name: Verificar lectura automática de relatos por URL
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/url-reader.js'
+      - 'workers/url-reader.js'
+      - 'scripts/discover.js'
+      - 'tests/url-reader*'
+      - '.github/workflows/test-url-reader.yml'
+permissions:
+  contents: read
+jobs:
+  reader:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verificar extracción y protección del lector
+        run: node tests/url-reader.mjs
+      - name: Preparar navegador
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install chromium
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/url-reader-http.log 2>&1 &
+      - name: Verificar carga automática y conservación de ediciones
+        run: node tests/url-reader-ui.cjs

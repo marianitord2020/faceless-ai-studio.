@@ -55,6 +55,7 @@ jobs:
           node tests/media-providers.mjs
           node tests/free-image-providers.mjs
           node tests/stock-photos.mjs
+          node tests/url-reader.mjs
       - name: Publicar código, variables públicas y binding AI
         uses: cloudflare/wrangler-action@v4
         with:

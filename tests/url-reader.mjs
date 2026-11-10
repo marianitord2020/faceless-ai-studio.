@@ -1,0 +1,28 @@
+import assert from 'node:assert/strict';
+import {validateStoryURL,extractStoryHTML,readStoryURL} from '../workers/url-reader.js';
+import worker from '../workers/ai-images-worker.js';
+for(const bad of ['http://example.com/','https://localhost/','https://127.0.0.1/','https://2130706433/','https://[::1]/','https://example.com:8080/','https://user:secret@example.com/'])assert.throws(()=>validateStoryURL(bad),/HTTPS|privadas/);
+const body='¡Esta es una historia que conserva sus palabras, sin inventar ni resumir! '.repeat(100);
+const html='<html lang="es"><head><title>Otro título</title></head><body><nav>Menú privado</nav><article><header><h1>Mi &uacute;nico relato</h1><p>[Cuento completo]</p>Autor original</header><div class="text-justify"><p>'+body+'</p><script>malicious()</script><p>FIN</p><p>Traducci&oacute;n de Ejemplo</p></div></article><footer>No importar anuncios</footer></body></html>';
+const extracted=extractStoryHTML(html,'https://ciudadseva.com/texto/fixture/');assert.equal(extracted.title,'Mi único relato');assert.equal(extracted.author,'Autor original');assert.ok(extracted.text.length>5000);assert.ok(extracted.text.includes('Traducción de Ejemplo'));assert.ok(!extracted.text.includes('malicious'));assert.ok(!extracted.text.includes('Menú privado'));assert.equal(extracted.language,'es');
+assert.throws(()=>extractStoryHTML('<body>Just a moment…</body>'),/No se encontró/);
+let targetCalls=0,mode='normal';
+globalThis.fetch=async(url,options={})=>{
+ const u=new URL(url);
+ if(u.hostname==='cloudflare-dns.com')return Response.json({Status:0,Answer:u.searchParams.get('type')==='A'?[{type:1,data:mode==='private'?'10.0.0.1':'93.184.216.34'}]:[]});
+ targetCalls++;assert.equal(options.redirect,'manual');
+ if(mode==='redirect')return new Response(null,{status:302,headers:{location:'https://127.0.0.1/private'}});
+ if(mode==='blocked')return new Response('blocked',{status:403});
+ if(mode==='large')return new Response(new Uint8Array(2_000_001),{headers:{'content-type':'text/html'}});
+ if(mode==='pdf')return new Response('pdf',{headers:{'content-type':'application/pdf'}});
+ return new Response(html,{headers:{'content-type':'text/html; charset=utf-8'}});
+};
+const result=await readStoryURL({url:'https://example.org/story'});assert.equal(result.title,'Mi único relato');assert.ok(result.characters>5000);
+mode='private';const count=targetCalls;await assert.rejects(readStoryURL({url:'https://private.example.org/'}),/pública/);assert.equal(targetCalls,count);
+mode='redirect';await assert.rejects(readStoryURL({url:'https://example.org/'}),/privadas/);
+mode='large';await assert.rejects(readStoryURL({url:'https://example.org/'}),/demasiado grande/);
+mode='pdf';await assert.rejects(readStoryURL({url:'https://example.org/'}),/PDF/);
+mode='blocked';await assert.rejects(readStoryURL({url:'https://example.org/'}),/HTTP 403/);
+mode='normal';const token='fixture-private-app-code';const req=pass=>new Request('https://worker.example/read-url',{method:'POST',headers:{origin:'https://marianitord2020.github.io','content-type':'application/json','x-app-token':pass},body:JSON.stringify({url:'https://example.org/story'})});
+assert.equal((await worker.fetch(req('bad'),{APP_PASSCODE:token})).status,401);assert.equal((await worker.fetch(req(token),{APP_PASSCODE:token})).status,200);
+console.log('PASS: full article/title/author extraction, accents, private network and redirect rejection, bounded HTML, blocked sites and protected route');

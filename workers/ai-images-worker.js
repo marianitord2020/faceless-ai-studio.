@@ -1,3 +1,4 @@
+import {readStoryURL} from './url-reader.js';
 import {searchStock,importStock} from './stock-photos.js';
 import {imageRouter,hordeStart,hordePoll} from './free-image-providers.js';
 import {hfEnabled,hfImage,hfSpeech,analyzeAudio,easyVoice,withFallback} from './media-providers.js';
@@ -243,7 +244,7 @@ export default {
     };
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
     const path = new URL(request.url).pathname;
-    if (request.method !== 'POST' || !['/images','/voice','/script','/ideas','/transcribe','/analyze','/stock/search','/stock/import'].includes(path)) {
+    if (request.method !== 'POST' || !['/images','/voice','/script','/ideas','/transcribe','/analyze','/stock/search','/stock/import','/read-url'].includes(path)) {
       return reply({ error: 'Ruta no encontrada' }, 404, cors);
     }
     if (!env.APP_PASSCODE || env.APP_PASSCODE.length < 16) {
@@ -284,6 +285,7 @@ export default {
         return reply({ error: 'Solicitud demasiado larga.' }, 413, cors);
       }
       const data = await request.json();
+      if(path==='/read-url')return reply(await readStoryURL(data),200,cors);
       if(path==='/stock/search')return reply(await searchStock(data,env),200,cors);
       if(path==='/stock/import')return reply(await importStock(data,env),200,cors);
       if(path==='/ideas'){
