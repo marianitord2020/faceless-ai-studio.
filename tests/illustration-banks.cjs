@@ -1,0 +1,12 @@
+const assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs');
+const context={window:{},URL};vm.runInNewContext(fs.readFileSync('scripts/illustration-banks.js','utf8'),context);
+const api=context.window.FacelessIllustrations;
+assert.equal(api.styles.length,6);
+assert.match(api.searchURL('icons8','Lola','movie3d'),/^https:\/\/icons8.com\/illustrations\/search\//);
+assert.match(decodeURIComponent(api.searchURL('icons8','Lola','movie3d')),/Lola 3d animated movie cartoon/);
+assert.equal(new URL(api.searchURL('freepik','niña del barrio','anime')).searchParams.get('query'),'niña del barrio anime manga illustration');
+assert.match(api.searchURL('vecteezy','gato','2d'),/^https:\/\/www.vecteezy.com\/free-vector\//);
+assert.equal(api.sourceURL('https://www.freepik.com/vector/example','freepik'),'https://www.freepik.com/vector/example');
+for(const bad of ['javascript:alert(1)','http://icons8.com/ill','https://icons8.com.evil.test/','https://user:pass@icons8.com/'])assert.equal(api.sourceURL(bad,'icons8'),'');
+assert.equal(api.sourceURL('https://www.vecteezy.com/vector/example','icons8'),'');
+console.log('PASS: six illustration styles, provider search URLs, Unicode queries and source domain validation');

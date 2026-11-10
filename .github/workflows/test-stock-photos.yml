@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - 'scripts/stock-photos.js'
+      - 'scripts/illustration-banks.js'
+      - 'tests/illustration-banks.cjs'
       - 'workers/stock-photos.js'
       - 'styles/stock-photos.css'
       - 'scripts/editor-layout.js'
@@ -23,7 +25,9 @@ jobs:
         with:
           node-version: '22'
       - name: Verificar búsquedas, créditos, firmas y límites
-        run: node tests/stock-photos.mjs
+        run: |
+          node tests/stock-photos.mjs
+          node tests/illustration-banks.cjs
       - name: Preparar navegador
         run: |
           npm install --no-save playwright@1.58.2

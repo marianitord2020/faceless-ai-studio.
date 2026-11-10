@@ -7,7 +7,7 @@
  function link(label,url){const a=el('a',label);a.href=safeURL(url)||'#';a.target='_blank';a.rel='noopener noreferrer';return a;}
  window.facelessMountStockPhotos=function(project,updatePreview){
   const slots=document.getElementById('manualPhotoSlots');if(!slots||document.getElementById('stockPhotos'))return;
-  const root=el('details','', 'stock-photos');root.id='stockPhotos';root.append(el('summary','Buscar fotos gratuitas para las escenas'));
+  const root=el('details','', 'stock-photos');root.id='stockPhotos';root.append(el('summary','Fotos e ilustraciones para las escenas'));
   root.append(el('p','Busca fotos existentes en Openverse, Pixabay o Pexels. Elige una y asígnala a una escena.','smalltext'));
   const form=el('form','', 'stock-search');
   const source=el('select');source.setAttribute('aria-label','Banco de fotos');
@@ -33,7 +33,7 @@
    if(facelessIsWorking())return;const index=Number(scene.value),signature=facelessImageSignature(project,index);window.facelessMediaBusy=true;chosenButton.disabled=true;
    status.textContent='Descargando la foto seleccionada…';
    try{
-    const data=await request('import',{selection:photo.selection},AbortSignal.timeout(45000));
+    const data=photo.localData||await request('import',{selection:photo.selection},AbortSignal.timeout(45000));
     if(current()?.id!==project.id||!root.isConnected||facelessImageSignature(project,index)!==signature)throw Error('El proyecto cambió. Busca y selecciona la foto de nuevo.');
     await facelessRestoreMedia(project);
     const image=new Image();await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=()=>reject(Error('No se pudo abrir la foto.'));image.src=data.dataURI;});
@@ -42,7 +42,7 @@
     facelessProjectPhotos(project.id).set(index,image);project.scenes[index].stockCredit=data.credit;persist();imgs=[];stopPreview();
     const video=document.getElementById('videoResult');if(video){video.pause();video.removeAttribute('src');video.load();video.classList.add('hidden');}
     if(previewURL){URL.revokeObjectURL(previewURL);previewURL=null;}document.getElementById('previewCanvas')?.classList.remove('hidden');document.getElementById('downloadArea')?.replaceChildren();
-    window.facelessRefreshPhotoSlots?.(project.id);refreshCredits();updatePreview();status.textContent='✓ Foto añadida a la escena '+(index+1)+'.'+(stored?'':' No pudo guardarse para otra sesión.');
+    window.facelessRefreshPhotoSlots?.(project.id);refreshCredits();updatePreview();status.textContent='✓ Foto añadida a la escena '+(index+1)+'.'+(stored?'':' No pudo guardarse para otra sesión.');return true;
    }catch(error){status.textContent=String(error.message||error);}finally{window.facelessMediaBusy=false;chosenButton.disabled=false;window.facelessRefreshPhotoSlots?.(project.id);}
   }
   async function search(nextPage=1){
@@ -55,5 +55,6 @@
    }catch(error){if(error.name!=='AbortError'&&root.isConnected)status.textContent=String(error.message||error);}finally{if(operation===ticket){loading=false;button.disabled=false;}}
   }
   form.onsubmit=event=>{event.preventDefault();search(1);};more.onclick=()=>{if(!loading)search(page+1);};
+  window.facelessMountIllustrationBanks?.(root,project,query,(data,button)=>apply({localData:data},button));
  };
 })();

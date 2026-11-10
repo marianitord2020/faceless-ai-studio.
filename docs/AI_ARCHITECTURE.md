@@ -109,3 +109,17 @@ No se presentan fotos de archivo como prueba de que ocurrió una noticia. Verifi
 Crea las claves en https://pixabay.com/api/docs/ y https://www.pexels.com/api/ . Las pruebas de la interfaz y contratos usan respuestas simuladas; no demuestran acceso real a una cuenta sin su clave.
 
 Wikimedia Commons se incluye como cuarto banco sin clave. Si Openverse responde 403, 429 o un fallo temporal, la búsqueda pasa a Commons y lo indica expresamente. Se conservan las fuentes reales y se filtran las licencias CC0, dominio público y CC BY.
+
+## Anime, ilustración 2D y 3D: bancos externos
+
+Video → Fotografías → Personalizar → Fotos e ilustraciones → Anime, 2D, 3D y más permite elegir Anime/manga, 2D, 3D, 3D animado de película, cómic o acuarela y abrir una búsqueda contextual en Icons8 Ouch!, Vecteezy o Freepik.
+
+Esta sección abre las páginas de los proveedores. No presenta sus catálogos como una API ya conectada, no extrae sus webs ni hace llamadas a APIs de pago. El usuario descarga un recurso gratuito desde el banco y lo importa en PNG, JPG o WebP (hasta 8 MB) a la escena seleccionada. Se registra el enlace original, autor, licencia indicada y estilo junto con la imagen. Los archivos ZIP, EPS, PSD o SVG necesitan exportarse primero a un formato compatible.
+
+- Icons8 Ouch!: consultar el filtro o etiqueta Free de la web; su API no tiene nivel gratuito según su centro de ayuda. No se usa su API para descargar ni almacenar activos.
+- Vecteezy: publica una API Free con hasta 500 descargas al mes. El acceso directo por API no se ha conectado: requiere cuenta y clave. La sección ofrece el flujo externo de descarga/importación y créditos.
+- Freepik: la API utiliza créditos. Se ofrece búsqueda en su web y descarga manual de los recursos que la cuenta permita utilizar gratuitamente.
+
+“3D animado (tipo Pixar)” es una categoría visual de búsqueda. No indica que el material pertenezca a Pixar ni garantiza personajes o franquicias licenciadas.
+
+Se valida que el enlace de procedencia pertenezca al proveedor elegido. Los créditos introducidos por el usuario no verifican por sí mismos una licencia: deben copiarse de la descarga original y conservarse al publicar.
