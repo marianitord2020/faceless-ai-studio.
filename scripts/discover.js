@@ -398,7 +398,21 @@
   }
   function createLocalScenes(idea,duration){
     const count=duration===30?5:duration===60?8:12,base=Math.floor(duration/count),extra=duration%count;
-    const raw=[
+    const elenaStory=[
+      'Durante veinte años, Elena creyó que Daniel, su primer amor, se había marchado sin despedirse. Ella aprendió a vivir con aquella ausencia.',
+      'Una tarde, mientras ordenaba la casa de su abuela, encontró una caja de cartas atada con una cinta azul.',
+      'Entre aquellas cartas había una dirigida a Elena, escrita con una letra que reconoció de inmediato: era de Daniel.',
+      'La carta llevaba veinte años sin abrirse. Elena tembló al leer la fecha y recordar el verano en que todo terminó.',
+      'Daniel no decía que había dejado de quererla. Le contaba que alguien le había asegurado que ella ya no quería volver a verlo.',
+      'Elena recordó una discusión familiar de aquel verano. Por primera vez sospechó que alguien había decidido por los dos.',
+      'Dentro del sobre encontró también una fotografía pequeña y una dirección antigua, la única pista para localizar a Daniel.',
+      'Elena pasó la noche preguntándose si debía buscarlo. Al amanecer comprendió que necesitaba conocer la verdad.',
+      'La vieja dirección la llevó a una librería. Allí, una mujer mayor miró la fotografía y reconoció enseguida a Daniel.',
+      'Le dijeron que él había conservado durante años la misma esperanza: saber por qué Elena dejó de responder sus cartas.',
+      'Cuando finalmente estuvieron frente a frente, ninguno encontró las palabras. Habían perdido décadas por una carta escondida.',
+      'Elena entendió que no podían recuperar veinte años, pero sí decidir qué hacer con el tiempo que todavía les quedaba.'
+    ];
+    const generic=[
       'Todo comenzó con '+idea.title.toLowerCase()+'. '+idea.synopsis,
       'Al principio, nadie sospechaba que esa decisión cambiaría lo que estaba a punto de suceder.',
       'Pero una pista inesperada reveló que había algo más detrás de la primera impresión.',
@@ -406,10 +420,13 @@
       'La verdad apareció cuando menos la esperaban, y obligó a mirar el pasado de otra manera.',
       'Desde aquel día, ninguna de las personas implicadas volvió a ver la situación del mismo modo.'
     ];
+    // El relato local El amor olvidado tiene narración propia ya escrita, no escenas genéricas.
+    const raw=idea.title==='El amor olvidado'?elenaStory:generic;
     let time=0;
     return Array.from({length:count},(_,i)=>{
       const seconds=base+(i<extra?1:0);
-      const text=raw[Math.min(raw.length-1,Math.floor(i*raw.length/count))]+' '+(i===count-1?idea.outline:'');
+      const text=raw[Math.min(raw.length-1,Math.floor(i*raw.length/count))]+
+        (idea.title==='El amor olvidado'?'':(i===count-1?' '+idea.outline:''));
       const scene={time,duration:seconds,text:text.slice(0,410),
         prompt:'Illustrate the fictional story "'+idea.title+'". '+idea.coverPrompt+
         '. Scene '+(i+1)+' of '+count+'. Visual style: '+state.imageStyle+'. No text.'};
