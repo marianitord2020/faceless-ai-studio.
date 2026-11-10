@@ -54,8 +54,7 @@ function facelessAudioToWAV(rendered) {
 }
 function facelessStopOldVoicePlayback(panel) {
   // Los elementos de audio extraídos del DOM pueden seguir sonando en Android.
-  const oldPlayer = panel.querySelector('#aiVoiceAudioArea audio');
-  if (oldPlayer) { oldPlayer.pause(); oldPlayer.removeAttribute('src'); oldPlayer.load(); }
+  for(const oldPlayer of panel.querySelectorAll('#aiVoiceAudioArea audio')) { oldPlayer.pause(); oldPlayer.removeAttribute('src'); oldPlayer.load(); }
   const exported = document.getElementById('videoResult');
   if (exported) { exported.pause(); exported.removeAttribute('src'); exported.load(); exported.classList.add('hidden'); }
   const microphone = document.getElementById('micPlayback');
@@ -131,9 +130,21 @@ function mountAIVoiceControls(project) {
   const start = panel.querySelector('#aiVoiceGenerate');
   const cancel = panel.querySelector('#aiVoiceCancel');
   const audioArea = panel.querySelector('#aiVoiceAudioArea');
-  if (audioFile && /^faceless-voz-/.test(audioFile.name)) {
-    status.textContent = 'La voz IA ya está cargada en este proyecto. Puedes descargarla o crear el video.';
+  function showSavedVoice(file){
+    if(!file||!panel.isConnected||current()?.id!==project.id)return;
+    if(facelessVoiceURL)URL.revokeObjectURL(facelessVoiceURL);
+    facelessVoiceURL=URL.createObjectURL(file);
+    audioArea.replaceChildren();
+    const player=document.createElement('audio');player.controls=true;player.src=facelessVoiceURL;
+    player.style.cssText='display:block;width:100%;margin:10px 0';
+    const link=document.createElement('a');link.href=facelessVoiceURL;link.download=file.name;
+    link.className='btn small';link.textContent='↓ Descargar narración WAV';audioArea.append(player,link);
   }
+  void facelessRestoreMedia(project).then(()=>{
+    if(facelessVoiceBusy||!panel.isConnected||current()?.id!==project.id)return;
+    const file=generatedVoiceByProject.get(project.id);
+    if(file){showSavedVoice(file);status.textContent='✓ Voz guardada recuperada. Puedes escucharla, descargarla o crear el video.'}
+  });
   const voiceSelect = panel.querySelector('#aiVoiceOption');
   const voiceByGenre={
     Noticias:{voice:'Charon',mood:'news'},
@@ -186,8 +197,6 @@ function mountAIVoiceControls(project) {
   cancel.onclick = () => { facelessVoiceCancel = true; status.textContent = 'Deteniendo después de esta escena…'; };
   start.onclick = async () => {
     if (facelessVoiceBusy) return;
-    await facelessRestoreMedia(project);
-    if (facelessVoiceBusy) return;
     const pass = passwordInput.value.trim();
     if (pass) facelessVoicePassword = pass;
     if (!facelessVoicePassword || facelessVoicePassword.length < 16) {
@@ -200,7 +209,6 @@ function mountAIVoiceControls(project) {
     const speed=Number(speedSelect.value)||1;
     if (!project.scenes?.length) { status.textContent = 'Este proyecto no tiene escenas.'; return; }
     // Antes de generar una nueva voz, eliminar y detener TODO el audio antiguo.
-    facelessRemovePriorVoice(project, panel);
     facelessVoiceBusy = true;
     facelessVoiceCancel = false;
     start.disabled = true;
@@ -212,6 +220,8 @@ function mountAIVoiceControls(project) {
       const segments = [];
       audioCtx = window.facelessProductionAudioContext || new (window.AudioContext || window.webkitAudioContext)();
       await audioCtx.resume();
+      await facelessRestoreMedia(project);
+      facelessRemovePriorVoice(project,panel);
       for (const [index, scene] of project.scenes.entries()) {
         if (facelessVoiceCancel) throw new Error('Generación cancelada, sin modificar el audio anterior.');
         const text = String(scene.text || '').trim();
@@ -238,15 +248,18 @@ function mountAIVoiceControls(project) {
       const duration = Number(project.duration) || 30;
       const sampleRate = 24000;
       const offline = new OfflineAudioContext(1, Math.ceil(duration * sampleRate), sampleRate);
-      let clipped = 0;
+      let adjusted = 0;
       for (const segment of segments) {
         const source = offline.createBufferSource();
         source.buffer = segment.audio;
-        source.playbackRate.value=speed;
         source.connect(offline.destination);
         const available = Math.max(0, Math.min(segment.duration, duration - segment.time));
-        if (segment.audio.duration/speed > available + 0.12) clipped++;
-        if (available > 0) source.start(segment.time, 0, Math.min(available*speed, segment.audio.duration));
+        if(available>0){
+          const rate=Math.max(speed,segment.audio.duration/available);
+          if(rate>speed+0.01)adjusted++;
+          source.playbackRate.value=rate;
+          source.start(segment.time,0,segment.audio.duration);
+        }
       }
       const mixed = await offline.startRendering();
       const blob = facelessAudioToWAV(mixed);
@@ -279,7 +292,7 @@ function mountAIVoiceControls(project) {
       link.className = 'btn small';
       audioArea.append(player, link);
       status.textContent = '✓ Voz lista e incorporada al proyecto. Pulsa «Crear y descargar video CON VOZ» para exportar el video narrado. ' +
-        (clipped ? 'Aviso: ' + clipped + ' escenas tenían voz más larga que su tiempo asignado y se recortaron. Ajusta el guion para sincronizar.' : 'Las escenas respetan sus tiempos.') +
+        (adjusted ? 'Se ajustó la velocidad de ' + adjusted + ' escenas para incluir la narración completa sin cortarla.' : 'Las escenas respetan sus tiempos.') +
         ' Voz: '+voice+'. Estilo: '+mood+'. Velocidad: '+speed+'×. Fuente: ' + [...new Set(segments.map(s=>s.provider))].join(', ');
     } catch (error) {
       const msg = String(error?.message || error);
