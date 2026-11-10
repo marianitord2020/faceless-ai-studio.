@@ -9,6 +9,7 @@ async function geminiScriptCall(env,query,options={}){
   if(options.json)generationConfig.responseMimeType='application/json';
   const request={contents:[{role:'user',parts:[{text:query}]}],generationConfig};
   if(options.search)request.tools=[{google_search:{}}];
+  if(options.url)request.tools=[{url_context:{}}];
   const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+SCRIPT_MODEL+':generateContent',{
     method:'POST',headers:{'content-type':'application/json','x-goog-api-key':env.GEMINI_TTS_API_KEY},
     body:JSON.stringify(request)
@@ -18,7 +19,7 @@ async function geminiScriptCall(env,query,options={}){
   const candidate=data?.candidates?.[0];
   const text=(candidate?.content?.parts||[]).map(p=>p.text||'').join('\n').trim();
   if(!text)scriptError('Gemini no devolvió datos. Revisa los límites de uso.');
-  return {text,meta:candidate?.groundingMetadata||{}};
+  return {text,meta:candidate?.groundingMetadata||{},urlMeta:candidate?.urlContextMetadata||{}};
 }
 function trustedSources(meta){
   const unique=new Set(),list=[];
@@ -50,7 +51,25 @@ export async function generateVerifiedScript(input,env){
   if(idea&&(!idea.title||!idea.synopsis))scriptError('La portada elegida necesita título y sinopsis.',400);
   const date=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Santo_Domingo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
   let proof='',sources=[];
-  if(mode!=='ficcion'){
+  if(mode==='noticias'&&idea?.sourceUrl){
+    let origin;
+    try{origin=new URL(idea.sourceUrl)}catch{scriptError('La fuente original de esta noticia no tiene un enlace válido.',422)}
+    if(origin.protocol!=='https:')scriptError('La fuente original debe usar HTTPS.',422);
+    const extracted=await geminiScriptCall(env,[
+      'LEE EL ARTÍCULO WEB EXACTO usando la herramienta url_context: '+origin.href,
+      'Titular seleccionado por el usuario: '+idea.title,
+      'Sinopsis de la tarjeta (requiere verificación en artículo): '+idea.synopsis,
+      'Fecha de consulta República Dominicana: '+date,
+      'Extrae solo datos confirmados del ARTÍCULO: qué ocurrió, quién, dónde, cuándo y citas verificadas.',
+      'Si la página no carga, está protegida o no contiene datos suficientes, dilo claramente. NUNCA inventes.',
+      'Responde con un informe factual breve en español; separa lo confirmado de lo desconocido.'
+    ].join('\n'),{url:true});
+    const metadata=extracted.urlMeta?.urlMetadata||extracted.urlMeta?.url_metadata||[];
+    const found=metadata.some(m=>String(m?.urlRetrievalStatus||m?.url_retrieval_status||'').includes('SUCCESS'));
+    if(!found)scriptError('No pude abrir el artículo original para verificar el guion. Prueba otra noticia o consulta la fuente manualmente.',422);
+    proof=extracted.text.slice(0,14000);
+    sources=[{title:idea.title,url:origin.href}];
+  }else if(mode!=='ficcion'){
     const instruction=mode==='noticias'
       ?'Busca noticias REALES y RECIENTES sobre la consulta exacta. Usa Google Search. Indica fecha de los hechos y publicación. Si la petición es genérica, selecciona noticias de hoy o ayer con fuentes identificables. Si no hay resultados suficientes, dilo. NUNCA inventes titulares o eventos.'
       :'Investiga la consulta EXACTA usando Google Search. Prioriza fuentes primarias o contrastadas y datos corroborados. Di si algún detalle está sin verificar. NUNCA inventes hechos.';
@@ -90,7 +109,7 @@ export async function generateVerifiedScript(input,env){
     'Título específico, fiel a la búsqueda. Cada texto escena 20–270 caracteres, narración natural en español.',
     'Los prompts visuales describen esa escena sin simular fotografías documentales de hechos no probados.',
     'Devuelve exclusivamente JSON {"title":"...","scenes":[{"text":"...","prompt":"..."},...]} con exactamente '+count+' escenas.',
-    mode==='ficcion'?'':'RESUMEN COMPROBADO CON GOOGLE SEARCH (ÚNICA FUENTE PARA AFIRMACIONES):\n'+proof
+    mode==='ficcion'?'':'INFORMACIÓN DE LA FUENTE ORIGINAL VERIFICADA (ÚNICA BASE PARA LAS AFIRMACIONES):\n'+proof
   ].filter(Boolean).join('\n\n');
   const out=await geminiScriptCall(env,prompt,{json:true});
   let data;
