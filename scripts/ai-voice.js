@@ -51,6 +51,34 @@ function facelessAudioToWAV(rendered) {
   }
   return new Blob([result], { type: 'audio/wav' });
 }
+function facelessStopOldVoicePlayback(panel) {
+  // Los elementos de audio extraídos del DOM pueden seguir sonando en Android.
+  const oldPlayer = panel.querySelector('#aiVoiceAudioArea audio');
+  if (oldPlayer) { oldPlayer.pause(); oldPlayer.removeAttribute('src'); oldPlayer.load(); }
+  const exported = document.getElementById('videoResult');
+  if (exported) { exported.pause(); exported.removeAttribute('src'); exported.load(); exported.classList.add('hidden'); }
+  const microphone = document.getElementById('micPlayback');
+  if (microphone) microphone.pause();
+  if (typeof stopPreview === 'function') stopPreview();
+}
+function facelessRemovePriorVoice(project, panel) {
+  facelessStopOldVoicePlayback(panel);
+  const oldGallery = panel.querySelector('#aiVoiceAudioArea');
+  if (oldGallery) oldGallery.replaceChildren();
+  if (facelessVoiceURL) { URL.revokeObjectURL(facelessVoiceURL); facelessVoiceURL = null; }
+  // La generación siempre SUSTITUYE la narración anterior, nunca las mezcla.
+  const oldGenerated = generatedVoiceByProject.get(project.id);
+  generatedVoiceByProject.delete(project.id);
+  if (audioFileProjectId === project.id && oldGenerated && audioFile === oldGenerated) {
+    audioFile = null;
+  }
+  const oldDownload = document.getElementById('downloadArea');
+  if (oldDownload) oldDownload.replaceChildren();
+  const oldCanvas = document.getElementById('previewCanvas');
+  if (oldCanvas) oldCanvas.classList.remove('hidden');
+  if (previewURL) { URL.revokeObjectURL(previewURL); previewURL = null; }
+  if (typeof updateAudioAttachmentUI === 'function') updateAudioAttachmentUI();
+}
 function mountAIVoiceControls(project) {
   const root = document.querySelector('#tabBody .video-workspace > div');
   if (!root) return;
@@ -84,7 +112,17 @@ function mountAIVoiceControls(project) {
   if (audioFile && /^faceless-voz-/.test(audioFile.name)) {
     status.textContent = 'La voz IA ya está cargada en este proyecto. Puedes descargarla o crear el video.';
   }
-  cancel.onclick = () => { facelessVoiceCancel = true; status.textContent = 'Deteniendo después de la escena actual…'; };
+  const voiceSelect = panel.querySelector('#aiVoiceOption');
+  voiceSelect.onchange = () => {
+    if (facelessVoiceBusy) {
+      facelessVoiceCancel = true;
+      status.textContent = 'Cambio de voz solicitado: cancelando generación anterior…';
+      return;
+    }
+    facelessRemovePriorVoice(project, panel);
+    status.textContent = 'Voz anterior detenida y eliminada. Pulsa Generar voz para escuchar solo la voz seleccionada.';
+  };
+  cancel.onclick = () => { facelessVoiceCancel = true; status.textContent = 'Deteniendo después de esta escena…'; };
   start.onclick = async () => {
     if (facelessVoiceBusy) return;
     const pass = passwordInput.value.trim();
@@ -96,9 +134,12 @@ function mountAIVoiceControls(project) {
     }
     const voice = panel.querySelector('#aiVoiceOption').value;
     if (!project.scenes?.length) { status.textContent = 'Este proyecto no tiene escenas.'; return; }
+    // Antes de generar una nueva voz, eliminar y detener TODO el audio antiguo.
+    facelessRemovePriorVoice(project, panel);
     facelessVoiceBusy = true;
     facelessVoiceCancel = false;
     start.disabled = true;
+    voiceSelect.disabled = true;
     cancel.style.display = '';
     let audioCtx;
     let completed = 0;
@@ -119,6 +160,7 @@ function mountAIVoiceControls(project) {
         segments.push({time:Number(scene.time)||0, duration:Number(scene.duration)||0, audio:decoded, provider:result.provider});
         completed++;
       }
+      if (facelessVoiceCancel) throw new Error('Generación anterior cancelada. Selecciona la voz y pulsa Generar otra vez.');
       if (!segments.length) throw new Error('No hay escenas con texto para narrar.');
       status.textContent = 'Uniendo ' + segments.length + ' escenas de voz y preparando el video…';
       const duration = Number(project.duration) || 30;
@@ -173,6 +215,7 @@ function mountAIVoiceControls(project) {
     } finally {
       if (audioCtx) await audioCtx.close().catch(()=>{});
       start.disabled = false;
+      voiceSelect.disabled = false;
       cancel.style.display = 'none';
       facelessVoiceBusy = false;
     }
