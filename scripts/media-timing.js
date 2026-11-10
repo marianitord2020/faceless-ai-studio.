@@ -6,7 +6,7 @@
  function tokens(p){return p.scenes.flatMap((s,scene)=>String(s.text).trim().split(/\s+/).filter(Boolean).map(text=>({text,key:normalize(text),scene}))).filter(w=>w.key)}
  function cuesFromWords(words){
   const cues=[];let batch=[];
-  function flush(){if(!batch.length)return;cues.push({start:batch[0].start,end:batch[batch.length-1].end,text:batch.map(w=>w.text).join(' ')});batch=[]}
+  function flush(){if(!batch.length)return;cues.push({start:batch[0].start,end:batch[batch.length-1].end,text:batch.map(w=>w.text).join(' '),words:batch.map(({text,start,end})=>({text,start,end}))});batch=[]}
   for(const word of words){if(batch.length&&(word.scene!==batch[0].scene||word.start-batch[batch.length-1].end>.65))flush();batch.push(word);if(batch.length>=6||/[.!?]$/.test(word.text))flush()}
   flush();return cues;
  }

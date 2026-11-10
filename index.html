@@ -104,29 +104,10 @@ const canvas=document.createElement('canvas');canvas.width=540;canvas.height=960
 function wrapText(t,x,y,maxWidth,lineHeight,maxLines){let lines=[],current='';for(const word of t.split(/\s+/)){const next=current?current+' '+word:word;if(ctx.measureText(next).width>maxWidth && current){lines.push(current);current=word}else current=next}if(current)lines.push(current);lines.slice(0,maxLines).forEach((l,i)=>ctx.fillText(l,x,y+i*lineHeight))}
 function drawFrame(index,seconds=0){
  const p=current();if(!p)return;
- const wide=p.format==='16:9';
- if(canvas.width!==(wide?960:540)||canvas.height!==(wide?540:960)){canvas.width=wide?960:540;canvas.height=wide?540:960}
- const w=canvas.width,h=canvas.height,im=(window.facelessSceneImages?.get(p.id)?.get(index))||(imgs.length?imgs[index%imgs.length]:null);
- ctx.clearRect(0,0,w,h);
- if(im){const scale=Math.max(w/im.width,h/im.height),sw=im.width*scale,sh=im.height*scale;ctx.drawImage(im,(w-sw)/2,(h-sh)/2,sw,sh)}
- else{
-   const palettes={Misterio:['#030f2d','#13275f','#6b21a8'],Historia:['#311b20','#704739','#d19a5b'],Curiosidades:['#132d48','#175d71','#17a9bb'],Motivación:['#471c5b','#af327e','#ffa656'],Noticias:['#101e39','#235b93','#35a7ed'],Educativo:['#0c2846','#126c7d','#42c7be']};
-   const colors=palettes[p.style]||palettes.Misterio,g=ctx.createLinearGradient(0,0,w,h);
-   g.addColorStop(0,colors[0]);g.addColorStop(.55,colors[1]);g.addColorStop(1,colors[2]);ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
-   // Smooth animated geometric shapes make distinct scenes without AI images.
-   for(let k=0;k<7;k++){
-      const f=k*1.93+index*2.7,r=w*(.10+(k%4)*.07),x=w*(.15+(k*.17)% .9)+Math.sin(seconds*.31+f)*w*.11,y=h*(.14+(k*.13)% .78)+Math.cos(seconds*.23+f)*h*.06;
-      ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fillStyle=k%2?'rgba(255,255,255,.055)':'rgba(164,115,255,.11)';ctx.fill();
-   }
-   ctx.strokeStyle='rgba(255,255,255,.11)';ctx.lineWidth=2;ctx.strokeRect(w*.08,h*.11,w*.84,h*.69);
-   ctx.fillStyle='rgba(255,255,255,.60)';ctx.font='600 23px sans-serif';ctx.textAlign='left';ctx.fillText((p.style||'FACeless').toUpperCase()+'  •  ESCENA '+(index+1),w*.10,h*.17);
- }
- const gr=ctx.createLinearGradient(0,h*.52,0,h);gr.addColorStop(0,'#04081100');gr.addColorStop(.45,'#03040bbb');gr.addColorStop(1,'#03040bf2');ctx.fillStyle=gr;ctx.fillRect(0,h*.52,w,h*.48);
- ctx.fillStyle='#fff';ctx.textAlign='center';ctx.shadowColor='#000';ctx.shadowBlur=9;
- ctx.font='bold 27px sans-serif';wrapText(p.title,w/2,h*.12,w-65,34,3);
- ctx.font=wide?'bold 31px sans-serif':'bold 33px sans-serif';wrapText(window.facelessCaptionAt?window.facelessCaptionAt(p,seconds):(p.scenes[index]?.text||''),w/2,h*.75,w-70,wide?38:43,5);
- ctx.shadowBlur=0;const progress=Math.max(0,Math.min(1,seconds/Math.max(1,p.duration)));
- ctx.fillStyle='rgba(255,255,255,.30)';ctx.fillRect(w*.08,h*.955,w*.84,6);ctx.fillStyle='#c07bff';ctx.fillRect(w*.08,h*.955,w*.84*progress,6);
+ const wide=p.format==='16:9',w=wide?960:540,h=wide?540:960;
+ if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h}
+ const getImage=i=>window.facelessSceneImages?.get(p.id)?.get(i)||(imgs.length?imgs[i%imgs.length]:null);
+ FacelessCinema.render(ctx,p,index,seconds,getImage,FacelessTiming.cues(p));
 }
 function safeMime(hasAudio=false){
  if(!window.MediaRecorder)return'';
@@ -207,7 +188,7 @@ async function renderVideo(){
  rendering=true;btn.disabled=true;
  $('downloadArea').replaceChildren();
  status.textContent=withAudio?'Preparando video con voz IA…':'Preparando video sin voz…';
- let stream,rec,audioCtx,audioSource,raf=null;
+ let stream,rec,audioCtx,audioSource,audioStartedAt=0,raf=null;
  try{
    // La voz se convierte en una pista real del video ANTES de arrancar el grabador.
    drawFrame(0,0);
@@ -239,12 +220,12 @@ async function renderVideo(){
      rec.onerror=e=>reject(new Error('Falló la grabación con sonido. '+(e?.error?.message||'')));
    });
    rec.start(1000);
-   if(audioSource)audioSource.start(audioCtx.currentTime);
+   if(audioSource){audioStartedAt=audioCtx.currentTime;audioSource.start(audioStartedAt);}
    const duration=p.duration*1000,startTime=performance.now();
    await new Promise((resolve,reject)=>{
      const tick=now=>{
        if(window.facelessProductionBusy&&window.facelessProductionCancelled){reject(new Error('Montaje detenido. Puedes volver a crear el video con los medios guardados.'));return}
-       const elapsed=Math.min(duration,now-startTime);
+       const elapsed=Math.min(duration,Math.max(0,audioSource?(audioCtx.currentTime-audioStartedAt)*1000:now-startTime));
        const sec=Math.min(p.duration-0.01,elapsed/1000);
        const index=p.scenes.findIndex(sc=>sec>=sc.time&&sec<sc.time+sc.duration);
        drawFrame(Math.max(0,index),sec);
@@ -366,5 +347,5 @@ route('discover');
   };
 })();;
  
-</script><script src="scripts/ai-photos.js?v=7"></script><script src="scripts/ai-voice.js?v=10"></script><script src="scripts/written-stories.js?v=1"></script><script src="scripts/media-timing.js?v=1"></script><script src="scripts/media-editor.js?v=3"></script><script src="scripts/studio-menus.js?v=2"></script><script src="scripts/editor-layout.js?v=3"></script><script src="scripts/discover.js?v=13"></script></body></html>
+</script><script src="scripts/ai-photos.js?v=7"></script><script src="scripts/ai-voice.js?v=11"></script><script src="scripts/written-stories.js?v=1"></script><script src="scripts/cinematic-video.js?v=1"></script><script src="scripts/media-timing.js?v=2"></script><script src="scripts/media-editor.js?v=3"></script><script src="scripts/studio-menus.js?v=2"></script><script src="scripts/editor-layout.js?v=3"></script><script src="scripts/discover.js?v=13"></script></body></html>
 

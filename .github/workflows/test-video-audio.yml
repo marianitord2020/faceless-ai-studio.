@@ -8,6 +8,8 @@ on:
       - 'scripts/editor-layout.js'
       - 'styles/editor.css'
       - 'scripts/ai-voice.js'
+      - 'scripts/cinematic-video.js'
+      - 'scripts/media-timing.js'
       - 'scripts/ai-photos.js'
       - 'scripts/discover.js'
       - '.github/workflows/test-video-audio.yml'

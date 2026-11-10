@@ -252,7 +252,7 @@ function mountAIVoiceControls(project) {
       const duration = Number(project.duration) || 30;
       const sampleRate = 24000;
       const offline = new OfflineAudioContext(1, Math.ceil(duration * sampleRate), sampleRate);
-      let adjusted = 0;
+      let adjusted = 0;const voiceCues=[];
       for (const segment of segments) {
         const source = offline.createBufferSource();
         source.buffer = segment.audio;
@@ -263,11 +263,16 @@ function mountAIVoiceControls(project) {
           if(rate>speed+0.01)adjusted++;
           source.playbackRate.value=rate;
           source.start(segment.time,0,segment.audio.duration);
+          // Captions stop when this spoken segment ends, including any fitted playback rate.
+          const scene=project.scenes.find(s=>Math.abs(s.time-segment.time)<.001);
+          if(scene){const timing=FacelessTiming.estimated({scenes:[{...scene,time:0}]},Math.min(available,segment.audio.duration/rate));
+            voiceCues.push(...timing.subtitleCues.map(c=>({...c,start:c.start+segment.time,end:c.end+segment.time,words:c.words.map(w=>({...w,start:w.start+segment.time,end:w.end+segment.time}))})));}
+
         }
       }
       const mixed = await offline.startRendering();
       const blob = facelessAudioToWAV(mixed);
-      delete project.subtitleCues;delete project.subtitleTextSignature;delete project.audioAlignment;delete project.audioBaseTimeline;persist();
+      project.subtitleCues=voiceCues;project.subtitleTextSignature=FacelessTiming.signature(project);project.audioAlignment={method:'tts-segments',coverage:null};delete project.audioBaseTimeline;persist();
       audioFile = new File([blob], 'faceless-voz-' + project.id + '.wav', {type:'audio/wav'});
       audioFileProjectId = project.id;
       generatedVoiceByProject.set(project.id, audioFile);

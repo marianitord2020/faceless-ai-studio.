@@ -8,6 +8,8 @@ on:
       - 'scripts/editor-layout.js'
       - 'styles/editor.css'
       - 'scripts/media-*.js'
+      - 'scripts/cinematic-video.js'
+      - 'tests/cinematic-video.cjs'
       - 'scripts/ai-photos.js'
       - 'scripts/ai-voice.js'
       - 'workers/ai-images-worker.js'
@@ -27,6 +29,7 @@ jobs:
           node-version: '22'
       - name: Verificar alineación y protección del reconocimiento
         run: |
+          node tests/cinematic-video.cjs
           node tests/media-timing.mjs
           node tests/transcribe-route.mjs
       - name: Preparar navegador
@@ -138,6 +141,22 @@ jobs:
             assert.equal(await page.evaluate(()=>Boolean(audioFile)),false);assert.equal(await page.evaluate(()=>facelessProjectPhotos('media-fixture').has(0)),false);
             assert.equal(await page.evaluate(()=>JSON.stringify(localStorage).includes('fixture-media-passcode-only')),false);assert.deepEqual(errors,[]);
             console.log('PASS: individual photo add/replace/remove, append without loss, reload persistence, removed assets stay deleted, uploaded audio playback, duration fit, speech-matched subtitles, mismatched voice rejection, audio replacement/removal and no stored credentials');
+            await page.evaluate(async()=>{
+              const p={id:'cinema-fixture',title:'Historia en movimiento',topic:'Movimiento',style:'Romance',duration:3,platform:'TikTok',format:'9:16',scenes:[{time:0,duration:1.5,text:'Una historia viva.',prompt:'One'},{time:1.5,duration:1.5,text:'Un final inolvidable.',prompt:'Two'}]};p.narration=p.scenes.map(s=>s.text).join(' ');projects.unshift(p);activeId=p.id;tab='video';resetMedia();route('editor');
+              const source=document.createElement('canvas');source.width=800;source.height=1200;const c=source.getContext('2d');for(let x=0;x<800;x+=40){c.fillStyle=x%80?'#ffcc44':'#5630b2';c.fillRect(x,0,40,1200);}const image=new Image();image.src=source.toDataURL();await image.decode();facelessProjectPhotos(p.id).set(0,image);facelessProjectPhotos(p.id).set(1,image);
+              const sample=document.createElement('canvas');sample.width=540;sample.height=960;const sc=sample.getContext('2d');FacelessCinema.background(sc,p,0,.2,image);const first=sample.toDataURL();FacelessCinema.background(sc,p,0,1.1,image);if(first===sample.toDataURL())throw Error('La fotografía se exportaría estática');
+            });
+            await page.evaluate(bytes=>{audioFile=new File([new Uint8Array(bytes)],'voz-cinema.wav',{type:'audio/wav'});audioFileProjectId='cinema-fixture';updateAudioAttachmentUI();},Array.from(wav(3)));
+            await page.locator('#renderVideo').click();
+            await page.waitForFunction(()=>!rendering&&document.querySelector('#downloadArea a'),{timeout:25000});
+            const cinemaDownload=page.waitForEvent('download');await page.locator('#downloadArea a').click();await (await cinemaDownload).saveAs('/tmp/faceless-cinema.webm');
+            assert.deepEqual(errors,[]);
+            console.log('PASS: actual canvas photo motion and short video export with narration');
             await browser.close();
           })().catch(e=>{console.error(e);process.exit(1)});
           JS
+          command -v ffprobe || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
+          ffprobe -v error -show_entries stream=codec_type -of csv=p=0 /tmp/faceless-cinema.webm > /tmp/cinema-tracks.txt
+          grep -q video /tmp/cinema-tracks.txt
+          grep -q audio /tmp/cinema-tracks.txt
+          echo "PASS: exported video contains video and audio tracks"
