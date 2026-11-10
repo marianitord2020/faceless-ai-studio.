@@ -1,5 +1,5 @@
 // Guiones verificados. Ficción solo cuando el usuario la elige expresamente.
-const SCRIPT_MODEL='gemini-2.5-flash-lite';
+const SCRIPT_MODEL='gemini-3.5-flash-lite';
 function scriptError(msg,status=502){const e=new Error(msg);e.httpStatus=status;throw e}
 const NEWS_TERMS=/(?:noticias?|actualidad|últimas?|recientes?|\bhoy\b|\bahora\b|\bmomento\b|esta semana|en vivo|última hora|breaking news|news today)/i;
 const FICTION_TERMS=/(?:historia ficticia|cuento ficticio|historia inventada|cuento inventado|ficción|ficcion|cuento de fantasía|invent[a-zá]* una historia|crea un cuento)/i;
