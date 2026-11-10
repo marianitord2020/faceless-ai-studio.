@@ -168,13 +168,14 @@
         $id('studioGallerySubtitle').textContent='Sin conexión solo hay relatos ficticios predefinidos; las noticias requieren fuentes actuales.';
       }
     };
+    $id('studioDuration').onchange=renderFeature;
     $id('studioGenerate').onclick=generateIdeas;
     $id('studioTopic').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();generateIdeas()}});
     // Portadas de demostración visibles al abrir, igual que el diseño aprobado.
     state.ideas=localIdeas('Historias de amor','Romance');
     state.topic='Historias de amor';
     state.style='Romance';state.source='local';state.mode='fiction';
-    $id('studioSource').value='local';
+    $id('studioSource').value='ai';
     renderCards();renderFeature();
     setStatus('✦ Catálogo local de ejemplo. Puedes elegir El amor olvidado o escribir otro tema y generar 10 propuestas con Gemini.');
   }
@@ -248,7 +249,7 @@
     if(idea.sourceSeenAt)meta.append(e('span',null,'Detectada por GDELT: '+idea.sourceSeenAt));
     text.appendChild(meta);
     const button=e('button','studio-create',state.building?'Preparando guion…':'▣ Llevar a creación');
-    button.type='button';button.disabled=state.building;button.onclick=createProject;
+    button.type='button';button.disabled=state.building||state.busy;button.onclick=createProject;
     text.appendChild(button);
     if(idea.sourceUrl){
       const a=e('a','studio-source','↗ Ver fuente original');
@@ -282,7 +283,7 @@
   async function callEndpoint(path,payload){
     const pass=state.pass;
     if(pass.length<16)throw Error('Introduce el mismo APP_PASSCODE de fotos y voces (mínimo 16 caracteres).');
-    const response=await fetch(API+path,{method:'POST',headers:{'content-type':'application/json','x-app-token':pass},
+    const response=await fetch(API+path,{method:'POST',signal:typeof AbortSignal.timeout==='function'?AbortSignal.timeout(110000):undefined,headers:{'content-type':'application/json','x-app-token':pass},
       body:JSON.stringify(payload)});
     let data;
     try{data=await response.json()}catch{throw Error('La API no devolvió una respuesta válida.')}
@@ -336,14 +337,14 @@
     state.pass=$id('studioPass').value.trim()||state.pass;
     state.topic=topic;state.style=style;state.mode=mode;state.source=local?'local':'ai';
     state.imageStyle=$id('studioImageStyle').value;
-    state.selected=0;state.covers.clear();state.sources=[];state.ideas=[];
+    state.selected=0;state.covers.clear();state.sources=[];state.ideas=[];initialState();
     $id('studioGenerate').disabled=true;
     try{
       if(local){
         state.ideas=localIdeas(topic,style);
         setStatus('✓ 10 relatos locales preparados sin usar créditos de IA. Son ejemplos de ficción; puedes elegir uno.');
       }else{
-        setStatus(mode==='news'?'Consultando Google Search para noticias reales y fuentes actuales…':
+        setStatus(mode==='news'?'Consultando GDELT para noticias reales y fuentes actuales…':
           'Gemini está preparando 10 títulos y sinopsis sobre «'+topic+'»…');
         const result=await callEndpoint('/ideas',{topic,style,mode});
         if(epoch!==state.epoch)return;
@@ -354,13 +355,13 @@
         setStatus('✓ '+state.ideas.length+' '+(mode==='news'?'noticias vinculadas a fuentes':'propuestas con sinopsis')+
           '. '+(mode==='news'?'No se inventaron titulares para completar diez.':'Generando sus imágenes de portada…'));
       }
-      renderCards();renderFeature();
-      if(!local&&mode!=='news')await generateCoverImages(epoch);
+      state.busy=false;renderCards();renderFeature();
+      if(!local&&mode!=='news')void generateCoverImages(epoch);
     }catch(error){
       setStatus('No se pudieron preparar las portadas: '+String(error?.message||error));
       if(!state.ideas.length)initialState();
     }finally{
-      state.busy=false;$id('studioGenerate').disabled=false;
+      state.busy=false;$id('studioGenerate').disabled=false;renderFeature();
     }
   }
   function imagePrompt(idea){
@@ -394,6 +395,7 @@
         renderCards();renderFeature();
         setStatus('✓ '+state.ideas.length+' historias escritas. Portadas IA: '+done+' de '+state.ideas.length+' listas.');
       }catch(error){
+        if(epoch!==state.epoch)break;
         fail++;
         if(fail>=3){
           setStatus('Se prepararon '+state.ideas.length+' sinopsis y '+done+' portadas IA. Cloudflare alcanzó un límite o tuvo errores; las restantes usan ilustraciones locales.');
@@ -449,6 +451,9 @@
   async function createProject(){
     if(state.building||state.busy)return;
     const idea=selectedIdea();if(!idea)return;
+    state.epoch++; // Stop background covers before developing the chosen story.
+    state.imageStyle=$id('studioImageStyle').value;
+    state.pass=$id('studioPass').value.trim()||state.pass;
     state.building=true;renderFeature();
     const duration=Number($id('studioDuration').value)||60;
     const local=state.source==='local';
