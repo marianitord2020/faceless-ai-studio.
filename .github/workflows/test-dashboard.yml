@@ -1,0 +1,71 @@
+name: Probar nuevo dashboard de relatos y noticias
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/discover.js'
+      - 'styles/studio-dashboard.css'
+      - 'index.html'
+      - '.github/workflows/test-dashboard.yml'
+permissions:
+  contents: read
+jobs:
+  dashboard:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Instalar Chromium
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install chromium
+      - name: Servir aplicación
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 > "$RUNNER_TEMP/server.log" 2>&1 &
+          sleep 2
+      - name: Verificar menú, opciones y editor
+        run: |
+          node <<'JS'
+          const {chromium}=require('playwright');
+          const assert=require('node:assert/strict');
+          (async()=>{
+            const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+            for(const size of [{width:1440,height:900},{width:390,height:844}]){
+              const page=await browser.newPage({viewport:size});
+              const errors=[];page.on('pageerror',e=>errors.push(e.message));
+              await page.goto('http://127.0.0.1:4173/');
+              await page.getByRole('button',{name:'Crear video',exact:true}).click();
+              assert.equal(await page.locator('#studioGenre').count(),1);
+              assert.equal(await page.locator('#studioMode').count(),1);
+              assert.equal(await page.locator('#studioImageStyle option').count(),7);
+              assert.equal(await page.locator('#studioVoice option').count(),9);
+              if(size.width>1000){
+                assert.equal(await page.locator('#studioGenreQuick').isVisible(),true);
+                assert.equal(await page.locator('#studioSourceQuick').isVisible(),true);
+                await page.locator('#studioGenreQuick').selectOption('Noticias');
+                assert.equal(await page.locator('#studioMode').inputValue(),'news');
+                await page.locator('#studioTopic').fill('Noticias de Higüey hoy');
+                assert.equal(await page.locator('#studioTopic').inputValue(),'Noticias de Higüey hoy');
+                assert.equal(await page.locator('.studio-sidebar').isVisible(),true);
+                assert.equal(await page.locator('.studio-results-view').isVisible(),true);
+                await page.locator('#studioGenreQuick').selectOption('Romance');
+                assert.equal(await page.locator('#studioMode').inputValue(),'fiction');
+              }else{
+                assert.equal(await page.locator('#studioGenreQuick').isVisible(),false);
+                assert.equal(await page.locator('.studio-sidebar').isVisible(),false);
+                assert.equal(await page.locator('.studio-results-view').isVisible(),false);
+                await page.getByRole('tab',{name:'Actualidad',exact:true}).click();
+                await page.locator('[data-menu="studioGenre"] [data-choice="Noticias"]').click();
+                assert.equal(await page.locator('#studioMode').inputValue(),'news');
+              }
+              assert.deepEqual(errors,[]);
+              console.log('DASHBOARD OK:',size.width+'x'+size.height);
+              await page.close();
+            }
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          JS
