@@ -39,7 +39,7 @@ jobs:
           for topic,style in [('Noticias de República Dominicana','Noticias'),('Farándula reciente','Farándula')]:
               payload=json.dumps({'topic':topic,'style':style,'mode':'news'}).encode()
               call=subprocess.run(['curl','-sS','--max-time','110','-w','\\n%{http_code}','-X','POST',endpoint,'-H','Origin: https://marianitord2020.github.io','-H','Content-Type: application/json','-H','x-app-token: '+os.environ['APP_PASSCODE'],'--data-binary','@-'],input=payload,capture_output=True,check=True)
-              body,code=call.stdout.decode().rsplit('\\n',1)
+              body,code=call.stdout.decode().rsplit(chr(10),1)
               if code!='200':raise RuntimeError('Error de cobertura HTTP '+code+': '+body[:400])
               result=json.loads(body)
               assert result['query']==topic and 1<=len(result['ideas'])<=10
