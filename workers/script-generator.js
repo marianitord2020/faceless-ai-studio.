@@ -35,7 +35,7 @@ export async function generateVerifiedScript(input,env){
   if(topic.length<5||topic.length>240)scriptError('Escribe una búsqueda concreta (5–240 caracteres).',400);
   const duration=[30,60,120].includes(Number(input.duration))?Number(input.duration):30;
   const platform=['TikTok','Shorts','Reels','Facebook'].includes(input.platform)?input.platform:'TikTok';
-  const style=['Misterio','Historia','Curiosidades','Motivación','Noticias','Educativo'].includes(input.style)?input.style:'Educativo';
+  const style=['Misterio','Historia','Curiosidades','Motivación','Noticias','Educativo','Romance','Farándula'].includes(input.style)?input.style:'Educativo';
   const selected=['informativo','noticias','ficcion'].includes(input.mode)?input.mode:'informativo';
   // Una petición explícita de ficción cuenta incluso con el selector predeterminado.
   const fiction=selected==='ficcion'||(selected==='informativo'&&FICTION_TERMS.test(topic));
@@ -48,7 +48,7 @@ export async function generateVerifiedScript(input,env){
     sourceUrl:String(input.idea.sourceUrl||'').trim().slice(0,1500)
   }:null;
   if(idea&&(!idea.title||!idea.synopsis))scriptError('La portada elegida necesita título y sinopsis.',400);
-  const date=new Date().toISOString().slice(0,10);
+  const date=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Santo_Domingo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
   let proof='',sources=[];
   if(mode!=='ficcion'){
     const instruction=mode==='noticias'
@@ -68,7 +68,7 @@ export async function generateVerifiedScript(input,env){
     sources=trustedSources(research.meta);
     const didSearch=Array.isArray(research.meta?.webSearchQueries)&&
       research.meta.webSearchQueries.some(q=>String(q).trim());
-    if(!didSearch||sources.length<(mode==='noticias'?2:1)){
+    if(!didSearch||sources.length<(mode==='noticias'&&!idea?2:1)){
       scriptError('No pude comprobar '+(mode==='noticias'?'noticias recientes':'el tema')+
         ' con fuentes de Google. No generaré datos inventados. Intenta una búsqueda más concreta.',422);
     }
