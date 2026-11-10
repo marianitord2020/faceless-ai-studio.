@@ -112,6 +112,7 @@ export async function generateVerifiedScript(input,env){
       idea.sourceUrl?'ARTÍCULO ORIGINAL DE LA PORTADA: '+idea.sourceUrl:'',
       'OBLIGATORIO: la narración desarrolla esta portada precisa; conserva personajes, sucesos y enfoque. No cambies de historia ni inventes otra noticia.']:[]),
     'FECHA: '+date+'. MODO: '+mode+'. DURACIÓN: '+duration+' s. ESCENAS EXACTAS: '+count+'. PLATAFORMA: '+platform+'. ESTILO: '+style+'.',
+    input.subcategory?'SUBCATEGORÍA SOLICITADA: '+JSON.stringify(String(input.subcategory).slice(0,80))+'. Conserva el tema y la portada seleccionada.':'',
     rules,
     'No cambies ni amplíes el tema: responde SOLO a lo que el usuario pidió.',
     'Título específico, fiel a la búsqueda. Máximo '+Math.floor(duration/count*2.1)+' palabras por escena para que la narración quepa sin correr ni cortar palabras. Total aproximado: '+Math.floor(duration*2.1)+' palabras. Narración natural en español.',

@@ -6,6 +6,7 @@ on:
     paths:
       - 'scripts/discover.js'
       - 'scripts/written-stories.js'
+      - 'tests/subcategories.mjs'
       - 'styles/discover.css'
       - 'index.html'
       - '.github/workflows/test-gallery-ui.yml'
@@ -20,6 +21,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Comprobar subcategorías en los guiones
+        run: node tests/subcategories.mjs
       - name: Preparar Chromium
         run: |
           npm install --no-save playwright@1.58.2
@@ -56,6 +59,7 @@ jobs:
 
             await page.screenshot({path:'/tmp/faceless-studio-mobile.png',fullPage:true});
             if(await page.locator('#studioSource').inputValue()!=='ai')throw Error('Las búsquedas nuevas deben usar Gemini por defecto');
+            await page.locator('#studioVideoOptions summary').click();
             await page.locator('#studioDuration').selectOption('30');
             const durationLabel=await page.locator('.studio-feature-meta').textContent();
             if(!durationLabel.includes('30 segundos')||!durationLabel.includes('5 escenas'))throw Error('La duración de la sinopsis no se actualizó');
@@ -143,6 +147,20 @@ jobs:
             const labels=await page.locator('#studioCards .studio-card b').allTextContents();
             if(!labels.every(x=>x.includes(last.topic)))throw Error('Se mostraron resultados de otra búsqueda');
             console.log('TEMAS: petición literal, tipo de contenido explícito, contador cero y ausencia de ejemplos ajenos tras un fallo: OK');
+            await page.locator('#studioGenre').selectOption('Terror');
+            await page.locator('#studioSubcategory').selectOption('Fantasmas');
+            await page.locator('#studioTopic').fill('Una casa abandonada en La Romana');
+            await page.locator('#studioGenerate').click();
+            await page.waitForFunction(()=>document.querySelector('#studioFeature h2')?.textContent?.startsWith('Una casa abandonada en La Romana'));
+            const categorized=topics.at(-1);
+            if(categorized.subcategory!=='Fantasmas'||categorized.topic!=='Una casa abandonada en La Romana'||categorized.style!=='Terror')throw Error('La subcategoría no llegó a la generación o sustituyó el tema');
+            await page.locator('#studioGenre').selectOption('Romance');
+            if(await page.locator('#studioSubcategory').inputValue()!=='')throw Error('Se conservó una subcategoría de otro género');
+            const romanceOptions=await page.locator('#studioSubcategory option').allTextContents();
+            if(!romanceOptions.includes('Reencuentros')||romanceOptions.includes('Fantasmas'))throw Error('Subcategorías incorrectas');
+            if(await page.locator('#studioGenre optgroup').count()!==3)throw Error('Faltan grupos de categorías');
+            console.log('CATEGORÍAS: grupos, subcategorías dependientes, reinicio al cambiar género y tema literal conservado: OK');
+
             await page.evaluate(()=>route('discover'));
             await page.locator('#studioGenre').selectOption('Farándula');
             if(await page.locator('#studioMode').inputValue()!=='news')throw Error('Farándula debe consultar hechos reales');

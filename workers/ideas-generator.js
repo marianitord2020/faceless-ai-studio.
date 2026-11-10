@@ -25,11 +25,12 @@ function ideasFromAI(items,limit=10){
 export async function generateCoverIdeas(input,env){
  const topic=String(input?.topic||'').replace(/\s+/g,' ').trim();
  if(topic.length<5||topic.length>220)ideasError('Escribe un tema de 5 a 220 caracteres.',400);
+ const subcategory=String(input?.subcategory||'').replace(/\s+/g,' ').trim().slice(0,80);
  const style=String(input?.style||'Misterio').slice(0,40);
  const mode=['fiction','news','factual'].includes(input?.mode)?input.mode:'fiction';
  const date=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Santo_Domingo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
- if(mode==='news')return searchRealNews(topic,style,env);
- if(mode==='factual')return generateWikipediaIdeas(topic,style,env);
+ if(mode==='news'){const sourceQuery=[topic,subcategory].filter(Boolean).join(' ');return {...await searchRealNews(sourceQuery,style,env),query:topic,subcategory,sourceQuery}}
+ if(mode==='factual'){const sourceQuery=[topic,subcategory].filter(Boolean).join(' ');return {...await generateWikipediaIdeas(sourceQuery,style,env),query:topic,subcategory,sourceQuery}}
  if(mode==='fiction'){
   const reference=input?.reference&&typeof input.reference==='object'?{
     title:String(input.reference.title||'').slice(0,120),text:String(input.reference.text||'').slice(0,1800),
@@ -38,6 +39,7 @@ export async function generateCoverIdeas(input,env){
   const instructions=[
    'Crea EXACTAMENTE diez conceptos de historias de FICCIÓN DIFERENTES en español para que el usuario elija UNA portada y la convierta en video.',
    'TEMA OBLIGATORIO: '+JSON.stringify(topic)+'; GÉNERO: '+style+'. No te desvíes del tema.',
+   ...(subcategory?['SUBCATEGORÍA ELEGIDA: '+JSON.stringify(subcategory)+'. Afina la historia dentro del tema literal del usuario; no sustituyas sus lugares, personajes ni restricciones.']:[]),
    'Cada propuesta: title atractivo distinto (6-90 caracteres), synopsis de 40-70 palabras explicando el conflicto particular, outline breve de comienzo, nudo y giro, coverPrompt en inglés describiendo la imagen cinematográfica de portada, sin texto ni marcas de agua.',
    'Cada título, sinopsis y trama debe tratar el tema literal solicitado. Los lugares, personajes y restricciones mencionados por el usuario son obligatorios; el género solo cambia el tono. No sustituyas el tema por ejemplos prefabricados.',
    'Antes de responder, revisa las diez propuestas y reescribe cualquiera que se aparte del tema. No reutilices la misma trama.',
@@ -50,6 +52,6 @@ export async function generateCoverIdeas(input,env){
   if(ideas.length!==10)ideasError('Gemini no preparó diez historias diferentes; intenta regenerar las propuestas.');
   let referenceUrl='';
   try{const u=new URL(reference?.url);if(u.protocol==='https:')referenceUrl=u.href}catch{}
-  return {query:topic,style,mode,ideas,checkedAt:null,sources:referenceUrl?[{title:reference.title,url:referenceUrl}]:[]};
+  return {query:topic,style,subcategory,mode,ideas,checkedAt:null,sources:referenceUrl?[{title:reference.title,url:referenceUrl}]:[]};
  }
 }

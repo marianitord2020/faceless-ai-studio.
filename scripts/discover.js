@@ -4,6 +4,22 @@
   'use strict';
   const API='https://faceless-images.marianitord2020.workers.dev';
   const styles=['Romance','Misterio','Terror','Fantasía','Historia','Curiosidades','Noticias','Farándula','Entretenimiento','Motivación','Educativo'];
+  const categoryGroups=[['Ficción y relatos',['Romance','Misterio','Terror','Fantasía']],['Aprender e inspirar',['Historia','Curiosidades','Motivación','Educativo']],['Actualidad y cultura',['Noticias','Farándula','Entretenimiento']]];
+  const subcategories={
+    Romance:['Reencuentros','Amor imposible','Segundas oportunidades','Amor y traición','Historias de pareja'],
+    Misterio:['Secretos familiares','Enigmas','Desapariciones ficticias','Investigación','Suspenso psicológico'],
+    Terror:['Fantasmas','Casas embrujadas','Leyendas urbanas','Terror psicológico','Criaturas'],
+    Fantasía:['Magia','Mundos imaginarios','Aventuras épicas','Seres mitológicos','Fantasía urbana'],
+    Historia:['Historia dominicana','Biografías','Civilizaciones','Acontecimientos históricos','Patrimonio cultural'],
+    Curiosidades:['Ciencia','Naturaleza','Tecnología','Cuerpo humano','Lugares sorprendentes'],
+    Motivación:['Superación personal','Disciplina','Autoestima','Emprendimiento','Metas y hábitos'],
+    Educativo:['Ciencia','Tecnología','Cultura general','Medioambiente','Aprendizaje'],
+    Noticias:['Política','Economía','Deportes','Tecnología','Salud','Seguridad','Cultura'],
+    Farándula:['Música','Cine','Televisión','Celebridades','Redes sociales'],
+    Entretenimiento:['Cine','Series','Música','Eventos','Videojuegos','Humor']
+  };
+  const categoryTopics={Romance:'Historias de amor',Misterio:'Misterios y secretos',Terror:'Historias de terror',Fantasía:'Aventuras de fantasía',Historia:'Historia de República Dominicana',Curiosidades:'Curiosidades del mundo',Motivación:'Historias de superación',Educativo:'Aprender algo nuevo',Noticias:'Noticias de República Dominicana hoy',Farándula:'Farándula hoy',Entretenimiento:'Entretenimiento hoy'};
+  let subcategoryGenre='';
   const imageStyles=[
     ['cinematic','Fotografía cinematográfica'],
     ['hyperreal','Foto hiperrealista'],
@@ -25,7 +41,7 @@
     Educativo:{emoji:'🎓',colors:['#134e58','#248487','#15254b']}
   };
   const state={ideas:[],selected:0,mode:'fiction',topic:'',style:'Romance',source:'ai',imageStyle:'cinematic',
-    pass:'',busy:false,building:false,epoch:0,covers:new Map(),sources:[],checkedAt:null,sourceProvider:'',matchType:'exact',sourceCoverage:null};
+    subcategory:'',pass:'',busy:false,building:false,epoch:0,covers:new Map(),sources:[],checkedAt:null,sourceProvider:'',matchType:'exact',sourceCoverage:null};
   window.facelessCoverCache=window.facelessCoverCache||new Map();
   let dbPromise=null;
   const $id=id=>document.getElementById(id);
@@ -114,16 +130,17 @@
     '<p>Encuentra una historia, elige tu favorita y dale vida.</p></div></div>'+
     '<div class="studio-settings">'+
     '<div class="studio-fields">'+
-    '<div class="studio-field"><label for="studioGenre">Género</label><select id="studioGenre"></select></div>'+
+    '<div class="studio-field"><label for="studioGenre">Categoría</label><select id="studioGenre"></select></div>'+
     '<div class="studio-field"><label for="studioTopic">¿Qué quieres contar?</label><input id="studioTopic" type="text" maxlength="220" placeholder="Ej.: Historias de amor"></div>'+
-    '<div class="studio-field"><label for="studioMode">Contenido</label><select id="studioMode">'+
+    '<div class="studio-field"><label for="studioSubcategory">Subcategoría</label><select id="studioSubcategory"></select></div>'+
+    '<div class="studio-field"><label for="studioMode">Tipo de contenido</label><select id="studioMode">'+
     '<option value="fiction">Relatos creativos</option><option value="news">Noticias reales y actuales</option><option value="factual">Documentales / hechos reales</option></select></div>'+
     '<div class="studio-field"><button class="studio-generate" type="button" id="studioGenerate">⌕ Generar 10 propuestas</button></div></div>'+
     '<div class="studio-addons">'+
-    '<div class="studio-addon"><label for="studioSource">Cómo quieres empezar</label><select id="studioSource"><option value="ai">IA — Gemini</option><option value="local">Textos publicados — sin IA generativa</option></select></div>'+
+    '<div class="studio-addon"><label for="studioSource">Cómo quieres empezar</label><select id="studioSource"><option value="ai">Crear con IA · Gemini</option><option value="local">Buscar textos publicados</option></select></div>'+
     '<div class="studio-addon"><label for="studioImageStyle">Estilo de imágenes</label><select id="studioImageStyle"></select></div>'+
     '<div class="studio-addon"><label for="studioDuration">Duración</label><select id="studioDuration"><option value="30">30 segundos</option><option value="60" selected>60 segundos</option><option value="120">120 segundos</option></select></div>'+
-    '<div class="studio-addon pass"><label for="studioPass">Código de acceso</label><input id="studioPass" type="password" autocomplete="new-password" placeholder="Tu código privado para usar IA"></div>'+
+    '<div class="studio-addon pass"><label for="studioPass">Código de acceso</label><input id="studioPass" type="password" autocomplete="new-password" placeholder="Tu código privado"></div>'+
     '<div class="studio-helper" id="studioCoverage">Noticias de República Dominicana y medios en español, con enlace a su fuente. Las imágenes generadas son ilustraciones editoriales.</div></div>'+
     '</div>'+
     '<div id="studioWritten" class="studio-settings" hidden>'+
@@ -149,36 +166,59 @@
     panel.prepend(heading);
     const fields=panel.querySelector('.studio-fields'),addons=panel.querySelector('.studio-addons');
     const topicField=$id('studioTopic').parentElement;topicField.classList.add('studio-topic');fields.prepend(topicField);
-    const sourceField=$id('studioSource').parentElement;sourceField.classList.add('studio-field');fields.appendChild(sourceField);
+    const sourceField=$id('studioSource').parentElement;sourceField.classList.add('studio-field','studio-origin');fields.appendChild(sourceField);
+    sourceField.appendChild(e('p','studio-field-hint',''));
     const action=$id('studioGenerate').parentElement;action.className='studio-search-action';
     const helper=$id('studioCoverage'),sourceInfo=e('details','studio-source-info');
     sourceInfo.append(e('summary',null,'Fuentes y cobertura'),helper);
     const searchFooter=e('div','studio-search-footer');searchFooter.append(sourceInfo,action);panel.append(searchFooter);
-    addons.prepend(e('div','studio-preferences-title','Preferencias del video'));
+    const preferences=e('details','studio-video-options');preferences.id='studioVideoOptions';
+    const preferencesSummary=e('summary');const preferencesTitle=e('span','studio-options-title','Imagen y duración');
+    const preferencesValue=e('span','studio-options-value','60 s · Cinematográfica');preferencesValue.id='studioVideoSummary';
+    preferencesSummary.append(preferencesTitle,preferencesValue);preferences.append(preferencesSummary,addons);
+    const access=addons.querySelector('#studioPass').parentElement;access.classList.add('studio-access');
+    panel.insertBefore(preferences,searchFooter);panel.insertBefore(access,searchFooter);
+    function updateVideoSummary(){const names={cinematic:'Cinematográfica',hyperreal:'Hiperrealista','3d':'Animación 3D','2d':'Ilustración 2D',anime:'Anime',cartoon:'Caricatura',historical:'Recreación histórica'};$id('studioVideoSummary').textContent=$id('studioDuration').value+' s · '+names[$id('studioImageStyle').value]}
+    $id('studioDuration').addEventListener('change',updateVideoSummary);$id('studioImageStyle').addEventListener('change',updateVideoSummary);
     const writtenHeading=e('div','studio-panel-heading');writtenHeading.append(e('span','studio-step','↳'),e('div',null,'Importa un relato'));
     $id('studioWritten').prepend(writtenHeading);
     const resultsHeading=root.querySelector('.studio-results-head');resultsHeading.prepend(e('span','studio-step','02'));
-    const genre=$id('studioGenre');for(const name of styles){const opt=new Option(name,name);genre.add(opt)}
-    genre.value='Romance';
+    const genre=$id('studioGenre');
+    for(const [label,names] of categoryGroups){const group=e('optgroup');group.label=label;for(const name of names)group.append(new Option(name,name));genre.append(group)}
+    function refreshSubcategories(){
+      if(subcategoryGenre===genre.value)return;subcategoryGenre=genre.value;
+      const sub=$id('studioSubcategory');sub.replaceChildren(new Option('Todos los temas',''));
+      for(const name of subcategories[genre.value]||[])sub.add(new Option(name,name));
+    }
+    genre.value='Romance';refreshSubcategories();
     const image=$id('studioImageStyle');for(const [key,name] of imageStyles)image.add(new Option(name,key));
     $id('studioTopic').value='Historias de amor';
     $id('studioTopic').addEventListener('input',()=>{$id('studioTopic').dataset.edited='true'});
     genre.onchange=()=>{
-      if(!$id('studioTopic').dataset.edited&&['Noticias','Farándula','Entretenimiento'].includes(genre.value))$id('studioTopic').value=genre.value==='Noticias'?'Noticias de República Dominicana hoy':genre.value+' hoy';
+      refreshSubcategories();
+      if(!$id('studioTopic').dataset.edited)$id('studioTopic').value=categoryTopics[genre.value]||'';
       if(['Noticias','Farándula','Entretenimiento'].includes(genre.value)){
         $id('studioMode').value='news';
         $id('studioSource').value='ai';
       }else if($id('studioMode').value==='news')$id('studioMode').value='fiction';
       $id('studioSource').onchange();
+      if(state.source==='demo'){
+        state.ideas=[];state.topic=$id('studioTopic').value;state.style=genre.value;state.mode=$id('studioMode').value;state.epoch++;
+        initialState();setStatus('Inicia la búsqueda para ver resultados de esta categoría.');
+      }
     };
     $id('studioMode').onchange=()=>{
-      if($id('studioMode').value==='news'&&!['Noticias','Farándula','Entretenimiento'].includes(genre.value))genre.value='Noticias';
+      if($id('studioMode').value==='news'&&!['Noticias','Farándula','Entretenimiento'].includes(genre.value)){genre.value='Noticias';if(!$id('studioTopic').dataset.edited)$id('studioTopic').value=categoryTopics.Noticias}
+      refreshSubcategories();
       if($id('studioMode').value!=='fiction')$id('studioSource').value='ai';
       $id('studioSource').onchange();
     };
     $id('studioSource').onchange=()=>{
       const local=$id('studioSource').value==='local';
       $id('studioWritten').hidden=!local;
+      $id('studioPass').parentElement.hidden=local;
+      const mode=$id('studioMode').value;
+      sourceField.querySelector('.studio-field-hint').textContent=local?'Busca relatos publicados o importa un texto para traducirlo.':mode==='news'?'Consulta noticias con fuentes reales y elige una para crear el guion.':mode==='factual'?'Consulta información documentada y prepara un guion con sus fuentes.':'Crea propuestas originales sobre el tema que escribas.';
       $id('studioGenerate').textContent=local?'⌕ Buscar textos publicados':'⌕ Generar 10 propuestas';
       if(local)$id('studioMode').value='fiction';
       $id('studioReddit').href='https://www.reddit.com/search/?'+new URLSearchParams({q:$id('studioTopic').value});
@@ -192,7 +232,7 @@
     state.ideas=localIdeas('Historias de amor','Romance');
     state.topic='Historias de amor';
     state.style='Romance';state.source='demo';state.mode='fiction';
-    $id('studioSource').value='ai';
+    $id('studioSource').value='ai';$id('studioSource').onchange();
     renderCards();renderFeature();
     setStatus('Relatos de ejemplo · Escribe tu tema para encontrar o crear otra historia.');
   }
@@ -356,6 +396,7 @@
     if(state.busy||state.building)return;
     const topic=$id('studioTopic').value.trim().replace(/\s+/g,' ');
     const style=$id('studioGenre').value;
+    const subcategory=$id('studioSubcategory').value;
     const requestedMode=$id('studioMode').value;
     const local=$id('studioSource').value==='local';
     const mode=requestedMode;
@@ -363,21 +404,21 @@
     if(local&&mode!=='fiction'){setStatus('Las noticias y los documentales reales requieren IA y fuentes actuales. Cambia el origen a «IA — Gemini».');return}
     state.busy=true;state.epoch++;const epoch=state.epoch;
     state.pass=$id('studioPass').value.trim()||state.pass;
-    state.topic=topic;state.style=style;state.mode=mode;state.source=local?'local':'ai';
+    state.topic=topic;state.style=style;state.subcategory=subcategory;state.mode=mode;state.source=local?'local':'ai';
     state.imageStyle=$id('studioImageStyle').value;
     state.selected=0;state.covers.clear();state.sources=[];state.ideas=[];state.sourceProvider='';state.matchType='exact';state.sourceCoverage=null;initialState();
     $id('studioGenerate').disabled=true;
     try{
       if(local){
         setStatus('Buscando textos publicados en Wikisource sobre «'+topic+'»…');
-        const result=await window.facelessWrittenStories.search(topic,style);
+        const result=await window.facelessWrittenStories.search([topic,subcategory].filter(Boolean).join(' '),style);
         if(!result.ideas.length)throw Error('No encontré textos publicados. Puedes abrir Reddit y pegar un relato.');
         state.ideas=result.ideas;state.sources=result.sources;state.sourceProvider=result.sourceProvider;state.matchType=result.matchType;
         setStatus('✓ '+state.ideas.length+' textos publicados'+(state.matchType==='related'?' relacionados con el género elegido':'')+'. La descripción es un fragmento de la fuente, sin reescritura con IA.');
       }else{
         setStatus(mode==='news'?'Consultando GDELT para noticias reales y fuentes actuales…':
           'Gemini está preparando 10 títulos y sinopsis sobre «'+topic+'»…');
-        const result=await callEndpoint('/ideas',{topic,style,mode});
+        const result=await callEndpoint('/ideas',{topic,style,mode,subcategory});
         if(epoch!==state.epoch)return;
         if(!Array.isArray(result.ideas)||!result.ideas.length)throw Error('La búsqueda no devolvió propuestas verificables.');
         state.ideas=result.ideas.slice(0,10);
@@ -407,9 +448,9 @@
       const text=await window.facelessWrittenStories.read(idea);
       const style=$id('studioGenre').value;
       const topic=('Una historia de '+style+' inspirada en '+idea.title).slice(0,220);
-      const result=await callEndpoint('/ideas',{topic,style,mode:'fiction',reference:{title:idea.title,url:idea.sourceUrl||'',text:text.slice(0,1800)}});
+      const result=await callEndpoint('/ideas',{topic,style,subcategory:$id('studioSubcategory').value,mode:'fiction',reference:{title:idea.title,url:idea.sourceUrl||'',text:text.slice(0,1800)}});
       if(!result.ideas?.length)throw Error('No se prepararon propuestas nuevas.');
-      state.ideas=result.ideas;state.topic=topic;state.style=style;state.mode='fiction';state.source='ai';state.selected=0;state.matchType='exact';state.sources=result.sources||[];state.covers.clear();
+      state.ideas=result.ideas;state.topic=topic;state.style=style;state.subcategory=$id('studioSubcategory').value;state.mode='fiction';state.source='ai';state.selected=0;state.matchType='exact';state.sources=result.sources||[];state.covers.clear();
       $id('studioTopic').value=topic;$id('studioSource').value='ai';$id('studioSource').onchange();
       setStatus('✓ Historias nuevas de ficción inspiradas en la fuente. No son sucesos reales ni traducciones del relato original.');
     }catch(error){setStatus(String(error.message||error))}
@@ -427,7 +468,7 @@
     try{
       setStatus($id('studioWrittenLanguage').value==='es'?'Importando texto publicado…':'Traduciendo con MyMemory; conservando el texto original…');
       const translated=await window.facelessWrittenStories.translate(text,$id('studioWrittenLanguage').value);
-      state.topic=title;state.style=$id('studioGenre').value;state.source='local';state.mode='fiction';state.selected=0;
+      state.topic=title;state.style=$id('studioGenre').value;state.subcategory=$id('studioSubcategory').value;state.source='local';state.mode='fiction';state.selected=0;
       state.sources=url?[{title,url}]:[];state.matchType='exact';state.sourceProvider='Texto importado';state.covers.clear();
       state.ideas=[{id:'imported-'+Date.now(),title,synopsis:translated.slice(0,400)+(translated.length>400?'…':''),writtenText:translated,importedOriginal:text,sourceUrl:url,sourceTitle:title,outline:'Texto publicado importado por el usuario.',coverPrompt:''}];
       setStatus('✓ Texto preparado en español. Revisa la traducción y la fuente antes de crear el video.');
@@ -448,7 +489,7 @@
     return [
       String(idea.coverPrompt||'').slice(0,450),
       'Cover for the FICTIONAL or illustrated documentary story: '+idea.title+'.',
-      'Central theme: '+state.topic+'.',
+      'Central theme: '+state.topic+'. Subcategory: '+state.subcategory+'.',
       preset[state.imageStyle]||preset.cinematic,
       'Landscape 16:9 card composition; subject centered; no words, no lettering, no watermarks, no logos.'
     ].join(' ');
@@ -542,7 +583,7 @@
       const data=local?{title:idea.title,scenes:written?writtenData.scenes:createLocalScenes(idea,duration),
         sources:written?state.sources:[],provider:written?'Texto publicado / sin IA generativa':'Relato local',mode:written?'texto_publicado':'ficcion',checkedAt:null}:await callEndpoint('/script',{
         topic:creationTopic,
-        duration,platform:choice.platform||'TikTok',style:state.style,
+        duration,platform:choice.platform||'TikTok',style:state.style,subcategory:state.subcategory,
         mode:state.mode==='fiction'?'ficcion':state.mode==='news'?'noticias':'informativo',
         idea:{title:idea.title,synopsis:idea.synopsis,outline:idea.outline,sourceUrl:idea.sourceUrl||''}
       });
@@ -562,7 +603,7 @@
       if(idea.sourceUrl&&!sources.some(s=>s.url===idea.sourceUrl))sources.unshift({title:idea.sourceTitle||idea.title,url:idea.sourceUrl});
       const project={
         id,title:idea.title,topic:creationTopic,originalQuery:state.topic,matchType:idea.matchType||'exact',matchReason:idea.matchReason||'',platform:choice.platform||'TikTok',
-        duration,format:choice.format||'9:16',style:state.style,date:new Date().toISOString(),
+        duration,format:choice.format||'9:16',style:state.style,subcategory:state.subcategory,date:new Date().toISOString(),
         scenes,narration:scenes.map(s=>s.text).join('\n'),hook:scenes[0].text,
         coverTitle:idea.title,coverSynopsis:idea.synopsis,coverPrompt:idea.coverPrompt,
         imageStyle:state.imageStyle,scriptMode:data.mode,
