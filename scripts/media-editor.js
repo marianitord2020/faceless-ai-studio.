@@ -7,7 +7,7 @@
  function invalidateVideo(){stopPreview();const video=id('videoResult');if(video){video.pause();video.removeAttribute('src');video.load();video.classList.add('hidden')}id('previewCanvas')?.classList.remove('hidden');id('downloadArea')?.replaceChildren();if(previewURL){URL.revokeObjectURL(previewURL);previewURL=null}}
  function applyTiming(p,data){Object.assign(p,data);p.date=new Date().toISOString();persist();id('sceneTotal').textContent='Suma de escenas: '+fmt(p.duration)+' / '+fmt(p.duration);const pills=id('editorPills');if(pills)pills.textContent=p.style+' '+p.duration+'s • '+p.format}
  function restoreTimeline(p){if(p.audioBaseTimeline){const base=p.audioBaseTimeline;if(base.scenes.length===p.scenes.length){p.duration=base.duration;p.scenes.forEach((s,i)=>Object.assign(s,base.scenes[i]))}else Object.assign(p,FacelessTiming.estimated(p,base.duration));delete p.audioBaseTimeline}delete p.subtitleCues;delete p.subtitleTextSignature;delete p.audioAlignment;persist()}
- async function saveAudio(p,file){file.facelessManual=true;file.facelessSignature=facelessVoiceSignature(p);audioFile=file;audioFileProjectId=p.id;generatedVoiceByProject.set(p.id,file);const saved=await facelessMediaPut(p.id+':voice',{manual:true,signature:file.facelessSignature,blob:file,name:file.name});if(!saved)toast('El audio está disponible en esta sesión, pero no se pudo guardar.');updateAudioAttachmentUI()}
+ async function saveAudio(p,file,manual=true){file.facelessManual=manual;file.facelessSignature=facelessVoiceSignature(p);audioFile=file;audioFileProjectId=p.id;generatedVoiceByProject.set(p.id,file);const saved=await facelessMediaPut(p.id+':voice',{manual,signature:file.facelessSignature,blob:file,name:file.name});if(!saved)toast('El audio está disponible en esta sesión, pero no se pudo guardar.');updateAudioAttachmentUI()}
  function password(){return id('productionPass')?.value.trim()||id('aiPhotosPasscode')?.value.trim()||id('aiVoicePasscode')?.value.trim()||window.facelessProductionPasscode||facelessImagePasscode||facelessVoicePassword||''}
  async function decode(file){if(file.size>35_000_000)throw Error('El audio supera 35 MB. Usa un archivo de hasta 10 minutos.');const Context=window.AudioContext||window.webkitAudioContext;const context=new Context();try{const buffer=await context.decodeAudioData((await file.arrayBuffer()).slice(0));if(!buffer.duration||buffer.duration>600)throw Error('Usa un audio de hasta 10 minutos.');return buffer}finally{await context.close()}}
  async function transcribe(buffer,pass,status){
@@ -66,7 +66,7 @@
    const pass=password();if(pass.length<16){status.textContent='Duración ajustada al audio. Los subtítulos tienen tiempos estimados. Introduce tu código privado arriba y pulsa Sincronizar con la voz para reconocer las palabras.';return}
    const recognized=await transcribe(decoded,pass,status);
    if(audioFile!==file||current()?.id!==p.id)return;
-   const data=FacelessTiming.align(p,recognized,decoded.duration);applyTiming(p,data);invalidateVideo();await saveAudio(p,file);updatePreview();status.textContent='✓ Subtítulos y escenas ajustados a la voz reconocida. Coincidencia del guion: '+data.audioAlignment.coverage+'%. Revisa la vista previa.';
+   const data=FacelessTiming.align(p,recognized,decoded.duration);applyTiming(p,data);invalidateVideo();await saveAudio(p,file,Boolean(file.facelessManual));updatePreview();status.textContent='✓ Subtítulos y escenas ajustados a la voz reconocida. Coincidencia del guion: '+data.audioAlignment.coverage+'%. Revisa la vista previa.';
   }
   async function attach(file){
    if(!file||facelessIsWorking())return;busy(true);const ticket=++operation;
@@ -96,7 +96,7 @@
    if(!audioRoot.isConnected)return;
    const has=Boolean(audioFile&&audioFileProjectId===p.id);
    audioRoot.hidden=!has||!audioFile.facelessManual;id('audioCount').hidden=!has;
-   id('pickOwnAudio').querySelector('strong').textContent=has&&audioFile.facelessManual?'Cambiar mi audio':'Añadir mi audio';id('removeAudio').disabled=!has||Boolean(window.facelessMediaBusy);id('syncAudio').disabled=!has||Boolean(window.facelessMediaBusy);id('syncAudio').hidden=!has||!audioFile.facelessManual;
+   id('pickOwnAudio').querySelector('strong').textContent=has&&audioFile.facelessManual?'Cambiar mi audio':'Añadir mi audio';id('removeAudio').disabled=!has||Boolean(window.facelessMediaBusy);id('syncAudio').disabled=!has||Boolean(window.facelessMediaBusy);id('syncAudio').hidden=!has;
    if(playerURL){URL.revokeObjectURL(playerURL);playerURL=''}
    const player=id('uploadedAudioPlayer');player.pause();player.removeAttribute('src');player.load();player.hidden=!has||!audioFile.facelessManual;
    if(has&&audioFile.facelessManual){playerURL=URL.createObjectURL(audioFile);player.src=playerURL;

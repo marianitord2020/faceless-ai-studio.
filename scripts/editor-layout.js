@@ -39,7 +39,7 @@ window.facelessCompactVideoEditor = function (project) {
   custom[1].append(byId('images').closest('.media-upload-group'));
   ['imageCount','manualPhotoSlots','aiPhotosResults'].forEach(id=>move(id,custom[1]));
   custom[2].append(byId('audio').closest('.media-upload-group'));
-  ['audioCount','audioAttachment','audioSyncStatus','aiVoiceAudioArea'].forEach(id=>move(id,custom[2]));
+  ['audioCount','audioAttachment','syncAudio','audioSyncStatus','aiVoiceAudioArea'].forEach(id=>move(id,custom[2]));
   const recorder=byId('startMic').closest('.record-panel');
   recorder.querySelectorAll('b,p:not([id])').forEach(el=>el.remove());byId('micStatus').textContent='';custom[2].append(recorder);
   byId('audioAttachment').querySelectorAll('p:not([id])').forEach(el=>el.remove());
