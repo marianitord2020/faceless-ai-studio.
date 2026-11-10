@@ -166,6 +166,8 @@
     '<div class="studio-results-layout"><div id="studioCards" class="studio-cards"></div>'+
     '<aside class="studio-feature" id="studioFeature" aria-label="Relato seleccionado"></aside></div>'+
     '</div></div></div>';
+    // La acción pertenece al formulario: en escritorio ocupa la cuarta columna y en Android permanece fija solo mientras el formulario está visible.
+    root.querySelector('.studio-menu-view').appendChild(root.querySelector('.studio-fixed-action'));
     function showMenu(){root.querySelector('.studio-menu-view').hidden=false;root.querySelector('.studio-results-view').hidden=true;root.classList.remove('studio-show-results');window.scrollTo({top:0,behavior:'instant'})}
     function showResults(){root.querySelector('.studio-menu-view').hidden=true;root.querySelector('.studio-results-view').hidden=false;root.classList.add('studio-show-results');window.scrollTo({top:0,behavior:'instant'})}
     window.facelessShowStudioMenu=showMenu;window.facelessShowStudioResults=showResults;
