@@ -138,7 +138,7 @@ function voiceDataURI(mime,base64) {
   if(!/^[A-Za-z0-9+/=\r\n]+$/.test(base64)||base64.length<1000) reject('El proveedor no devolvió audio válido');
   return { mime, dataURI: 'data:'+mime+';base64,'+base64 };
 }
-async function geminiVoice(text,voice,env){
+async function geminiVoice(text,voice,env,style='neutral'){
   if(!env.GEMINI_TTS_API_KEY) reject('Falta GEMINI_TTS_API_KEY',503);
   const model='gemini-3.8-flash-lite-tts';
   const safeVoice = ['Fola','Kore','Aoede','Puck','Charon','Leda','Zephyr'].includes(voice)?voice:'Fola';
@@ -146,7 +146,15 @@ async function geminiVoice(text,voice,env){
     method:'POST',
     headers:{'content-type':'application/json','x-goog-api-key':env.GEMINI_TTS_API_KEY},
     body:JSON.stringify({
-      contents:[{parts:[{text,speechMetadata:{style:'Narración clara, expresiva y natural en español latinoamericano'}}]}],
+      contents:[{parts:[{text,speechMetadata:{style:({
+        news:'Voz de noticiero profesional en español latinoamericano: dicción precisa, seria, ritmo informado y sin dramatizar.',
+        suspense:'Narración de misterio y suspenso en español latinoamericano: tensión suave, silencios expresivos y voz profunda.',
+        romantic:'Narración romántica en español latinoamericano: cálida, íntima, emotiva y delicada.',
+        documentary:'Narración documental histórica en español latinoamericano: sobria, pausada y clara.',
+        entertainment:'Narración de farándula y entretenimiento en español latinoamericano: dinámica, alegre y expresiva.',
+        energetic:'Narración motivadora en español latinoamericano: inspiradora, segura y llena de energía.',
+        neutral:'Narración clara, expresiva y natural en español latinoamericano.'
+      })[style]||'Narración clara, expresiva y natural en español latinoamericano.'}}]}],
       generationConfig:{responseModalities:['AUDIO'],speechConfig:{voiceConfig:{voice:safeVoice}}}
     })
   });
@@ -174,11 +182,11 @@ async function cloudflareVoice(text,voice,env){
   if(bytes.length>6_000_000)reject('Audio por escena demasiado grande',413);
   return {provider:'Cloudflare Aura-2 español',...voiceDataURI('audio/mpeg',encode64(bytes))};
 }
-async function makeVoice(text,voice,env){
+async function makeVoice(text,voice,env,style){
   const issues=[];
   // Gemini 3.8 Flash-Lite TTS tiene nivel API gratuito sujeto a cuotas.
   if(env.GEMINI_TTS_API_KEY && !['female','male'].includes(voice)){
-    try{return await geminiVoice(text,voice,env)}catch(e){issues.push(readableError(e));}
+    try{return await geminiVoice(text,voice,env,style)}catch(e){issues.push(readableError(e));}
   }
   try{return await cloudflareVoice(text,voice,env);}
   catch(e){issues.push(readableError(e));}
@@ -226,7 +234,9 @@ export default {
           return reply({error:'Cada fragmento de voz debe tener entre 2 y 650 caracteres.'},400,cors);
         }
         const voice=String(data?.voice||'Fola');
-        const result=await makeVoice(spoken,voice,env);
+        const allowedStyles=['news','suspense','romantic','documentary','entertainment','energetic','neutral'];
+        const style=allowedStyles.includes(data?.style)?data.style:'neutral';
+        const result=await makeVoice(spoken,voice,env,style);
         return reply(result,200,cors);
       }
       const prompt = String(data?.prompt || '').trim().slice(0, 1800);
