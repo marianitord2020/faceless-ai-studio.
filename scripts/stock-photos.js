@@ -8,10 +8,10 @@
  window.facelessMountStockPhotos=function(project,updatePreview){
   const slots=document.getElementById('manualPhotoSlots');if(!slots||document.getElementById('stockPhotos'))return;
   const root=el('details','', 'stock-photos');root.id='stockPhotos';root.append(el('summary','Fotos e ilustraciones para las escenas'));
-  root.append(el('p','Busca fotos existentes en Openverse, Pixabay o Pexels. Elige una y asígnala a una escena.','smalltext'));
+  root.append(el('p','Busca fotos existentes en los bancos comprobados. Elige una y asígnala a una escena.','smalltext'));
   const form=el('form','', 'stock-search');
   const source=el('select');source.setAttribute('aria-label','Banco de fotos');
-  for(const [value,text] of [['openverse','Openverse · sin clave adicional'],['pixabay','Pixabay'],['pexels','Pexels'],['wikimedia','Wikimedia Commons · sin clave adicional']]){const o=el('option',text);o.value=value;source.append(o);}
+  for(const [value,text] of [['pixabay','Pixabay'],['wikimedia','Wikimedia Commons · sin clave adicional'],['openverse','Openverse']]){const o=el('option',text);o.value=value;source.append(o);}
   const query=el('input');query.type='search';query.placeholder='Ej.: playa de República Dominicana';query.maxLength=100;query.required=true;query.minLength=2;query.setAttribute('aria-label','Buscar fotografías');
   const pass=el('input');pass.type='password';pass.placeholder='Código privado de tu página';pass.autocomplete='off';pass.setAttribute('aria-label','Código privado de la aplicación');
   const button=el('button','Buscar fotos','btn primary');button.type='submit';form.append(source,query,pass,button);
@@ -19,8 +19,8 @@
   const sceneLabel=el('label','Añadir la foto elegida a:');sceneLabel.append(scene);root.append(form,sceneLabel);
   const status=el('p','', 'status');status.setAttribute('aria-live','polite');const grid=el('div','', 'stock-results');
   const more=el('button','Más resultados','btn small');more.type='button';more.hidden=true;
-  const external=link('Abrir el banco de fotos', 'https://openverse.org/');root.append(external);source.addEventListener('change',()=>{external.href=source.value==='pixabay'?'https://pixabay.com/':source.value==='pexels'?'https://www.pexels.com/':source.value==='wikimedia'?'https://commons.wikimedia.org/':'https://openverse.org/';});
-  const note=el('p','Verifica la fuente y la licencia antes de publicar. En Openverse mostramos CC0, dominio público y CC BY; conservamos sus créditos.','smalltext');
+  const external=link('Abrir el banco de fotos', 'https://pixabay.com/');root.append(external);source.addEventListener('change',()=>{external.href=source.value==='pixabay'?'https://pixabay.com/':source.value==='openverse'?'https://openverse.org/':'https://commons.wikimedia.org/';});
+  const note=el('p','Verifica la fuente y la licencia antes de publicar. Conservamos el autor, la licencia y el enlace de cada foto seleccionada.','smalltext');
   const credits=el('div','', 'stock-credits'),copyButton=el('button','Copiar créditos de las fotos','btn small');copyButton.type='button';
   root.append(status,grid,more,note,copyButton,credits);slots.after(root);
   let page=1,ticket=0,controller,loading=false;
@@ -55,6 +55,6 @@
    }catch(error){if(error.name!=='AbortError'&&root.isConnected)status.textContent=String(error.message||error);}finally{if(operation===ticket){loading=false;button.disabled=false;}}
   }
   form.onsubmit=event=>{event.preventDefault();search(1);};more.onclick=()=>{if(!loading)search(page+1);};
-  window.facelessMountIllustrationBanks?.(root,project,query,(data,button)=>apply({localData:data},button));
+
  };
 })();
