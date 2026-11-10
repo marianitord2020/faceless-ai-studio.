@@ -37,7 +37,7 @@ jobs:
           assert data.get("dataURI","").startswith("data:audio/"),"Sin audio"
           b=base64.b64decode(data["dataURI"].split(",",1)[1],validate=True)
           assert len(b)>1000,"Audio demasiado pequeño"
-          assert b[:3]==b"ID3" or b[:2] in (b"\xff\xfb",b"\xff\xf3",b"\xff\xf2"),"No se reconoció MP3"
+          assert b[:4]==b"RIFF" or b[:3]==b"ID3" or b[:2] in (b"\xff\xfb",b"\xff\xf3",b"\xff\xf2"),"No se reconoció WAV o MP3"
           print("VOZ REAL GENERADA Y VERIFICADA")
           print("Proveedor:",data.get("provider"))
           print("Bytes:",len(b))
