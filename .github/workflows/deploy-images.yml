@@ -97,6 +97,9 @@ jobs:
             fi
           done
 
+      - name: Validar una imagen real gratuita de ImageRouter
+        run: node tests/imagerouter-live.mjs
+
       - name: Comprobar que el servidor exige un código privado
         run: |
           set -euo pipefail
