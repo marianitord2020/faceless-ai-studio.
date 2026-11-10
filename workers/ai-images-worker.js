@@ -243,7 +243,11 @@ export default {
         const tag=(start,count)=>String.fromCharCode(...bytes.subarray(start,start+count));
         if(total<46||tag(0,4)!=='RIFF'||tag(8,4)!=='WAVE'||tag(12,4)!=='fmt '||view.getUint32(16,true)!==16||view.getUint16(20,true)!==1||view.getUint16(22,true)!==1||view.getUint32(24,true)!==16000||view.getUint16(34,true)!==16||tag(36,4)!=='data'||view.getUint32(40,true)!==total-44)reject('Formato de audio no válido: usa WAV PCM mono, 16 kHz, 16 bits.',400);
         const duration=(total-44)/32000;
-        const result=await env.AI.run('@cf/openai/whisper',{audio:Array.from(bytes)});
+        let result;
+        try{result=await env.AI.run('@cf/openai/whisper',{audio:Array.from(bytes)})}catch(error){
+          if(/4006|daily free allocation|quota|neurons/i.test(String(error?.message||error)))reject('Se agotó la cuota diaria gratuita de Cloudflare para reconocer la voz. El audio sigue añadido; reintenta la sincronización cuando se renueve la cuota.',503);
+          throw error;
+        }
         const words=(result?.words||[]).map(w=>({word:String(w.word||'').trim().slice(0,180),start:Number(w.start),end:Number(w.end)})).filter(w=>w.word&&Number.isFinite(w.start)&&Number.isFinite(w.end)&&w.start>=0&&w.end>w.start&&w.end<=duration+.2).slice(0,1000);
         if(!words.length)reject('No se detectó voz con tiempos. Comprueba que la grabación contenga narración clara.',422);
         return reply({words,provider:'Cloudflare Whisper',duration},200,cors);

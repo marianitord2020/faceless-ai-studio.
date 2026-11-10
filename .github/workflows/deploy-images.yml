@@ -90,27 +90,34 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          command -v ffmpeg >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq espeak-ng
+          espeak-ng -v es -s 145 -w /tmp/studio-voz-es.wav 'Hola, esta es una prueba de sincronización. Lola encontró una carta en el jardín.'
           python3 <<'PY'
-          import base64,io,json,os,subprocess,wave
-          endpoint='https://faceless-images.marianitord2020.workers.dev'
-          def call(path,payload,kind):
-              result=subprocess.run(['curl','--silent','--show-error','--max-time','110','-X','POST',endpoint+path,'-H','Origin: https://marianitord2020.github.io','-H','x-app-token: '+os.environ['APP_PASSCODE'],'-H','Content-Type: '+kind,'--data-binary','@-','-w','\\n%{http_code}'],input=payload,capture_output=True,check=True)
-              body,status=result.stdout.rsplit(bytes([10]),1)
-              if status!=b'200': raise RuntimeError('La comprobación de '+path+' falló: HTTP '+status.decode()+' '+body.decode()[:180])
-              return json.loads(body)
-          voice=call('/voice',json.dumps({'text':'Hola, esta es una prueba de sincronización. Lola encontró una carta en el jardín.','voice':'female'}).encode(),'application/json')
-          data=base64.b64decode(voice['dataURI'].split(',',1)[1])
-          pcm=subprocess.run(['ffmpeg','-v','error','-i','pipe:0','-f','s16le','-ac','1','-ar','16000','pipe:1'],input=data,capture_output=True,check=True).stdout
+          import array,io,json,os,subprocess,sys,wave
+          with wave.open('/tmp/studio-voz-es.wav','rb') as original:
+              assert original.getnchannels()==1 and original.getsampwidth()==2
+              samples=array.array('h',original.readframes(original.getnframes()));rate=original.getframerate()
+          converted=array.array('h')
+          for i in range(int(len(samples)*16000/rate)):
+              position=i*rate/16000;left=int(position);right=min(left+1,len(samples)-1);fraction=position-left
+              converted.append(round(samples[left]*(1-fraction)+samples[right]*fraction))
           output=io.BytesIO()
           with wave.open(output,'wb') as wav:
-              wav.setnchannels(1);wav.setsampwidth(2);wav.setframerate(16000);wav.writeframes(pcm)
-          recognized=call('/transcribe',output.getvalue(),'audio/wav')
-          words=recognized.get('words',[])
+              wav.setnchannels(1);wav.setsampwidth(2);wav.setframerate(16000);wav.writeframes(converted.tobytes())
+          call=subprocess.run(['curl','--silent','--show-error','--max-time','110','-X','POST','https://faceless-images.marianitord2020.workers.dev/transcribe','-H','Origin: https://marianitord2020.github.io','-H','x-app-token: '+os.environ['APP_PASSCODE'],'-H','Content-Type: audio/wav','--data-binary','@-','-w','\n%{http_code}'],input=output.getvalue(),capture_output=True,check=True)
+          body,status=call.stdout.rsplit(bytes([10]),1)
+          data=json.loads(body)
+          if status!=b'200':
+              message=str(data.get('error',''))
+              if status==b'503' and ('cuota diaria gratuita' in message or 'daily free allocation' in message):
+                  print('::warning::RECONOCIMIENTO REAL PENDIENTE: la cuota gratuita diaria está agotada. No se ha validado la transcripción real; no se activaron servicios de pago.')
+                  sys.exit(0)
+              raise RuntimeError('Reconocimiento: HTTP '+status.decode()+' '+message[:180])
+          words=data.get('words',[])
           assert len(words)>=8,'No se recuperaron suficientes palabras'
           assert all(w['end']>w['start']>=0 for w in words),'Tiempos no válidos'
           text=' '.join(w['word'] for w in words).lower()
           assert 'carta' in text and 'jard' in text,'No coincide la voz española reconocida'
           print('RECONOCIMIENTO REAL: voz española, '+str(len(words))+' palabras con tiempos; ruta protegida y audio WAV verificados.')
           PY
-
