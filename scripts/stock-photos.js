@@ -19,7 +19,7 @@
   const sceneLabel=el('label','Añadir la foto elegida a:');sceneLabel.append(scene);root.append(form,sceneLabel);
   const status=el('p','', 'status');status.setAttribute('aria-live','polite');const grid=el('div','', 'stock-results');
   const more=el('button','Más resultados','btn small');more.type='button';more.hidden=true;
-  const external=link('Abrir el banco de fotos', 'https://pixabay.com/');root.append(external);source.addEventListener('change',()=>{external.href=source.value==='pixabay'?'https://pixabay.com/':source.value==='openverse'?'https://openverse.org/':'https://commons.wikimedia.org/';});
+  const external=link('Abrir el banco de fotos', 'https://pixabay.com/');root.append(external,document.createTextNode(' · '),link('Buscar en Pexels','https://www.pexels.com/es-es/'));source.addEventListener('change',()=>{external.href=source.value==='pixabay'?'https://pixabay.com/':source.value==='openverse'?'https://openverse.org/':'https://commons.wikimedia.org/';});
   const note=el('p','Verifica la fuente y la licencia antes de publicar. Conservamos el autor, la licencia y el enlace de cada foto seleccionada.','smalltext');
   const credits=el('div','', 'stock-credits'),copyButton=el('button','Copiar créditos de las fotos','btn small');copyButton.type='button';
   root.append(status,grid,more,note,copyButton,credits);slots.after(root);

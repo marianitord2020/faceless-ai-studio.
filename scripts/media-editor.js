@@ -73,6 +73,7 @@
     id('aiVoiceAudioArea')?.replaceChildren();
     if(!p.audioBaseTimeline)p.audioBaseTimeline={duration:p.duration,scenes:p.scenes.map(s=>({time:s.time,duration:s.duration}))};
     applyTiming(p,FacelessTiming.estimated(p,decoded.duration));await saveAudio(p,file);updatePreview();
+    if(window.facelessFlow==='manual'){status.textContent='Audio añadido. Ajusta los tiempos manualmente.';return;}
     status.textContent='Audio añadido. Preparando reconocimiento con IA…';
     try{await sync(file,decoded)}catch(error){status.textContent=String(error.message||error)+' El audio sigue añadido; los tiempos son estimados. Puedes reintentar la sincronización.'}
    }catch(error){status.textContent=String(error.message||error)}finally{busy(false);photoRefresh(p.id);updateAudioAttachmentUI();id('audio').value=''}
@@ -92,11 +93,11 @@
    window.facelessMountManualTiming?.(p,updatePreview);
    const has=Boolean(audioFile&&audioFileProjectId===p.id);
    audioRoot.hidden=!has;id('audioCount').hidden=!has;
-   id('pickOwnAudio').querySelector('strong').textContent=has&&audioFile.facelessManual?'Cambiar mi audio':'Añadir mi audio';id('removeAudio').disabled=!has||Boolean(window.facelessMediaBusy);id('syncAudio').disabled=!has||Boolean(window.facelessMediaBusy);id('syncAudio').hidden=!has;
+   id('pickOwnAudio').querySelector('strong').textContent=has&&audioFile.facelessManual?'Cambiar mi audio':'Añadir mi audio';id('removeAudio').disabled=!has||Boolean(window.facelessMediaBusy);id('syncAudio').disabled=!has||Boolean(window.facelessMediaBusy);id('syncAudio').hidden=!has||window.facelessFlow==='manual';
    if(playerURL){URL.revokeObjectURL(playerURL);playerURL=''}
    const player=id('uploadedAudioPlayer');player.pause();player.removeAttribute('src');player.load();player.hidden=!has||!audioFile.facelessManual;
    if(has&&audioFile.facelessManual){playerURL=URL.createObjectURL(audioFile);player.src=playerURL;
-    if(!window.facelessMediaBusy&&p.subtitleTextSignature!==FacelessTiming.signature(p))status.textContent='El guion cambió. Pulsa Sincronizar con IA para recalcular los tiempos.';
+    if(window.facelessFlow!=='manual'&&!window.facelessMediaBusy&&p.subtitleTextSignature!==FacelessTiming.signature(p))status.textContent='El guion cambió. Pulsa Sincronizar con IA para recalcular los tiempos.';
    }
    id('audioFileName').textContent=has?(audioFile.name||'Narración añadida'):'No hay audio añadido';
   };

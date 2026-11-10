@@ -14,3 +14,12 @@
 .editor-mode .media-frame{scroll-margin-top:20px;scroll-margin-bottom:calc(160px + env(safe-area-inset-bottom))}
 .editor-mode #renderStatus{margin:12px 0 0;font-size:12px;min-height:0}
 .editor-mode #renderStatus:empty{display:none}
+/* Mode entry and independent workspaces, using the existing palette. */
+.mode-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;min-height:65vh;align-content:center}
+.mode-card{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:310px;padding:36px 24px;text-decoration:none;text-align:center;color:var(--text);border:1px solid #61388c;border-radius:24px;background:radial-gradient(ellipse at top,#46115d77,transparent 80%),var(--panel);box-shadow:0 20px 50px #0003;transition:transform .2s,border-color .2s}
+.mode-card:hover{transform:translateY(-4px);border-color:#b66bff}.mode-card>span{font-size:58px}.mode-card h1{font-size:clamp(23px,3vw,32px);margin:22px 0 14px}.mode-card p{color:var(--muted);margin:0;max-width:290px}.flow-back{margin-bottom:20px}
+body[data-screen="home"] .nav,body[data-screen="home"] .footer{display:none}
+#discoverFlowBack{display:none}body[data-screen="discover"] #discoverFlowBack{display:inline-flex}
+body[data-flow="manual"] #syncAudio{display:none!important}
+.caption-style{margin-top:16px}.caption-style label{margin-top:0}
+@media(max-width:600px){.mode-cards{grid-template-columns:1fr;gap:16px;min-height:70vh}.mode-card{min-height:225px;padding:24px 18px}.mode-card>span{font-size:44px}.mode-card h1{margin:14px 0 10px}}

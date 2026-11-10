@@ -3,6 +3,7 @@ window.facelessCompactVideoEditor = function (project) {
   const byId = id => document.getElementById(id);
   const root = document.querySelector('#tabBody .video-workspace');
   if (!root) return;
+  if(window.facelessFlow==='manual'){window.facelessManualLayout(project,root);return;}
   const shell = root.parentElement;
   const panels = ['productionStart','aiPhotosStart','aiVoiceGenerate'].map(id => byId(id).closest('section'));
   const titles = ['Video automático sin créditos','Fotografías automáticas con IA','Narración automática en español'];
@@ -36,19 +37,20 @@ window.facelessCompactVideoEditor = function (project) {
   move('aiImageStyle',custom[1],true);
   ['aiVoiceOption','aiVoiceMood','aiVoiceSpeed'].forEach(id=>move(id,custom[2],true));
   ['aiPhotosPasscode','aiVoicePasscode'].forEach(id=>{document.querySelector(`label[for="${id}"]`)?.remove();byId(id).hidden=true;});
-  custom[1].append(byId('images').closest('.media-upload-group'));
-  ['imageCount','manualPhotoSlots','stockPhotos','aiPhotosResults'].forEach(id=>move(id,custom[1]));
-  custom[2].append(byId('audio').closest('.media-upload-group'));
-  ['audioCount','audioAttachment','syncAudio','audioSyncStatus','aiVoiceAudioArea'].forEach(id=>move(id,custom[2]));
+  const infrastructure=document.createElement('div');infrastructure.hidden=true;infrastructure.id='manualInfrastructure';shell.append(infrastructure);
+  infrastructure.append(byId('images').closest('.media-upload-group'));
+  ['imageCount','manualPhotoSlots','stockPhotos'].forEach(id=>move(id,infrastructure));move('aiPhotosResults',custom[1]);
+  infrastructure.append(byId('audio').closest('.media-upload-group'));
+  ['audioCount','audioAttachment','syncAudio','audioSyncStatus'].forEach(id=>move(id,infrastructure));move('aiVoiceAudioArea',custom[2]);
   const recorder=byId('startMic').closest('.record-panel');
-  recorder.querySelectorAll('b,p:not([id])').forEach(el=>el.remove());byId('micStatus').textContent='';custom[2].append(recorder);
+  recorder.querySelectorAll('b,p:not([id])').forEach(el=>el.remove());byId('micStatus').textContent='';infrastructure.append(recorder);
   byId('audioAttachment').querySelectorAll('p:not([id])').forEach(el=>el.remove());
   shell.querySelectorAll('.media-upload-copy small').forEach(el=>el.remove());
   const frame=root.querySelector('.media-frame');frame.hidden=true;custom[0].append(frame);move('downloadArea',custom[0]);
   const toolbar=document.createElement('div');toolbar.className='editor-export-bar';
   move('previewVideo',toolbar);move('renderVideo',toolbar);
   const cards=document.createElement('div');cards.className='editor-video-cards';panels.forEach(panel=>cards.append(panel));
-  shell.className='compact-video-editor';shell.replaceChildren(cards,byId('renderStatus'),toolbar);
+  shell.className='compact-video-editor';shell.replaceChildren(cards,byId('renderStatus'),toolbar,infrastructure);window.facelessMountCaptionStyle?.(project,cards);
   byId('productionStart').textContent='Crear video completo';
   byId('aiPhotosStart').textContent='Generar fotos automáticamente';
   byId('aiPhotosStart').className='btn outline full';

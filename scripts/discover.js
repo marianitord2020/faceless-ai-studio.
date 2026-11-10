@@ -635,7 +635,7 @@
       const sources=validSources(data.sources);
       if(idea.sourceUrl&&!sources.some(s=>s.url===idea.sourceUrl))sources.unshift({title:idea.sourceTitle||idea.title,url:idea.sourceUrl});
       const project={
-        id,title:idea.title,topic:creationTopic,originalQuery:state.topic,matchType:idea.matchType||'exact',matchReason:idea.matchReason||'',platform:choice.platform||'TikTok',
+        creationFlow:'ai',id,title:idea.title,topic:creationTopic,originalQuery:state.topic,matchType:idea.matchType||'exact',matchReason:idea.matchReason||'',platform:choice.platform||'TikTok',
         duration,format:choice.format||'9:16',style:state.style,subcategory:state.subcategory,date:new Date().toISOString(),
         scenes,narration:scenes.map(s=>s.text).join('\n'),hook:scenes[0].text,
         coverTitle:idea.title,coverSynopsis:idea.synopsis,coverPrompt:idea.coverPrompt,
