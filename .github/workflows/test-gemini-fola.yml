@@ -29,6 +29,28 @@ jobs:
           node-version: '22'
       - name: Verificar tema literal y respaldo HTTP 429
         run: node tests/news-topic.mjs
+      - name: Comprobar cobertura nacional y farándula en español
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          import json,os,urllib.request
+          endpoint='https://faceless-images.marianitord2020.workers.dev/ideas'
+          for topic,style in [('Noticias de República Dominicana','Noticias'),('Farándula reciente','Farándula')]:
+              request=urllib.request.Request(endpoint,data=json.dumps({'topic':topic,'style':style,'mode':'news'}).encode(),headers={'Origin':'https://marianitord2020.github.io','Content-Type':'application/json','x-app-token':os.environ['APP_PASSCODE']})
+              try:
+                  with urllib.request.urlopen(request,timeout=110) as response: result=json.load(response)
+              except urllib.error.HTTPError as error:
+                  print('Error de cobertura HTTP',error.code,error.read().decode()[:400]);raise
+              assert result['query']==topic and 1<=len(result['ideas'])<=10
+              assert result['matchType'] in ('exact','related')
+              coverage=result['sourceCoverage']
+              assert coverage['publishers']>=22 and coverage['dominicanPublishers']>=14
+              assert len(coverage['queriedPublishers'])<=14
+              assert all(i.get('sourceUrl','').startswith('https://') and i.get('matchType') in ('exact','related') for i in result['ideas'])
+              print('COBERTURA REAL:',topic,len(result['ideas']),'resultados;',result['sourceProvider'],'catálogo:',coverage['publishers'],'medios')
+          PY
+
       - name: Probar acceso directo seguro a Fola
         if: github.event_name == 'workflow_dispatch'
         shell: bash
@@ -288,24 +310,3 @@ jobs:
           print('Primera escena:',result['scenes'][0]['text'])
           PY
 
-      - name: Comprobar cobertura nacional y farándula en español
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 <<'PY'
-          import json,os,urllib.request
-          endpoint='https://faceless-images.marianitord2020.workers.dev/ideas'
-          for topic,style in [('Noticias de República Dominicana','Noticias'),('Farándula reciente','Farándula')]:
-              request=urllib.request.Request(endpoint,data=json.dumps({'topic':topic,'style':style,'mode':'news'}).encode(),headers={'Origin':'https://marianitord2020.github.io','Content-Type':'application/json','x-app-token':os.environ['APP_PASSCODE']})
-              try:
-                  with urllib.request.urlopen(request,timeout=110) as response: result=json.load(response)
-              except urllib.error.HTTPError as error:
-                  print('Error de cobertura HTTP',error.code,error.read().decode()[:400]);raise
-              assert result['query']==topic and 1<=len(result['ideas'])<=10
-              assert result['matchType'] in ('exact','related')
-              coverage=result['sourceCoverage']
-              assert coverage['publishers']>=22 and coverage['dominicanPublishers']>=14
-              assert len(coverage['queriedPublishers'])<=14
-              assert all(i.get('sourceUrl','').startswith('https://') and i.get('matchType') in ('exact','related') for i in result['ideas'])
-              print('COBERTURA REAL:',topic,len(result['ideas']),'resultados;',result['sourceProvider'],'catálogo:',coverage['publishers'],'medios')
-          PY

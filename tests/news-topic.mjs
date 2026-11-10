@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {searchRealNews,searchSubject,searchTerm,parseFeed,relatedMatches,selectSources} from '../workers/news-search.js';
 import {sourceSummary} from '../workers/news-sources.js';
 import {generateWikipediaIdeas} from '../workers/wiki-search.js';
+import {geminiScriptCall} from '../workers/script-generator.js';
 assert.equal(searchSubject('Noticias de La Romana hoy'),'La Romana');
 assert.equal(searchSubject('Noticias de IA hoy'),'IA');
 assert.equal(searchSubject('Farándula reciente'),'Farándula');
@@ -58,4 +59,8 @@ globalThis.fetch=async (url,options)=>{
 const documentary=await generateWikipediaIdeas('Napoleón Bonaparte','Historia',{GEMINI_TTS_API_KEY:'fixture-only'});
 assert.match(documentary.ideas[0].sourceUrl,/Napole/);
 globalThis.fetch=original;
+let retryCalls=0;
+globalThis.fetch=async()=>++retryCalls===1?new Response('{}',{status:503,headers:{'retry-after':'0'}}):Response.json({candidates:[{content:{parts:[{text:'Texto real de prueba'}]}}]});
+assert.equal((await geminiScriptCall({GEMINI_TTS_API_KEY:'fixture'},'Tema de prueba')).text,'Texto real de prueba');
+assert.equal(retryCalls,2);globalThis.fetch=original;
 console.log('PASS: nationwide/Spanish catalog, exact-first, labeled related topics, preserved places/names/dates, HTTP 429 fallback and source integrity');

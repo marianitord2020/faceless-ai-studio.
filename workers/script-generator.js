@@ -10,10 +10,18 @@ async function geminiScriptCall(env,query,options={}){
   const request={contents:[{role:'user',parts:[{text:query}]}],generationConfig};
   if(options.search)request.tools=[{google_search:{}}];
   if(options.url)request.tools=[{url_context:{}}];
-  const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+SCRIPT_MODEL+':generateContent',{
-    method:'POST',headers:{'content-type':'application/json','x-goog-api-key':env.GEMINI_TTS_API_KEY},
-    body:JSON.stringify(request)
-  });
+  let res;
+  for(let attempt=0;attempt<2;attempt++){
+    res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+SCRIPT_MODEL+':generateContent',{
+      method:'POST',headers:{'content-type':'application/json','x-goog-api-key':env.GEMINI_TTS_API_KEY},
+      body:JSON.stringify(request),signal:AbortSignal.timeout(45000)
+    });
+    if(![502,503,504].includes(res.status)||attempt===1)break;
+    const retryHeader=res.headers.get('retry-after');
+    const retry=retryHeader===null?NaN:Number(retryHeader);
+    await res.body?.cancel();
+    await new Promise(resolve=>setTimeout(resolve,Number.isFinite(retry)?Math.min(3000,Math.max(0,retry*1000)):1200));
+  }
   let data;try{data=await res.json()}catch{scriptError('Gemini no devolvió un resultado válido.')}
   if(!res.ok)scriptError('Gemini: '+String(data?.error?.message||res.status).slice(0,210),res.status);
   const candidate=data?.candidates?.[0];
