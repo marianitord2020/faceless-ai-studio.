@@ -48,7 +48,7 @@ window.facelessMountManualTiming=function(p,updatePreview){
   if(!cues.length||cues.some((c,i)=>!c.text||!Number.isFinite(c.start)||!Number.isFinite(c.end)||c.start<0||c.end<=c.start||c.end>p.duration+.005||(i>0&&c.start<cues[i-1].end))){message.textContent='Cada frase necesita texto, inicio y fin válidos. Las frases no pueden solaparse ni superar el audio.';return}
   stopPreview();
   p.scenes.forEach((scene,i)=>{scene.time=starts[i];scene.duration=(starts[i+1]??p.duration)-starts[i];});
-  p.subtitleCues=cues.map(c=>({...c,words:[{text:c.text,start:c.start,end:c.end}]}));
+  p.subtitleCues=cues.map(c=>({...c,manual:true}));
   p.subtitleTextSignature=FacelessTiming.signature(p);p.audioAlignment={method:'manual'};p.date=new Date().toISOString();
   if(!persist()){message.textContent='No se pudieron guardar los tiempos.';return}
   const video=document.getElementById('videoResult');if(video){video.pause();video.classList.add('hidden');}
