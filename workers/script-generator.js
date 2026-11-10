@@ -1,7 +1,8 @@
 // Guiones verificados. Ficción solo cuando el usuario la elige expresamente.
 const SCRIPT_MODEL='gemini-2.5-flash-lite';
 function scriptError(msg,status=502){const e=new Error(msg);e.httpStatus=status;throw e}
-const NEWS_TERMS=/\b(noticias?|actualidad|últimas?|recientes?|hoy|ahora|momento|esta semana|en vivo|última hora|breaking news|news today)\b/i;
+const NEWS_TERMS=/(?:noticias?|actualidad|últimas?|recientes?|\bhoy\b|\bahora\b|\bmomento\b|esta semana|en vivo|última hora|breaking news|news today)/i;
+const FICTION_TERMS=/(?:historia ficticia|cuento ficticio|historia inventada|cuento inventado|ficción|ficcion|cuento de fantasía|invent[a-zá]* una historia|crea un cuento)/i;
 async function geminiScriptCall(env,query,options={}){
   if(!env.GEMINI_TTS_API_KEY)scriptError('Falta conectar Gemini para crear guiones.',503);
   const generationConfig={temperature:options.search?0.05:0.15,maxOutputTokens:options.search?2800:5000};
@@ -36,7 +37,9 @@ export async function generateVerifiedScript(input,env){
   const platform=['TikTok','Shorts','Reels','Facebook'].includes(input.platform)?input.platform:'TikTok';
   const style=['Misterio','Historia','Curiosidades','Motivación','Noticias','Educativo'].includes(input.style)?input.style:'Educativo';
   const selected=['informativo','noticias','ficcion'].includes(input.mode)?input.mode:'informativo';
-  const mode=selected==='ficcion'?'ficcion':(selected==='noticias'||style==='Noticias'||NEWS_TERMS.test(topic)?'noticias':'informativo');
+  // Una petición explícita de ficción cuenta incluso con el selector predeterminado.
+  const fiction=selected==='ficcion'||(selected==='informativo'&&FICTION_TERMS.test(topic));
+  const mode=fiction?'ficcion':(selected==='noticias'||style==='Noticias'||NEWS_TERMS.test(topic)?'noticias':'informativo');
   const count=duration===30?5:duration===60?8:12;
   const date=new Date().toISOString().slice(0,10);
   let proof='',sources=[];
