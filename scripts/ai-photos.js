@@ -164,6 +164,7 @@ function mountAIPhotoControls(project, updatePreview) {
     facelessImageCancel = false;
     facelessImageRunning = true;
     start.disabled = true;
+    imageStyleSelect.disabled=true;
     stop.style.display = '';
     let done = 0;
     try {
@@ -220,6 +221,7 @@ function mountAIPhotoControls(project, updatePreview) {
     } finally {
       facelessImageRunning = false;
       start.disabled = Boolean(window.facelessProductionBusy);
+      imageStyleSelect.disabled=Boolean(window.facelessProductionBusy);
       stop.style.display = 'none';
     }
   };
