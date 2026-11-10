@@ -25,7 +25,7 @@ export async function generateCoverIdeas(input,env){
  if(topic.length<5||topic.length>220)ideasError('Escribe un tema de 5 a 220 caracteres.',400);
  const style=String(input?.style||'Misterio').slice(0,40);
  const mode=['fiction','news','factual'].includes(input?.mode)?input.mode:'fiction';
- const date=new Date().toISOString().slice(0,10);
+ const date=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Santo_Domingo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
  if(mode==='fiction'){
   const instructions=[
    'Crea EXACTAMENTE diez conceptos de historias de FICCIÓN DIFERENTES en español para que el usuario elija UNA portada y la convierta en video.',
