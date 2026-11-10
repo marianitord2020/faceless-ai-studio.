@@ -246,7 +246,9 @@
       $id('studioMode').value=local?'fiction':['Noticias','Farándula','Entretenimiento','Deportes'].includes(genre.value)?'news':['Historia','Curiosidades','Motivación','Educativo'].includes(genre.value)?'factual':'fiction';
       $id('studioReddit').href='https://www.reddit.com/search/?'+new URLSearchParams({q:$id('studioTopic').value});
     };
-    window.facelessMountUrlReader?.({read:async url=>{state.pass=$id('studioPass').value.trim()||state.pass||window.facelessProductionPasscode||'';return callEndpoint('/read-url',{url});},busy:()=>state.busy||state.building});
+    const readerAccess=()=>[$id('studioPass').value.trim(),state.pass,window.facelessProductionPasscode,typeof facelessImagePasscode==='string'?facelessImagePasscode:'',typeof facelessVoicePassword==='string'?facelessVoicePassword:''].find(code=>typeof code==='string'&&code.length>=16)||'';
+    const setReaderAccess=code=>{state.pass=code;$id('studioPass').value=code;window.facelessProductionPasscode=code;$id('studioPass').dispatchEvent(new Event('input',{bubbles:true}));};
+    window.facelessMountUrlReader?.({read:async url=>{state.pass=readerAccess();return callEndpoint('/read-url',{url});},getAccess:readerAccess,setAccess:setReaderAccess,busy:()=>state.busy||state.building});
     $id('studioImportWritten').onclick=importWritten;
     $id('studioTopic').addEventListener('input',()=>{$id('studioReddit').href='https://www.reddit.com/search/?'+new URLSearchParams({q:$id('studioTopic').value})});
     $id('studioDuration').onchange=renderFeature;

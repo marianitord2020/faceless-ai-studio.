@@ -21,7 +21,9 @@ jobs:
         with:
           node-version: '22'
       - name: Verificar extracción y protección del lector
-        run: node tests/url-reader.mjs
+        run: |
+          node tests/url-reader.mjs
+          node tests/url-reader-access.cjs
       - name: Preparar navegador
         run: |
           npm install --no-save playwright@1.58.2
