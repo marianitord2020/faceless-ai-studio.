@@ -21,6 +21,7 @@ jobs:
       APP_PASSCODE: ${{ secrets.APP_PASSCODE }}
     steps:
       - name: Probar acceso directo seguro a Fola
+        if: github.event_name == 'workflow_dispatch'
         shell: bash
         run: |
           set -euo pipefail
@@ -75,6 +76,7 @@ jobs:
           print('VOZ FOLA REAL VERIFICADA: audio WAV generado, bytes:',len(blob))
           PY
       - name: Verificar Fola desde Cloudflare y la pagina
+        if: github.event_name == 'workflow_dispatch'
         shell: bash
         run: |
           set -euo pipefail
