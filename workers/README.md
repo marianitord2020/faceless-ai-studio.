@@ -57,10 +57,10 @@ El botón **Generar voz automáticamente** está en la pestaña **🎬 Video**. 
 
 - Gemini sigue siendo el proveedor principal. `GEMINI_SCRIPT_API_KEY` permite usar una clave separada para guiones; si falta, se conserva `GEMINI_TTS_API_KEY` como antes.
 - Guarda `GROQ_API_KEY` únicamente como secreto de GitHub Actions o del Worker. El despliegue sincroniza la clave cuando existe; no aparece en la página.
-- Ante un fallo de Gemini, la generación de texto intenta Groq `llama-3.3-70b-versatile`. Si falta la clave, Groq no se llama. Esto no activa ni configura facturación: el uso depende del plan y cuotas de la cuenta del proveedor.
+- Ante un fallo de Gemini, la generación de texto intenta Groq `openai/gpt-oss-120b`. Si falta la clave, Groq no se llama. Esto no activa ni configura facturación: el uso depende del plan y cuotas de la cuenta del proveedor.
 - Las búsquedas actuales y lecturas de fuentes con herramientas Gemini no pasan a un modelo sin búsqueda. Si no pueden verificarse, se informa del error. Un guion puede redactarse con Groq después de haber recuperado la información verificada.
 - Los resultados identifican el proveedor real. No se sustituyen errores por historias prefabricadas.
-- Variables opcionales del Worker: `GEMINI_SCRIPT_MODEL`, `GROQ_TEXT_MODEL`. Los valores predeterminados conservan Gemini 3.5 Flash-Lite y Llama 3.3 70B Versatile.
+- Variables opcionales del Worker: `GEMINI_SCRIPT_MODEL`, `GROQ_TEXT_MODEL`. Los valores predeterminados conservan Gemini 3.5 Flash-Lite y GPT-OSS 120B.
 - Prueba sin credenciales reales: `node tests/text-fallback.mjs`. Verifica cuota simulada, autenticación, preferencia por Gemini y bloqueo del respaldo para investigación.
 
 La sincronización de audio subido o grabado usa ahora Whisper Tiny multilingüe dentro de un Worker del navegador. Descarga los archivos del modelo la primera vez y no envía la grabación al servidor. Analiza la grabación después de detenerla; no es escucha en vivo. Puede detenerse el análisis y conservar los tiempos anteriores.

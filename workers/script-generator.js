@@ -37,12 +37,12 @@ async function geminiOnlyCall(env,query,options={}){
 async function geminiGroqCall(env,query,options={}){
   try{return await geminiOnlyCall(env,query,options)}catch(error){
     if(options.search||options.url||!env.GROQ_API_KEY||error.httpStatus===500)throw error;
-    const model=String(env.GROQ_TEXT_MODEL||'llama-3.3-70b-versatile');
+    const model=String(env.GROQ_TEXT_MODEL||'openai/gpt-oss-120b');
     if(!/^[\w./-]+$/.test(model))scriptError('Modelo Groq no válido.',500);
     let response;
     try{response=await fetch('https://api.groq.com/openai/v1/chat/completions',{
       method:'POST',headers:{'content-type':'application/json','authorization':'Bearer '+env.GROQ_API_KEY},
-      body:JSON.stringify({model,messages:[{role:'system',content:options.json?'Responde exclusivamente un objeto JSON válido. Conserva los datos y restricciones del usuario.':'Responde en español respetando las fuentes y restricciones.'},{role:'user',content:query}],temperature:0.15,max_completion_tokens:5000,...(options.json?{response_format:{type:'json_object'}}:{})}),
+      body:JSON.stringify({model,messages:[{role:'system',content:options.json?'Responde exclusivamente un objeto JSON válido. Conserva los datos y restricciones del usuario.':'Responde en español respetando las fuentes y restricciones.'},{role:'user',content:query}],temperature:0.15,max_completion_tokens:5000,...(model.startsWith('openai/gpt-oss')?{reasoning_effort:'low'}:{}),...(options.json?{response_format:{type:'json_object'}}:{})}),
       signal:AbortSignal.timeout(45000)
     })}catch{scriptError('Gemini y el respaldo Groq no están disponibles. Reintenta más tarde.',503)}
     let data;try{data=await response.json()}catch{scriptError('Groq no devolvió una respuesta válida.',502)}

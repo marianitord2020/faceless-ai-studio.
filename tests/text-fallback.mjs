@@ -8,7 +8,7 @@ globalThis.fetch=async(url,options)=>{
  const body=JSON.parse(options.body);
  assert.equal(options.headers.authorization,'Bearer fixture-groq');
  assert.equal(body.response_format.type,'json_object');
- assert.equal(body.model,'llama-3.3-70b-versatile');
+ assert.equal(body.model,'openai/gpt-oss-120b');
  return Response.json({choices:[{message:{content:'{"ideas":[]}'},finish_reason:'stop'}]});
 };
 const result=await geminiScriptCall(env,'Devuelve JSON',{json:true});
