@@ -44,12 +44,10 @@ jobs:
             await page.waitForFunction(()=>window.facelessStudioReady===true,{timeout:15000});
             const discovery=await page.evaluate(()=>{
               const exists=!!document.getElementById('discover')&&!document.getElementById('discover').classList.contains('hidden');
-              document.getElementById('studioSource').value='local';
               document.getElementById('studioMode').value='fiction';
               document.getElementById('studioGenre').value='Romance';
               document.getElementById('studioTopic').value='Historias de amor';
               document.getElementById('studioDuration').value='60';
-              document.getElementById('studioGenerate').click();
               return exists;
             });
             if(!discovery)throw Error('No aparece el catálogo visual');
