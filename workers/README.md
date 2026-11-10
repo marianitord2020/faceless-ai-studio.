@@ -35,6 +35,15 @@ En el Worker de Cloudflare, y **solo después de habilitar API de pago voluntari
 
 Con modo pagado: Leonardo → Gemini → Cloudflare. Si un proveedor falla al **iniciar** un trabajo, intenta el siguiente. La generación ya iniciada por Leonardo se consulta por ID sin iniciar otra y evitar cobros duplicados. El plan gratuito de Leonardo en su web no implica API gratuita.
 
+## Narración automática en español (Google Fola + Cloudflare)
+El botón **Generar voz automáticamente** está en la pestaña **🎬 Video**. Genera narración por escena, la une en un WAV de la duración del proyecto y la carga en el montaje. También permite escuchar y descargar ese WAV.
+
+- **Funciona sin nueva clave:** Cloudflare Workers AI `@cf/deepgram/aura-2-es`, voz Celeste o Álvaro en español, dentro de la cuota que tenga tu cuenta.
+- **Voz Fola de Google AI Studio:** opcional. En [Google AI Studio](https://aistudio.google.com/apikey) crea una clave API del proyecto que permita usar TTS. Guárdala **solo** en [GitHub > Actions secrets](https://github.com/marianitord2020/faceless-ai-studio./settings/secrets/actions) con nombre `GEMINI_TTS_API_KEY`. Nunca compartas el valor en el chat ni en HTML. Vuelve a ejecutar el workflow de despliegue; sincronizará el secreto en Cloudflare. Cuando exista, el servidor intentará **Gemini 3.8 Flash-Lite TTS (Fola)** primero, y ante un error usará **Cloudflare Aura-2-es**.
+- Google publica una cuota gratuita para ciertos modelos TTS, sujeta a disponibilidad y límites por cuenta; **no se habilita facturación automáticamente**. Las llamadas se pagan o descuentan según el plan activo de cada servicio.
+- El texto de cada escena tiene límite de 650 caracteres. Si la voz dura más que el tiempo asignado a una escena, el montaje recorta esa parte y avisa. Para evitar cortes, ajusta el guion.
+- No hay sincronización exacta por palabra: cada escena se coloca en su instante programado. La narración generada se almacena temporalmente en memoria y puede descargarse como WAV.
+
 ## Seguridad y límites
 - `APP_PASSCODE` es una protección básica para una web personal. Antes de abrir la web a clientes necesitas autenticación individual, límites por usuario y control de gastos.
 - La cuota diaria gratis de Cloudflare puede agotarse. No se activan pagos automáticamente.
