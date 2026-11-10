@@ -167,7 +167,88 @@ async function startMicrophoneRecording(){
 function stopMicTracks(){if(micStream){micStream.getTracks().forEach(t=>t.stop());micStream=null}const a=$('startMic'),b=$('stopMic');if(a)a.disabled=false;if(b)b.disabled=true}
 function stopMicrophoneRecording(){if(micRecorder?.state==='recording'){micRecorder.stop();$('micStatus').textContent='Procesando grabación...';}else stopMicTracks()}
 function stopPreview(){if(previewTimer)cancelAnimationFrame(previewTimer);previewTimer=null;if(previewAudio){previewAudio.pause();previewAudio.src='';previewAudio=null}if(previewAudioURL){URL.revokeObjectURL(previewAudioURL);previewAudioURL=null}}
-async function renderVideo(){if(rendering)return;const p=current(),mime=safeMime(),status=$('renderStatus'),btn=$('renderVideo');if(!mime){status.textContent='Este navegador no admite la exportación con MediaRecorder.';return}stopPreview();rendering=true;btn.disabled=true;status.textContent='Preparando el video…';let stream,rec,audioCtx,audioEl=null,audioURL=null,raf=null;try{stream=canvas.captureStream(24);let chunks=[];if(audioFile){audioCtx=new (window.AudioContext||window.webkitAudioContext)();await audioCtx.resume();audioEl=new Audio();audioURL=URL.createObjectURL(audioFile);audioEl.src=audioURL;audioEl.preload='auto';await new Promise((resolve,reject)=>{audioEl.oncanplay=resolve;audioEl.onerror=()=>reject(new Error('No se pudo leer el audio.'));audioEl.load()});const source=audioCtx.createMediaElementSource(audioEl),dest=audioCtx.createMediaStreamDestination();source.connect(dest);source.connect(audioCtx.destination);dest.stream.getAudioTracks().forEach(track=>stream.addTrack(track))}rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:1650000});rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};const completion=new Promise((resolve,reject)=>{rec.onstop=resolve;rec.onerror=()=>reject(new Error('Falló la grabación.'))});rec.start(1000);if(audioEl)await audioEl.play();const duration=p.duration*1000,start=performance.now();await new Promise(resolve=>{const next=(now)=>{const elapsed=Math.min(duration,now-start),sec=Math.min(p.duration-.01,elapsed/1000),idx=p.scenes.findIndex(s=>sec>=s.time&&sec<s.time+s.duration);drawFrame(Math.max(0,idx),sec);status.textContent='Procesando: '+Math.floor(elapsed/duration*100)+'%';if(elapsed<duration){raf=requestAnimationFrame(next)}else resolve()};raf=requestAnimationFrame(next)});rec.stop();await completion;const type=mime.startsWith('video/mp4')?'video/mp4':'video/webm',extension=type==='video/mp4'?'mp4':'webm',blob=new Blob(chunks,{type});if(blob.size<1000)throw Error('El archivo de video generado parece estar vacío.');if(previewURL)URL.revokeObjectURL(previewURL);previewURL=URL.createObjectURL(blob);$('videoResult').src=previewURL;$('videoResult').classList.remove('hidden');$('previewCanvas').classList.add('hidden');$('downloadArea').innerHTML='';const a=document.createElement('a');a.className='btn primary download';a.download='faceless-'+p.id+'.'+extension;a.href=previewURL;a.textContent='↓ Descargar '+extension.toUpperCase();$('downloadArea').appendChild(a);status.textContent='Video listo. Reprodúcelo y comprueba imagen, sonido y subtítulos.'}catch(e){status.textContent='No se pudo crear el video: '+(e?.message||'error desconocido')+'\nPrueba con menos imágenes, sin audio o con una duración más corta.';if(rec&&rec.state!=='inactive')try{rec.stop()}catch{}}finally{if(raf)cancelAnimationFrame(raf);if(audioEl)audioEl.pause();if(audioURL)URL.revokeObjectURL(audioURL);if(stream)stream.getTracks().forEach(t=>t.stop());if(audioCtx)await audioCtx.close().catch(()=>{});btn.disabled=false;rendering=false}}
+async function renderVideo(){
+ if(rendering)return;
+ const p=current(),withAudio=Boolean(audioFile),mime=safeMime(withAudio),status=$('renderStatus'),btn=$('renderVideo');
+ if(!mime){status.textContent='Tu navegador no permite exportar video con MediaRecorder. Prueba Chrome actualizado.';return}
+ stopPreview();
+ rendering=true;btn.disabled=true;
+ status.textContent=withAudio?'Preparando video con voz IA…':'Preparando video sin voz…';
+ let stream,rec,audioCtx,audioSource,raf=null;
+ try{
+   // La voz se convierte en una pista real del video ANTES de arrancar el grabador.
+   drawFrame(0,0);
+   stream=canvas.captureStream(24);
+   if(!stream.getVideoTracks().length)throw new Error('No se pudo capturar la imagen del video.');
+   if(withAudio){
+     const AudioContextImpl=window.AudioContext||window.webkitAudioContext;
+     if(!AudioContextImpl)throw new Error('Este navegador no admite audio combinado. Utiliza Chrome actualizado.');
+     audioCtx=new AudioContextImpl();
+     const pcm=await audioCtx.decodeAudioData((await audioFile.arrayBuffer()).slice(0));
+     if(!pcm?.length||!pcm.duration)throw new Error('El audio de narración está vacío.');
+     const dest=audioCtx.createMediaStreamDestination();
+     audioSource=audioCtx.createBufferSource();
+     audioSource.buffer=pcm;
+     audioSource.connect(dest);
+     const tracks=dest.stream.getAudioTracks();
+     if(!tracks.length)throw new Error('No se pudo crear la pista de voz.');
+     for(const track of tracks)stream.addTrack(track);
+     await audioCtx.resume();
+     if(stream.getAudioTracks().length!==tracks.length)throw new Error('No se pudo adjuntar el audio al video.');
+   }
+   const chunks=[];
+   rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:1650000,audioBitsPerSecond:128000});
+   rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
+   const completion=new Promise((resolve,reject)=>{
+     rec.onstop=resolve;
+     rec.onerror=e=>reject(new Error('Falló la grabación con sonido. '+(e?.error?.message||'')));
+   });
+   rec.start(1000);
+   if(audioSource)audioSource.start(audioCtx.currentTime+0.025);
+   const duration=p.duration*1000,startTime=performance.now();
+   await new Promise(resolve=>{
+     const tick=now=>{
+       const elapsed=Math.min(duration,now-startTime);
+       const sec=Math.min(p.duration-0.01,elapsed/1000);
+       const index=p.scenes.findIndex(sc=>sec>=sc.time&&sec<sc.time+sc.duration);
+       drawFrame(Math.max(0,index),sec);
+       status.textContent=(withAudio?'Grabando video con voz: ':'Grabando video: ')+Math.floor(elapsed/duration*100)+'%';
+       if(elapsed<duration)raf=requestAnimationFrame(tick);
+       else resolve();
+     };
+     raf=requestAnimationFrame(tick);
+   });
+   rec.stop();await completion;
+   if(!chunks.some(c=>c.size))throw new Error('El navegador no generó ningún fragmento del video.');
+   const type=mime.startsWith('video/mp4')?'video/mp4':'video/webm',extension=type==='video/mp4'?'mp4':'webm';
+   const blob=new Blob(chunks,{type});
+   if(blob.size<1000)throw new Error('El archivo de video generado parece estar vacío.');
+   if(previewURL)URL.revokeObjectURL(previewURL);
+   previewURL=URL.createObjectURL(blob);
+   $('videoResult').src=previewURL;
+   $('videoResult').classList.remove('hidden');
+   $('previewCanvas').classList.add('hidden');
+   $('downloadArea').innerHTML='';
+   const link=document.createElement('a');
+   link.className='btn primary download';
+   link.download='faceless-'+p.id+'.'+extension;
+   link.href=previewURL;
+   link.textContent='↓ Descargar video '+extension.toUpperCase()+(withAudio?' CON VOZ':'');
+   $('downloadArea').appendChild(link);
+   status.textContent=withAudio
+     ?'✓ Video con narración incluido. Reprodúcelo y verifica que tenga sonido antes de descargar.'
+     :'Video creado sin narración. Para añadir voz, genera Fola y vuelve a crear el video.';
+ }catch(e){
+   status.textContent='No se pudo crear el video'+(withAudio?' con voz':'')+': '+(e?.message||'error desconocido')+'\nPrueba Chrome actualizado o reduce la duración.';
+   if(rec&&rec.state!=='inactive')try{rec.stop()}catch{}
+ }finally{
+   if(raf)cancelAnimationFrame(raf);
+   if(audioSource)try{audioSource.stop()}catch{}
+   if(stream)stream.getTracks().forEach(track=>track.stop());
+   if(audioCtx)await audioCtx.close().catch(()=>{});
+   btn.disabled=false;rendering=false;
+ }
+}
 route('home'); 
 (() => {
   const original = document.getElementById('generate');
