@@ -48,6 +48,29 @@ jobs:
             await page.goto('http://127.0.0.1:4173/');
             await page.waitForFunction(()=>window.facelessStudioReady);
             await page.evaluate(()=>{const p={id:'media-fixture',title:'Fotos y voz',topic:'Lola',style:'Misterio',duration:12,platform:'TikTok',format:'9:16',date:new Date().toISOString(),scenes:[{time:0,duration:4,text:'Hola esta es la primera escena.',prompt:'Scene one'},{time:4,duration:4,text:'Ahora contamos una historia sobre Lola.',prompt:'Scene two'},{time:8,duration:4,text:'Al final todos regresan a casa.',prompt:'Scene three'}]};p.narration=p.scenes.map(s=>s.text).join('\n');projects.unshift(p);persist();activeId=p.id;tab='video';route('editor')});
+            for(const width of [320,360,390,412,768]){
+              await page.setViewportSize({width,height:844});
+              const bounds=await page.evaluate(()=>{
+                const box=id=>{const r=document.getElementById(id).getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height}};
+                return {actions:['toggleEdit','copyAll','exportJson','saveProject'].map(box),preview:box('previewVideo'),render:box('renderVideo'),bar:document.querySelector('.editor-export-bar').getBoundingClientRect().bottom,width:innerWidth,height:innerHeight,scroll:document.documentElement.scrollWidth};
+              });
+              for(let i=0;i<bounds.actions.length;i++)for(let j=i+1;j<bounds.actions.length;j++){
+                const a=bounds.actions[i],b=bounds.actions[j];assert.ok(a.right<=b.left+.5||b.right<=a.left+.5||a.bottom<=b.top+.5||b.bottom<=a.top+.5,'Project actions overlap at '+width);
+              }
+              assert.ok(bounds.actions.every(a=>a.left>=0&&a.right<=width));
+              assert.equal(bounds.actions[3].width,36);assert.equal(bounds.actions[3].height,36);
+              assert.ok(bounds.preview.bottom+7<=bounds.render.top,'Export rows overlap at '+width);
+              assert.ok(Math.abs(bounds.bar-bounds.height)<1);assert.ok(bounds.scroll<=width);
+            }
+            await page.setViewportSize({width:390,height:844});
+            const previewBox=await page.locator('#previewVideo').boundingBox();
+            await page.locator('#previewVideo').click();
+            await page.waitForFunction(()=>document.getElementById('previewVideo').textContent==='Detener vista previa');
+            const activeBox=await page.locator('#previewVideo').boundingBox();assert.equal(activeBox.y,previewBox.y);assert.equal(activeBox.height,previewBox.height);
+            await page.locator('#previewVideo').click();assert.equal(await page.locator('#previewVideo').textContent(),'Vista previa');
+            await page.evaluate(()=>window.scrollTo({top:document.documentElement.scrollHeight,behavior:'instant'}));
+            const lastCard=await page.locator('#videoVoiceCard').boundingBox(),barBox=await page.locator('.editor-export-bar').boundingBox();assert.ok(lastCard.y+lastCard.height<=barBox.y,'Toolbar covers the last card');
+            await page.evaluate(()=>{renderTab();window.scrollTo({top:0,behavior:'instant'})});
             assert.equal(await page.locator('.editor-video-card').count(),3);
             assert.deepEqual(await page.locator('.editor-video-card h3').allTextContents(),['Video automático sin créditos','Fotografías automáticas con IA','Narración automática en español']);
             assert.equal(await page.locator('.editor-personalize[open]').count(),0);

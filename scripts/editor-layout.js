@@ -46,9 +46,9 @@ window.facelessCompactVideoEditor = function (project) {
   shell.querySelectorAll('.media-upload-copy small').forEach(el=>el.remove());
   const frame=root.querySelector('.media-frame');frame.hidden=true;custom[0].append(frame);move('downloadArea',custom[0]);
   const toolbar=document.createElement('div');toolbar.className='editor-export-bar';
-  move('previewVideo',toolbar);move('renderVideo',toolbar);move('renderStatus',toolbar);
+  move('previewVideo',toolbar);move('renderVideo',toolbar);
   const cards=document.createElement('div');cards.className='editor-video-cards';panels.forEach(panel=>cards.append(panel));
-  shell.className='compact-video-editor';shell.replaceChildren(cards,toolbar);
+  shell.className='compact-video-editor';shell.replaceChildren(cards,byId('renderStatus'),toolbar);
   byId('productionStart').textContent='Crear video completo';
   byId('aiPhotosStart').textContent='Generar fotos automáticamente';
   byId('aiPhotosStart').className='btn outline full';
@@ -73,7 +73,7 @@ window.facelessCompactVideoEditor = function (project) {
   });
   const showPreview=()=>{custom[0].open=true;frame.hidden=false;};
   const preview=byId('previewVideo'), originalPreview=preview.onclick;
-  preview.onclick=function(event){showPreview();frame.scrollIntoView({block:'nearest',behavior:'smooth'});return originalPreview.call(this,event);};
+  preview.onclick=function(event){showPreview();frame.scrollIntoView({block:'center',behavior:'smooth'});return originalPreview.call(this,event);};
   const observer=new MutationObserver(()=>{if(!byId('videoResult')?.classList.contains('hidden')||byId('downloadArea')?.querySelector('a'))showPreview();});
   observer.observe(byId('videoResult'),{attributes:true,attributeFilter:['class']});observer.observe(byId('downloadArea'),{childList:true});
   window.facelessEditorObserver?.disconnect();window.facelessEditorObserver=observer;
