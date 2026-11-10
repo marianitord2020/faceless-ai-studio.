@@ -71,6 +71,17 @@ function mountAIPhotoControls(project, updatePreview) {
   panel.innerHTML =
     '<h3 style="margin:0 0 8px">🖼 Fotografías automáticas con IA</h3>' +
     '<p>Una fotografía por escena a partir del guion. Las imágenes se utilizan en el video sin tener que subirlas manualmente.</p>' +
+    '<label for="aiImageStyle" class="group-label" style="margin-top:14px">Estilo de imágenes del video</label>' +
+    '<select id="aiImageStyle" style="margin-bottom:12px">' +
+    '<option value="cinematic">Fotografía cinematográfica</option>' +
+    '<option value="hyperreal">Hiperrealista</option>' +
+    '<option value="3d">Animación 3D tipo Pixar</option>' +
+    '<option value="2d">Ilustración 2D</option>' +
+    '<option value="anime">Anime</option>' +
+    '<option value="cartoon">Caricatura</option>' +
+    '<option value="historical">Personajes reales / retrato histórico</option>' +
+    '</select>' +
+    '<p class="smalltext">Para figuras históricas como Napoleón generaremos recreaciones o ilustraciones; no las presentaremos como fotos documentales auténticas.</p>' +
     '<label for="aiPhotosPasscode" class="group-label" style="margin-top:14px">Código privado para las fotos</label>' +
     '<input id="aiPhotosPasscode" type="password" autocomplete="new-password" spellcheck="false" placeholder="APP_PASSCODE (el secreto de GitHub)" style="width:100%;margin-bottom:10px">' +
     '<p class="smalltext">Usa el mismo valor que guardaste como <b>APP_PASSCODE</b> en los secretos de GitHub. No es el token API de Cloudflare ni el código del Gemini de guiones.</p>' +
@@ -85,6 +96,13 @@ function mountAIPhotoControls(project, updatePreview) {
   const status = panel.querySelector('#aiPhotosStatus');
   const results = panel.querySelector('#aiPhotosResults');
   const photoMap = facelessProjectPhotos(project.id);
+  const imageStyleSelect=panel.querySelector('#aiImageStyle');
+  imageStyleSelect.value=project.imageStyle||'cinematic';
+  imageStyleSelect.onchange=()=>{
+    project.imageStyle=imageStyleSelect.value;
+    if(typeof persist==='function')persist();
+  };
+
 
   function refreshGallery() {
     results.innerHTML = '';
@@ -147,9 +165,19 @@ function mountAIPhotoControls(project, updatePreview) {
         status.textContent = 'Generando foto ' + (done + 1) + ' de ' + remaining.length +
           ' (escena ' + (i + 1) + ')…';
         const scene = project.scenes[i];
+        const visualPresets={
+          cinematic:'Fotografía cinematográfica profesional, iluminación realista.',
+          hyperreal:'Imagen hiperrealista con textura detallada y luz natural.',
+          '3d':'Animación 3D cinematográfica colorida, personajes expresivos, acabado de película animada.',
+          '2d':'Ilustración digital 2D cuidada, composición de ilustrador profesional.',
+          anime:'Ilustración anime con iluminación atmosférica y detalles finos.',
+          cartoon:'Caricatura ilustrada de gran calidad con colores vivos.',
+          historical:'Recreación histórica artística respetuosa de la época y vestimenta, personajes reales reconocibles cuando corresponda, no fingir una fotografía histórica auténtica.'
+        };
         const prompt = String(scene.prompt || ('Escena ' + (i + 1) + ': ' + scene.text + '. ' + project.topic)) +
-          '. Fotografía cinematográfica de alta calidad, composición consistente entre escenas, sin letras ni marcas de agua. Estilo: ' +
-          project.style + '. Formato ' + project.format + '.';
+          '. Tema exacto: '+project.topic+'. '+(visualPresets[imageStyleSelect.value]||visualPresets.cinematic)+
+          ' Personajes y escenario consistentes entre escenas. Sin letras ni marcas de agua. ' +
+          'Estilo narrativo: ' + project.style + '. Formato ' + project.format + '.';
         const data = await facelessFetchPhoto(facelessImagePasscode, prompt, project.format);
         const photo = new Image();
         await new Promise((resolve, reject) => {
