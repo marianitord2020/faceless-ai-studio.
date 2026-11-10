@@ -184,6 +184,8 @@ async function renderVideo(){
      const AudioContextImpl=window.AudioContext||window.webkitAudioContext;
      if(!AudioContextImpl)throw new Error('Este navegador no admite audio combinado. Utiliza Chrome actualizado.');
      audioCtx=new AudioContextImpl();
+     // Reanudar mientras sigue activo el gesto del botón en Android.
+     await audioCtx.resume();
      const pcm=await audioCtx.decodeAudioData((await audioFile.arrayBuffer()).slice(0));
      if(!pcm?.length||!pcm.duration)throw new Error('El audio de narración está vacío.');
      const dest=audioCtx.createMediaStreamDestination();
@@ -301,4 +303,4 @@ route('home');
   };
 })();
  
-</script><script src="scripts/ai-photos.js?v=2"></script><script src="scripts/ai-voice.js?v=1"></script></body></html>
+</script><script src="scripts/ai-photos.js?v=2"></script><script src="scripts/ai-voice.js?v=2"></script></body></html>
