@@ -132,6 +132,7 @@ function mountAIVoiceControls(project) {
   if (audioFile && /^faceless-voz-/.test(audioFile.name)) {
     status.textContent = 'La voz IA ya está cargada en este proyecto. Puedes descargarla o crear el video.';
   }
+  const voiceSelect = panel.querySelector('#aiVoiceOption');
   const voiceByGenre={
     Noticias:{voice:'Charon',mood:'news'},
     Misterio:{voice:'Charon',mood:'suspense'},
@@ -153,7 +154,7 @@ function mountAIVoiceControls(project) {
   note.className='smalltext';
   note.textContent='Sugerencia para '+project.style+': voz '+preset.voice+' con interpretación '+preset.mood+'. Puedes cambiarla sin duplicar audios.';
   voiceSelect.insertAdjacentElement('afterend',note);
-  const voiceSelect = panel.querySelector('#aiVoiceOption');
+
   const stopVoiceOnChange=()=>{
     if (facelessVoiceBusy) { facelessVoiceCancel=true; return; }
     facelessRemovePriorVoice(project,panel);
