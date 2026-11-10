@@ -1,0 +1,96 @@
+name: Probar video con voz integrada
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'scripts/ai-voice.js'
+      - '.github/workflows/test-video-audio.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  video-with-audio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Instalar navegador de prueba
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install chromium
+      - name: Servir interfaz local
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 > "$RUNNER_TEMP/http.log" 2>&1 &
+          sleep 2
+      - name: Exportar video con pista de audio real
+        run: |
+          node <<'JS'
+          const {chromium}=require('playwright');
+          const fs=require('node:fs');
+          (async()=>{
+            const browser=await chromium.launch({headless:true,args:['--no-sandbox','--autoplay-policy=no-user-gesture-required']});
+            const page=await browser.newPage({acceptDownloads:true});
+            page.on('pageerror',e=>console.error('JS PAGE ERROR',e.message));
+            await page.goto('http://127.0.0.1:4173/');
+            const setup=await page.evaluate(()=>{
+              const proj={
+                id:'ci-audio',topic:'Video con voz integrada',title:'Prueba de audio',
+                platform:'TikTok',duration:4,format:'9:16',style:'Curiosidades',
+                date:new Date().toISOString(),narration:'Narración de prueba',
+                hook:'Narración de prueba',
+                scenes:[{time:0,duration:4,text:'Narración de prueba',prompt:'Prueba visual'}]
+              };
+              projects.unshift(proj);
+              activeId=proj.id;tab='video';
+              route('editor');
+              const hz=24000,frames=hz*4,buffer=new ArrayBuffer(44+frames*2),d=new DataView(buffer);
+              const word=(o,v)=>{for(let j=0;j<v.length;j++)d.setUint8(o+j,v.charCodeAt(j))};
+              word(0,'RIFF');d.setUint32(4,buffer.byteLength-8,true);
+              word(8,'WAVE');word(12,'fmt ');d.setUint32(16,16,true);
+              d.setUint16(20,1,true);d.setUint16(22,1,true);
+              d.setUint32(24,hz,true);d.setUint32(28,hz*2,true);
+              d.setUint16(32,2,true);d.setUint16(34,16,true);
+              word(36,'data');d.setUint32(40,frames*2,true);
+              for(let i=0;i<frames;i++)d.setInt16(44+2*i,Math.round(Math.sin(2*Math.PI*440*i/hz)*12000),true);
+              audioFile=new File([buffer],'faceless-voz-ci-audio.wav',{type:'audio/wav'});
+              audioFileProjectId=proj.id;
+              generatedVoiceByProject.set(proj.id,audioFile);
+              updateAudioAttachmentUI();
+              return {button:document.getElementById('renderVideo').textContent,
+                 supportsVideo:typeof HTMLCanvasElement.prototype.captureStream==='function',
+                 hasAudio:!!audioFile};
+            });
+            console.log('SETUP:',setup);
+            if(!setup.button.includes('CON VOZ')||!setup.hasAudio)throw Error('La voz no está integrada en el botón');
+            await page.locator('#renderVideo').click();
+            await page.waitForFunction(()=>!rendering,{timeout:30000});
+            const result=await page.evaluate(()=>({
+              status:document.getElementById('renderStatus')?.textContent,
+              videoUrl:previewURL,
+              filename:document.querySelector('#downloadArea a')?.download
+            }));
+            console.log('EXPORT STATUS:',result.status);
+            if(!result.videoUrl || !result.filename || !result.filename.includes('.webm'))throw Error('No se creó el video con voz');
+            const downloadPromise=page.waitForEvent('download');
+            await page.locator('#downloadArea a').click();
+            const download=await downloadPromise;
+            await download.saveAs('/tmp/faceless-audio-video.webm');
+            const bytes=fs.statSync('/tmp/faceless-audio-video.webm').size;
+            if(bytes<10000)throw Error('Video demasiado pequeño: '+bytes);
+            console.log('VIDEO OK; bytes:',bytes);
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          JS
+          command -v ffprobe || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
+          echo "Pistas del video:"
+          ffprobe -v error -show_entries stream=codec_type,codec_name -of csv=p=0 /tmp/faceless-audio-video.webm | tee /tmp/faceless-tracks.txt
+          grep -q 'audio' /tmp/faceless-tracks.txt
+          grep -q 'video' /tmp/faceless-tracks.txt
+          echo "Audio real integrado: VERIFICADO"
+          ffmpeg -i /tmp/faceless-audio-video.webm -vn -af volumedetect -f null - 2>&1 | grep -E 'mean_volume|max_volume'
