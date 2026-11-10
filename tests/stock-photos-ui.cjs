@@ -4,7 +4,7 @@ const assert=require('node:assert/strict');
  const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
  const page=await browser.newPage({viewport:{width:390,height:844}}),errors=[];
  page.on('pageerror',e=>errors.push(e.message));
- const png='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aP3sAAAAASUVORK5CYII=';
+ const png='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgaPj/HwAEggJ/59habAAAAABJRU5ErkJggg==';
  const credit={id:'photo-fixture',provider:'openverse',title:'Playa <script>alert(1)</script>',author:'Autor de prueba',sourceURL:'https://example.org/photo',license:'CC BY 4.0',licenseURL:'https://creativecommons.org/licenses/by/4.0/'};
  await page.route('**/stock/search',r=>r.fulfill({status:200,contentType:'application/json',body:JSON.stringify({results:[{...credit,thumbnail:png,selection:'signed-fixture'}],hasMore:false})}));
  await page.route('**/stock/import',r=>r.fulfill({status:200,contentType:'application/json',body:JSON.stringify({dataURI:png,credit})}));
@@ -15,7 +15,7 @@ const assert=require('node:assert/strict');
  await page.locator('#stockPhotos').evaluate(node=>{for(let p=node;p;p=p.parentElement)if(p.tagName==='DETAILS')p.open=true;});
  assert.equal(await page.locator('#stockPhotos').count(),1);
  for(const width of [320,390,768]){await page.setViewportSize({width,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));}
- await page.getByLabel('Buscar fotografías',{exact:true}).fill('playa');await page.getByLabel('Código privado de la aplicación',{exact:true}).fill('fixture-stock-private-code');await page.getByLabel('Escena de destino').selectOption('1');
+ await page.getByLabel('Buscar fotografías',{exact:true}).fill('playa');await page.locator('#stockPhotos').getByLabel('Código privado de la aplicación',{exact:true}).fill('fixture-stock-private-code');await page.getByLabel('Escena de destino').selectOption('1');
  await page.getByRole('button',{name:'Buscar fotos',exact:true}).click();await page.waitForSelector('.stock-card');
  assert.equal(await page.locator('.stock-card b').textContent(),credit.title);assert.equal(await page.locator('.stock-card script').count(),0);
  await page.getByRole('button',{name:'Usar esta foto',exact:true}).click();await page.waitForFunction(()=>current().scenes[1].stockCredit?.author==='Autor de prueba');

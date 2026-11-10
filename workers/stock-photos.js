@@ -23,16 +23,26 @@ async function verify(token,env){
  let data;try{data=JSON.parse(new TextDecoder().decode(unbase64(payload)))}catch{fail('Selección inválida.',400);}
  if(!Number.isFinite(data.expires)||data.expires<Date.now())fail('La búsqueda venció. Busca de nuevo.',410);return data;
 }
+async function commons(query,page){
+ const u=new URL('https://commons.wikimedia.org/w/api.php');u.search=new URLSearchParams({action:'query',generator:'search',gsrsearch:query+' filetype:bitmap',gsrnamespace:'6',gsrlimit:'24',gsroffset:String((page-1)*24),prop:'imageinfo',iiprop:'url|extmetadata',iiurlwidth:'1200',format:'json'});
+ const d=await json(u.href,{'User-Agent':'FacelessAIStudio/1.0 (stock photos)'});
+ return Object.values(d.query?.pages||{}).flatMap(p=>{
+  const i=p.imageinfo?.[0],m=i?.extmetadata||{},license=String(m.LicenseShortName?.value||'');
+  if(!/^(CC0|Public domain|CC BY [0-9.]+)$/i.test(license))return [];
+  return [{id:String(p.pageid),provider:'wikimedia',title:clean(p.title?.replace(/^File:/,'')),author:clean(String(m.Artist?.value||'').replace(/<[^>]*>/g,'')),authorURL:'',sourceURL:https(i.descriptionurl),license,licenseURL:https(m.LicenseUrl?.value)||'https://commons.wikimedia.org/wiki/Commons:Licensing',thumbnail:https(i.thumburl||i.url),download:https(i.thumburl||i.url)}];
+ }).slice(0,12);
+}
 export async function searchStock(input,env){
  const query=clean(input.query,101).trim();if(query.length<2||query.length>100)fail('Escribe una búsqueda de 2 a 100 caracteres.',400);
  const provider=String(input.provider||'openverse'),page=Math.min(20,Math.max(1,Math.floor(Number(input.page)||1)));
- if(!['openverse','pixabay','pexels'].includes(provider))fail('Banco de fotos no válido.',400);
+ if(!['openverse','pixabay','pexels','wikimedia'].includes(provider))fail('Banco de fotos no válido.',400);
  if(provider==='pixabay'&&!env.PIXABAY_API_KEY)fail('Falta conectar PIXABAY_API_KEY. Puedes usar Openverse mientras tanto.',503);
  if(provider==='pexels'&&!env.PEXELS_API_KEY)fail('Falta conectar PEXELS_API_KEY. Puedes usar Openverse mientras tanto.',503);
  const items=await cached(provider,query,page,async()=>{
+  if(provider==='wikimedia')return commons(query,page);
   if(provider==='openverse'){
    const u=new URL('https://api.openverse.org/v1/images/');u.search=new URLSearchParams({q:query,page:String(page),page_size:'12',license:'cc0,pdm,by',mature:'false',filter_dead:'true'});
-   const d=await json(u.href,{'User-Agent':'FacelessAIStudio/1.0'});
+   let d;try{d=await json(u.href,{'User-Agent':'FacelessAIStudio/1.0'})}catch(error){if([403,429,502,503,504].includes(error.httpStatus))return commons(query,page);throw error;}
    return (d.results||[]).filter(x=>/^[a-f0-9-]{36}$/i.test(x.id)&&['cc0','pdm','by'].includes(x.license)).map(x=>({id:x.id,provider,title:clean(x.title),author:clean(x.creator),authorURL:https(x.creator_url),sourceURL:https(x.foreign_landing_url),license:clean(x.license+' '+(x.license_version||'')),licenseURL:https(x.license_url),thumbnail:'https://api.openverse.org/v1/images/'+x.id+'/thumb/',download:'https://api.openverse.org/v1/images/'+x.id+'/thumb/'}));
   }
   if(provider==='pixabay'){
@@ -43,20 +53,21 @@ export async function searchStock(input,env){
   const d=await json(u.href,{Authorization:env.PEXELS_API_KEY});return (d.photos||[]).map(x=>({id:String(x.id),provider,title:clean(x.alt),author:clean(x.photographer),authorURL:https(x.photographer_url),sourceURL:https(x.url),license:'Pexels License',licenseURL:'https://www.pexels.com/license/',thumbnail:https(x.src?.medium),download:https(x.src?.large2x||x.src?.large)}));
  });
  const results=await Promise.all(items.filter(x=>x.download&&x.thumbnail&&x.sourceURL).map(async p=>{const {download,...publicPhoto}=p;return {...publicPhoto,selection:await sign(p,env)};}));
- return {provider,query,page,results,hasMore:items.length===12};
+ return {provider,query,page,results,hasMore:items.length===12,notice:provider==='openverse'&&results[0]?.provider==='wikimedia'?'Openverse no está disponible. Mostramos fotos de Wikimedia Commons.':''};
 }
 function allowedImageURL(value,provider){
  const href=https(value);if(!href)return false;const u=new URL(href);
  if(u.port&&u.port!=='443')return false;
  if(provider==='openverse')return u.hostname==='api.openverse.org'&&/^\/v1\/images\/[a-f0-9-]{36}\/thumb\/$/i.test(u.pathname);
  if(provider==='pixabay')return ['cdn.pixabay.com','pixabay.com'].includes(u.hostname);
- if(provider==='pexels')return u.hostname==='images.pexels.com';return false;
+ if(provider==='pexels')return u.hostname==='images.pexels.com';
+ if(provider==='wikimedia')return ['upload.wikimedia.org','thumb.wikimedia.org'].includes(u.hostname);return false;
 }
 export async function importStock(input,env){
  const p=await verify(input.selection,env);if(!allowedImageURL(p.download,p.provider))fail('Origen de imagen no permitido.',400);
  let r,url=p.download;
  for(let redirects=0;redirects<3;redirects++){
-  r=await fetch(url,{redirect:'manual',signal:AbortSignal.timeout(30000)});
+  r=await fetch(url,{headers:{'User-Agent':'FacelessAIStudio/1.0 (stock photos)'},redirect:'manual',signal:AbortSignal.timeout(30000)});
   if([301,302,303,307,308].includes(r.status)){const next=new URL(r.headers.get('location')||'',url).href;await r.body?.cancel();if(!allowedImageURL(next,p.provider))fail('Redirección de imagen no permitida.');url=next;continue;}
   break;
  }

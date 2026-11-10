@@ -107,3 +107,5 @@ Las rutas POST `/stock/search` y `/stock/import` exigen el mismo APP_PASSCODE de
 No se presentan fotos de archivo como prueba de que ocurrió una noticia. Verifica su contexto y licencia original antes de publicar.
 
 Crea las claves en https://pixabay.com/api/docs/ y https://www.pexels.com/api/ . Las pruebas de la interfaz y contratos usan respuestas simuladas; no demuestran acceso real a una cuenta sin su clave.
+
+Wikimedia Commons se incluye como cuarto banco sin clave. Si Openverse responde 403, 429 o un fallo temporal, la búsqueda pasa a Commons y lo indica expresamente. Se conservan las fuentes reales y se filtran las licencias CC0, dominio público y CC BY.

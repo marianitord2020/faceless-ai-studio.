@@ -29,3 +29,10 @@ await searchStock({query:'playa',provider:'pexels'},env);
 const request=pass=>new Request('https://example.com/stock/search',{method:'POST',headers:{origin:'https://marianitord2020.github.io','content-type':'application/json','x-app-token':pass},body:JSON.stringify({query:'beach'})});
 assert.equal((await worker.fetch(request('bad'),env)).status,401);assert.equal((await worker.fetch(request(env.APP_PASSCODE),env)).status,200);
 console.log('PASS: source search, 24h cache, license filters, signed imports, tamper/SSRF/size rejection, private keys and protected routes');
+globalThis.caches={default:{match:async()=>undefined,put:async()=>{}}};
+globalThis.fetch=async(url)=>{
+ if(String(url).startsWith('https://api.openverse.org/'))return new Response('blocked',{status:403});
+ return Response.json({query:{pages:{7:{pageid:7,title:'File:Photo.jpg',imageinfo:[{descriptionurl:'https://commons.wikimedia.org/wiki/File:Photo.jpg',thumburl:'https://upload.wikimedia.org/photo.jpg',extmetadata:{Artist:{value:'<b>Real author</b>'},LicenseShortName:{value:'CC BY 4.0'},LicenseUrl:{value:'https://creativecommons.org/licenses/by/4.0/'}}}]},8:{pageid:8,title:'Restricted',imageinfo:[{extmetadata:{LicenseShortName:{value:'CC BY-NC 4.0'}}}]}}}});
+};
+const alternative=await searchStock({query:'otra playa'},env);assert.equal(alternative.results.length,1);assert.equal(alternative.results[0].provider,'wikimedia');assert.equal(alternative.results[0].author,'Real author');assert.match(alternative.notice,/Wikimedia Commons/);
+console.log('PASS: Openverse outage fallback to Wikimedia with explicit source label and license filtering');
