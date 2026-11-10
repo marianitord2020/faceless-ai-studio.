@@ -4,7 +4,11 @@ const agent='FacelessAIStudio:1.0:https://github.com/marianitord2020/faceless-ai
 function fail(message,status=502){const e=Error(message);e.httpStatus=status;throw e;}
 async function jsonFetch(url,options={}){
  let response;try{response=await fetch(url,{...options,signal:AbortSignal.timeout(60000)})}catch{fail('Proveedor de fotos no disponible. Reintenta más tarde.',504);}
- if(!response.ok){await response.body?.cancel();fail('Proveedor de fotos: HTTP '+response.status,response.status);}
+ if(!response.ok){
+  let detail;try{detail=await response.json()}catch{}
+  const error=Error('Proveedor de fotos: HTTP '+response.status);error.httpStatus=response.status;
+  error.providerDetail=String(detail?.error?.message||detail?.error||detail?.message||'').slice(0,400);throw error;
+ }
  try{return await response.json()}catch{fail('Respuesta de fotos no válida.');}
 }
 function photo(base64,mime,provider){

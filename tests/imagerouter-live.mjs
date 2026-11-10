@@ -13,6 +13,8 @@ try{
  assert.ok(bytes.length>500);
  console.log('IMAGEROUTER_LIVE_OK: imagen WebP real validada; modelo gratuito; '+result.provider);
 }catch(error){
+ const detail=String(error.providerDetail||'').split(process.env.IMAGEROUTER_API_KEY).join('[redacted]').replace(/[\r\n]/g,' ').slice(0,240);
+ if(detail)console.error('IMAGEROUTER_REASON: '+detail);
  console.error('IMAGEROUTER_LIVE_FAILED: HTTP '+(error.httpStatus||'desconocido')+'. '+(/precio cero/.test(error.message)?'El modelo no figura con precio cero.':'Revisa disponibilidad, cuota y permisos; no se usan modelos de pago.'));
  process.exitCode=1;
 }
