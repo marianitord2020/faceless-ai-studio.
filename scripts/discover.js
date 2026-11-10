@@ -3,7 +3,7 @@
 (() => {
   'use strict';
   const API='https://faceless-images.marianitord2020.workers.dev';
-  const styles=['Romance','Misterio','Historia','Curiosidades','Noticias','Farándula','Motivación','Educativo'];
+  const styles=['Romance','Misterio','Historia','Curiosidades','Noticias','Farándula','Entretenimiento','Motivación','Educativo'];
   const imageStyles=[
     ['cinematic','Fotografía cinematográfica'],
     ['hyperreal','Foto hiperrealista'],
@@ -20,11 +20,12 @@
     Curiosidades:{emoji:'🧠',colors:['#203e53','#3281a3','#121a40']},
     Noticias:{emoji:'📰',colors:['#093a66','#266da0','#07172e']},
     Farándula:{emoji:'🌟',colors:['#69315d','#ac4691','#30215d']},
+    Entretenimiento:{emoji:'🎬',colors:['#69315d','#ac4691','#30215d']},
     Motivación:{emoji:'✨',colors:['#5b355e','#cc7054','#192b62']},
     Educativo:{emoji:'🎓',colors:['#134e58','#248487','#15254b']}
   };
   const state={ideas:[],selected:0,mode:'fiction',topic:'',style:'Romance',source:'ai',imageStyle:'cinematic',
-    pass:'',busy:false,building:false,epoch:0,covers:new Map(),sources:[],checkedAt:null,sourceProvider:''};
+    pass:'',busy:false,building:false,epoch:0,covers:new Map(),sources:[],checkedAt:null,sourceProvider:'',matchType:'exact',sourceCoverage:null};
   window.facelessCoverCache=window.facelessCoverCache||new Map();
   let dbPromise=null;
   const $id=id=>document.getElementById(id);
@@ -132,7 +133,7 @@
     '<div class="studio-addon"><label for="studioImageStyle">Estilo de imágenes</label><select id="studioImageStyle"></select></div>'+
     '<div class="studio-addon"><label for="studioDuration">Duración</label><select id="studioDuration"><option value="30">30 segundos</option><option value="60" selected>60 segundos</option><option value="120">120 segundos</option></select></div>'+
     '<div class="studio-addon pass"><label for="studioPass">Código APP_PASSCODE</label><input id="studioPass" type="password" autocomplete="new-password" placeholder="Solo para IA; no es tu API Key"></div>'+
-    '<div class="studio-helper">Las noticias se buscan en GDELT y, si no responde, en fuentes de medios. Cada resultado enlaza al artículo original. Se muestran solo fuentes recuperadas, nunca noticias inventadas. Las portadas visuales de noticias son ilustraciones editoriales.</div></div>'+
+    '<div class="studio-helper" id="studioCoverage">Cobertura de República Dominicana y medios en español de noticias, farándula y entretenimiento. Cada resultado enlaza al artículo original. Se muestran solo fuentes recuperadas, nunca noticias inventadas. Las portadas visuales de noticias son ilustraciones editoriales.</div></div>'+
     '</div>'+
     '<div class="studio-results-head"><div><h2>✦ <span id="studioGalleryTitle">10 propuestas de historias</span></h2>'+
     '<p id="studioGallerySubtitle">Selecciona un relato, lee su sinopsis y llévalo a creación.</p></div>'+
@@ -151,14 +152,16 @@
     $id('studioSideOld').onclick=()=>route('create');
     $id('studioSideVoices').onclick=()=>{toast('Selecciona un relato. En 🎬 Video podrás elegir voz automática o manual.')};
     $id('studioSidePhotos').onclick=()=>{toast('Selecciona un relato para abrir el generador de imágenes de escenas.')};
+    $id('studioTopic').addEventListener('input',()=>{$id('studioTopic').dataset.edited='true'});
     genre.onchange=()=>{
-      if(genre.value==='Noticias'){
+      if(!$id('studioTopic').dataset.edited&&['Noticias','Farándula','Entretenimiento'].includes(genre.value))$id('studioTopic').value=genre.value==='Noticias'?'Noticias de República Dominicana hoy':genre.value+' hoy';
+      if(['Noticias','Farándula','Entretenimiento'].includes(genre.value)){
         $id('studioMode').value='news';
         $id('studioSource').value='ai';
       }else if($id('studioMode').value==='news')$id('studioMode').value='fiction';
     };
     $id('studioMode').onchange=()=>{
-      if($id('studioMode').value==='news')genre.value='Noticias';
+      if($id('studioMode').value==='news'&&!['Noticias','Farándula','Entretenimiento'].includes(genre.value))genre.value='Noticias';
       if($id('studioMode').value!=='fiction')$id('studioSource').value='ai';
     };
     $id('studioSource').onchange=()=>{
@@ -228,14 +231,15 @@
       const picture=e('div','studio-card-visual');visual(picture,idea,index,false);
       const body=e('div','studio-card-text');
       body.append(e('b',null,idea.title),e('small',null,idea.synopsis),
-        e('span','chip',state.mode==='news'?'📰 Fuente real':state.mode==='factual'?'📚 Documental':'✦ '+state.style));
+        e('span','chip',idea.matchType==='related'?'≈ Relacionado':state.mode==='news'?'📰 Fuente real':state.mode==='factual'?'📚 Documental':'✦ '+state.style));
+      if(idea.matchType==='related'&&idea.matchReason)body.appendChild(e('small',null,idea.matchReason));
       card.append(picture,body);
       card.onclick=()=>{state.selected=index;renderCards();renderFeature()};
       cards.appendChild(card);
     });
-    $id('studioGalleryTag').textContent=state.ideas.length+' '+(state.mode==='news'?'noticias encontradas':'propuestas');
-    $id('studioGalleryTitle').textContent=state.mode==='news'?'Noticias encontradas':state.ideas.length+' propuestas de '+(state.mode==='factual'?'documentales':'historias');
-    $id('studioGallerySubtitle').textContent=state.mode==='news'
+    $id('studioGalleryTag').textContent=state.ideas.length+' '+(state.matchType==='related'?'relacionados':state.mode==='news'?'noticias encontradas':'propuestas');
+    $id('studioGalleryTitle').textContent=state.matchType==='related'?'Temas relacionados con «'+state.topic+'»':state.mode==='news'?'Noticias encontradas':state.ideas.length+' propuestas de '+(state.mode==='factual'?'documentales':'historias');
+    $id('studioGallerySubtitle').textContent=state.matchType==='related'?'No hubo coincidencias exactas. Estos resultados son cercanos a tu búsqueda; revisa el motivo y su fecha.':state.mode==='news'
       ?'Solo noticias vinculadas a fuentes reales. Selecciona una y consulta su fecha y origen.'
       :'Selecciona una portada, lee la sinopsis y luego llévala a creación.';
   }
@@ -246,6 +250,7 @@
     const text=e('div','studio-feature-text');
     text.appendChild(e('h2',null,idea.title));
     text.appendChild(e('p',null,idea.synopsis));
+    if(idea.matchType==='related')text.appendChild(e('p','studio-limit','≈ Relacionado con «'+state.topic+'». '+(idea.matchReason||'')));
     const meta=e('div','studio-feature-meta');
     meta.append(e('span',null,'◷ '+$id('studioDuration').value+' segundos'),
       e('span',null,'▱ '+(Number($id('studioDuration').value)===30?5:Number($id('studioDuration').value)===60?8:12)+' escenas'));
@@ -345,7 +350,7 @@
     state.pass=$id('studioPass').value.trim()||state.pass;
     state.topic=topic;state.style=style;state.mode=mode;state.source=local?'local':'ai';
     state.imageStyle=$id('studioImageStyle').value;
-    state.selected=0;state.covers.clear();state.sources=[];state.ideas=[];state.sourceProvider='';initialState();
+    state.selected=0;state.covers.clear();state.sources=[];state.ideas=[];state.sourceProvider='';state.matchType='exact';state.sourceCoverage=null;initialState();
     $id('studioGenerate').disabled=true;
     try{
       if(local){
@@ -359,8 +364,9 @@
         if(!Array.isArray(result.ideas)||!result.ideas.length)throw Error('La búsqueda no devolvió propuestas verificables.');
         state.ideas=result.ideas.slice(0,10);
         state.sources=Array.isArray(result.sources)?result.sources:[];
-        state.checkedAt=result.checkedAt||null;state.sourceProvider=String(result.sourceProvider||'');
-        setStatus('✓ '+state.ideas.length+' '+(mode==='news'?'noticias vinculadas a fuentes':'propuestas con sinopsis')+
+        state.checkedAt=result.checkedAt||null;state.sourceProvider=String(result.sourceProvider||'');state.matchType=result.matchType||'exact';state.sourceCoverage=result.sourceCoverage||null;
+        if(state.sourceCoverage){const c=state.sourceCoverage;$id('studioCoverage').textContent='Catálogo: '+c.publishers+' medios, '+c.dominicanPublishers+' dominicanos. En esta búsqueda: '+c.queriedPublishers.length+' medios consultados, además del índice GDELT. Cada resultado mantiene su fuente.';}
+        setStatus((state.matchType==='related'?'No encontré coincidencias exactas. Estas son '+state.ideas.length+' opciones relacionadas':'✓ '+state.ideas.length+' '+(mode==='news'?'noticias vinculadas a fuentes':'propuestas con sinopsis'))+
           '. '+(mode==='news'?'Fuentes: '+state.sourceProvider+'. No se inventaron titulares para completar diez.':'Generando sus imágenes de portada…'));
       }
       state.busy=false;renderCards();renderFeature();
@@ -465,12 +471,13 @@
     state.building=true;renderFeature();
     const duration=Number($id('studioDuration').value)||60;
     const local=state.source==='local';
+    const creationTopic=idea.matchType==='related'?idea.title:state.topic;
     setStatus(local?'Creando proyecto con el relato local seleccionado…':
       'Gemini está escribiendo el guion completo de «'+idea.title+'» sin cambiar su trama…');
     try{
       const data=local?{title:idea.title,scenes:createLocalScenes(idea,duration),
         sources:[],provider:'Relato local',mode:'ficcion',checkedAt:null}:await callEndpoint('/script',{
-        topic:state.topic,
+        topic:creationTopic,
         duration,platform:choice.platform||'TikTok',style:state.style,
         mode:state.mode==='fiction'?'ficcion':state.mode==='news'?'noticias':'informativo',
         idea:{title:idea.title,synopsis:idea.synopsis,outline:idea.outline,sourceUrl:idea.sourceUrl||''}
@@ -490,7 +497,7 @@
       const sources=validSources(data.sources);
       if(idea.sourceUrl&&!sources.some(s=>s.url===idea.sourceUrl))sources.unshift({title:idea.sourceTitle||idea.title,url:idea.sourceUrl});
       const project={
-        id,title:idea.title,topic:state.topic,platform:choice.platform||'TikTok',
+        id,title:idea.title,topic:creationTopic,originalQuery:state.topic,matchType:idea.matchType||'exact',matchReason:idea.matchReason||'',platform:choice.platform||'TikTok',
         duration,format:choice.format||'9:16',style:state.style,date:new Date().toISOString(),
         scenes,narration:scenes.map(s=>s.text).join('\n'),hook:scenes[0].text,
         coverTitle:idea.title,coverSynopsis:idea.synopsis,coverPrompt:idea.coverPrompt,

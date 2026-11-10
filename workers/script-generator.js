@@ -36,7 +36,7 @@ export async function generateVerifiedScript(input,env){
   if(topic.length<5||topic.length>240)scriptError('Escribe una búsqueda concreta (5–240 caracteres).',400);
   const duration=[30,60,120].includes(Number(input.duration))?Number(input.duration):30;
   const platform=['TikTok','Shorts','Reels','Facebook'].includes(input.platform)?input.platform:'TikTok';
-  const style=['Misterio','Historia','Curiosidades','Motivación','Noticias','Educativo','Romance','Farándula'].includes(input.style)?input.style:'Educativo';
+  const style=['Misterio','Historia','Curiosidades','Motivación','Noticias','Educativo','Romance','Farándula','Entretenimiento'].includes(input.style)?input.style:'Educativo';
   const selected=['informativo','noticias','ficcion'].includes(input.mode)?input.mode:'informativo';
   // Una petición explícita de ficción cuenta incluso con el selector predeterminado.
   const fiction=selected==='ficcion'||(selected==='informativo'&&FICTION_TERMS.test(topic));

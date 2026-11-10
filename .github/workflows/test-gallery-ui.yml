@@ -134,6 +134,30 @@ jobs:
             const labels=await page.locator('#studioCards .studio-card b').allTextContents();
             if(!labels.every(x=>x.includes(last.topic)))throw Error('Se mostraron resultados de otra búsqueda');
             console.log('TEMAS: petición literal, tipo de contenido explícito, contador cero y ausencia de ejemplos ajenos tras un fallo: OK');
+            await page.evaluate(()=>route('discover'));
+            await page.locator('#studioGenre').selectOption('Farándula');
+            if(await page.locator('#studioMode').inputValue()!=='news')throw Error('Farándula debe consultar hechos reales');
+            await page.locator('#studioGenre').selectOption('Entretenimiento');
+            if(await page.locator('#studioMode').inputValue()!=='news')throw Error('Entretenimiento debe consultar hechos reales');
+            await page.unroute('**/faceless-images.marianitord2020.workers.dev/ideas');
+            await page.route('**/faceless-images.marianitord2020.workers.dev/ideas',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({query:'Turismo en Higüey',matchType:'related',exactMatchCount:0,sourceProvider:'Diario Libre',sourceCoverage:{publishers:22,dominicanPublishers:14,queriedPublishers:['Diario Libre']},ideas:[{id:'related-1',title:'Festival cultural abre sus puertas en Higüey',synopsis:'Un festival cultural en Higüey, vinculado con actividades para visitantes.',outline:'Festival cultural en Higüey.',sourceUrl:'https://www.diariolibre.com/cultura/higuey',sourceTitle:'Diario Libre',matchType:'related',matchReason:'Relacionado por cultura; mantiene Higüey.'}]})}));
+            let chosenRelated;
+            await page.unroute('**/faceless-images.marianitord2020.workers.dev/script');
+            await page.route('**/faceless-images.marianitord2020.workers.dev/script',route=>{
+              chosenRelated=route.request().postDataJSON();
+              return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({title:chosenRelated.idea.title,mode:'noticias',provider:'Gemini fixture',scenes:Array.from({length:8},()=>({text:'El festival cultural de Higüey presenta sus actividades.',prompt:'A clearly illustrated cultural festival'}))})});
+            });
+            await page.locator('#studioTopic').fill('Turismo en Higüey');
+            await page.locator('#studioGenerate').click();
+            await page.waitForFunction(()=>document.getElementById('studioGalleryTitle').textContent.includes('Temas relacionados'));
+            if(!(await page.locator('#studioCards .chip').textContent()).includes('Relacionado'))throw Error('Se ocultó la etiqueta de coincidencia aproximada');
+            if(!(await page.locator('#studioFeature').textContent()).includes('mantiene Higüey'))throw Error('No se explicó por qué se relaciona el resultado');
+            await page.locator('#studioFeature .studio-create').click();
+            await page.waitForFunction(()=>current()?.title==='Festival cultural abre sus puertas en Higüey');
+            const relatedProject=await page.evaluate(()=>({topic:current().topic,original:current().originalQuery,type:current().matchType}));
+            if(relatedProject.type!=='related'||relatedProject.original!=='Turismo en Higüey'||chosenRelated.topic!==relatedProject.topic)
+              throw Error('La elección relacionada no conservó la búsqueda original y el tema seleccionado');
+            console.log('RELACIONADOS: etiqueta, motivo, fuente, selección, consulta original y categorías reales: OK');
             await browser.close();
           })().catch(e=>{console.error(e);process.exit(1)});
           JS
