@@ -8,6 +8,8 @@ on:
       - 'workers/script-generator.js'
       - 'workers/ideas-generator.js'
       - 'workers/news-search.js'
+      - 'workers/wiki-search.js'
+      - 'tests/news-topic.mjs'
 
 permissions:
   contents: read
@@ -20,6 +22,12 @@ jobs:
       GEMINI_TTS_API_KEY: ${{ secrets.GEMINI_TTS_API_KEY }}
       APP_PASSCODE: ${{ secrets.APP_PASSCODE }}
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verificar tema literal y respaldo HTTP 429
+        run: node tests/news-topic.mjs
       - name: Probar acceso directo seguro a Fola
         if: github.event_name == 'workflow_dispatch'
         shell: bash

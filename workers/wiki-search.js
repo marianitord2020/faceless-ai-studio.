@@ -27,7 +27,7 @@ export async function generateWikipediaIdeas(topic,style,env){
   n:i,title:String(p.title).slice(0,120),url:https(p.fullurl),
   text:String(p.extract).slice(0,2200),
   thumbnail:https(p.thumbnail?.source)
- })).filter(p=>p.url&&p.text.length>=90);
+ })).filter(p=>p.url&&p.text.length>=90).map((p,n)=>({...p,n}));
  if(!articles.length)factualError('No encontré artículos informativos suficientes sobre «'+topic+'». No crearé datos históricos inventados.',422);
  const prompt=[
   'Genera hasta diez tarjetas de IDEAS DOCUMENTALES verificables en español sobre EXACTAMENTE '+JSON.stringify(topic)+'.',
@@ -60,3 +60,4 @@ export async function generateWikipediaIdeas(topic,style,env){
   sourceProvider:'Wikipedia',sourceAttribution:'https://es.wikipedia.org/',
   note:'Información resumida y enlazada a Wikipedia; verificar fuentes originales y derechos de las imágenes antes de reutilizarlas.'};
 }
+

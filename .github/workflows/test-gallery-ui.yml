@@ -105,6 +105,35 @@ jobs:
             await page.setViewportSize({width:1440,height:900});
             await page.screenshot({path:'/tmp/faceless-studio-desktop.png',fullPage:true});
             console.log('PANTALLA RESPONSIVE Y RELATO LOCAL: VERIFICADOS');
+            // A failed news lookup must not display unrelated example stories.
+            await page.evaluate(()=>route('discover'));
+            await page.unroute('**/faceless-images.marianitord2020.workers.dev/images');
+            await page.route('**/faceless-images.marianitord2020.workers.dev/images',route=>route.fulfill({status:503,contentType:'application/json',body:'{"error":"No image quota in UI fixture"}'}));
+            await page.unroute('**/faceless-images.marianitord2020.workers.dev/ideas');
+            const topics=[];
+            await page.route('**/faceless-images.marianitord2020.workers.dev/ideas',async route=>{
+              const input=route.request().postDataJSON();topics.push(input);
+              if(input.mode==='news'){
+                await route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'Las fuentes están temporalmente limitadas para «'+input.topic+'».'})});return;
+              }
+              await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({query:input.topic,ideas:Array.from({length:10},(_,i)=>({id:'topic-'+i,title:input.topic+' '+(i+1),synopsis:'Una historia de ficción dedicada específicamente a '+input.topic+'.',outline:'Inicio, conflicto y final de '+input.topic,coverPrompt:input.topic}))})});
+            });
+            await page.locator('#studioMode').selectOption('news');
+            await page.locator('#studioTopic').fill('Turismo en Higüey hoy');
+            await page.locator('#studioGenerate').click();
+            await page.waitForFunction(()=>document.getElementById('studioStatus').textContent.includes('No se pudo completar'));
+            if(await page.locator('#studioCards .studio-card').count()!==0)throw Error('Una búsqueda fallida mostró relatos ajenos al tema');
+            if(await page.locator('#studioGalleryTag').textContent()!=='0 resultados')throw Error('Contador de resultados desactualizado');
+            if(!(await page.locator('#studioGalleryTitle').textContent()).includes('Turismo en Higüey hoy'))throw Error('Se perdió el tema literal');
+            await page.locator('#studioMode').selectOption('fiction');
+            await page.locator('#studioTopic').fill('Un robot que aprende a cocinar mangú');
+            await page.locator('#studioGenerate').click();
+            await page.waitForFunction(()=>document.querySelectorAll('#studioCards .studio-card').length===10);
+            const last=topics.at(-1);
+            if(last.mode!=='fiction'||last.topic!=='Un robot que aprende a cocinar mangú')throw Error('El género Noticias anuló el tipo de contenido o el tema elegido');
+            const labels=await page.locator('#studioCards .studio-card b').allTextContents();
+            if(!labels.every(x=>x.includes(last.topic)))throw Error('Se mostraron resultados de otra búsqueda');
+            console.log('TEMAS: petición literal, tipo de contenido explícito, contador cero y ausencia de ejemplos ajenos tras un fallo: OK');
             await browser.close();
           })().catch(e=>{console.error(e);process.exit(1)});
           JS

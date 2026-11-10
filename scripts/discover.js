@@ -24,7 +24,7 @@
     Educativo:{emoji:'🎓',colors:['#134e58','#248487','#15254b']}
   };
   const state={ideas:[],selected:0,mode:'fiction',topic:'',style:'Romance',source:'ai',imageStyle:'cinematic',
-    pass:'',busy:false,building:false,epoch:0,covers:new Map(),sources:[],checkedAt:null};
+    pass:'',busy:false,building:false,epoch:0,covers:new Map(),sources:[],checkedAt:null,sourceProvider:''};
   window.facelessCoverCache=window.facelessCoverCache||new Map();
   let dbPromise=null;
   const $id=id=>document.getElementById(id);
@@ -132,7 +132,7 @@
     '<div class="studio-addon"><label for="studioImageStyle">Estilo de imágenes</label><select id="studioImageStyle"></select></div>'+
     '<div class="studio-addon"><label for="studioDuration">Duración</label><select id="studioDuration"><option value="30">30 segundos</option><option value="60" selected>60 segundos</option><option value="120">120 segundos</option></select></div>'+
     '<div class="studio-addon pass"><label for="studioPass">Código APP_PASSCODE</label><input id="studioPass" type="password" autocomplete="new-password" placeholder="Solo para IA; no es tu API Key"></div>'+
-    '<div class="studio-helper">Para noticias se consulta GDELT y se enlaza al medio original. Se muestran solo fuentes recuperadas, nunca noticias inventadas. Las portadas visuales de noticias son ilustraciones editoriales.</div></div>'+
+    '<div class="studio-helper">Las noticias se buscan en GDELT y, si no responde, en fuentes de medios. Cada resultado enlaza al artículo original. Se muestran solo fuentes recuperadas, nunca noticias inventadas. Las portadas visuales de noticias son ilustraciones editoriales.</div></div>'+
     '</div>'+
     '<div class="studio-results-head"><div><h2>✦ <span id="studioGalleryTitle">10 propuestas de historias</span></h2>'+
     '<p id="studioGallerySubtitle">Selecciona un relato, lee su sinopsis y llévalo a creación.</p></div>'+
@@ -180,12 +180,15 @@
     setStatus('✦ Catálogo local de ejemplo. Puedes elegir El amor olvidado o escribir otro tema y generar 10 propuestas con Gemini.');
   }
   function initialState(){
+    $id('studioGalleryTitle').textContent=state.mode==='news'?'Noticias sobre «'+state.topic+'»':'Resultados de «'+state.topic+'»';
+    $id('studioGalleryTag').textContent='0 resultados';
+    $id('studioGallerySubtitle').textContent='Solo se mostrarán resultados de esta búsqueda.';
     $id('studioCards').replaceChildren();
     const empty=e('div','studio-state');
     empty.style.gridColumn='1 / -1';
     const icon=e('span','big','✦');
-    empty.append(icon,e('b',null,'Tu próxima historia empieza aquí'),
-      e('p',null,'Escribe un tema y pulsa «Generar 10 propuestas». Cada portada tendrá su propia sinopsis; después podrás elegir una.'));
+    empty.append(icon,e('b',null,'Tu búsqueda: '+state.topic),
+      e('p',null,'Aquí aparecerán los resultados que coincidan con tu tema. Si no hay fuentes disponibles, lo indicaremos sin cambiar tu búsqueda.'));
     $id('studioCards').appendChild(empty);
     $id('studioFeature').replaceChildren();
     const block=e('div','studio-state');
@@ -214,7 +217,7 @@
       container.appendChild(fallback);
     }
     const badge=e('span',large?'studio-feature-badge':'studio-card-number',
-      large?(state.mode==='news'?'📰 Noticia verificada':state.style):'#'+(index+1));
+      large?(state.mode==='news'?'📰 Fuente enlazada':state.style):'#'+(index+1));
     container.appendChild(badge);
   }
   function renderCards(){
@@ -230,7 +233,7 @@
       card.onclick=()=>{state.selected=index;renderCards();renderFeature()};
       cards.appendChild(card);
     });
-    $id('studioGalleryTag').textContent=state.ideas.length+' '+(state.mode==='news'?'noticias verificadas':'propuestas');
+    $id('studioGalleryTag').textContent=state.ideas.length+' '+(state.mode==='news'?'noticias encontradas':'propuestas');
     $id('studioGalleryTitle').textContent=state.mode==='news'?'Noticias encontradas':state.ideas.length+' propuestas de '+(state.mode==='factual'?'documentales':'historias');
     $id('studioGallerySubtitle').textContent=state.mode==='news'
       ?'Solo noticias vinculadas a fuentes reales. Selecciona una y consulta su fecha y origen.'
@@ -246,7 +249,7 @@
     const meta=e('div','studio-feature-meta');
     meta.append(e('span',null,'◷ '+$id('studioDuration').value+' segundos'),
       e('span',null,'▱ '+(Number($id('studioDuration').value)===30?5:Number($id('studioDuration').value)===60?8:12)+' escenas'));
-    if(idea.sourceSeenAt)meta.append(e('span',null,'Detectada por GDELT: '+idea.sourceSeenAt));
+    if(idea.sourceSeenAt)meta.append(e('span',null,(idea.sourceDateKind==='publication'?'Publicada: ':'Detectada: ')+idea.sourceSeenAt));
     text.appendChild(meta);
     const button=e('button','studio-create',state.building?'Preparando guion…':'▣ Llevar a creación');
     button.type='button';button.disabled=state.building||state.busy;button.onclick=createProject;
@@ -264,9 +267,9 @@
       feature.appendChild(wiki);
     }
     if(state.mode==='news'){
-      const credit=e('p','studio-limit','Noticias detectadas por GDELT Project. La fecha corresponde a observación, no necesariamente al hecho. Verifica la noticia en el medio antes de publicar. Las fotografías del medio no se incorporan al video sin permiso.');
+      const credit=e('p','studio-limit','Fuentes consultadas: '+(state.sourceProvider||'medios enlazados')+'. La fecha es de publicación o detección, no necesariamente del hecho. Consulta el artículo original. Las fotografías del medio no se incorporan al video sin permiso.');
       feature.appendChild(credit);
-      const attribution=e('a','studio-source','Datos: GDELT Project');
+      const attribution=e('a','studio-source','Acerca del índice GDELT');
       attribution.href='https://www.gdeltproject.org/';attribution.rel='noopener noreferrer';attribution.target='_blank';
       feature.appendChild(attribution);
     }
@@ -330,14 +333,19 @@
     const style=$id('studioGenre').value;
     const requestedMode=$id('studioMode').value;
     const local=$id('studioSource').value==='local';
-    const mode=style==='Noticias'?'news':requestedMode;
+    const mode=requestedMode;
     if(topic.length<5){setStatus('Escribe un tema de al menos cinco caracteres.');$id('studioTopic').focus();return}
     if(local&&mode!=='fiction'){setStatus('Las noticias y los documentales reales requieren IA y fuentes actuales. Cambia el origen a «IA — Gemini».');return}
+    if(local&&(topic.toLocaleLowerCase()!=='historias de amor'||style!=='Romance')){
+      $id('studioSource').value='ai';
+      state.ideas=[];state.topic=topic;state.mode=mode;state.epoch++;initialState();
+      setStatus('El catálogo local contiene ejemplos; para generar tu tema «'+topic+'» usa IA — Gemini y pulsa Generar propuestas.');return;
+    }
     state.busy=true;state.epoch++;const epoch=state.epoch;
     state.pass=$id('studioPass').value.trim()||state.pass;
     state.topic=topic;state.style=style;state.mode=mode;state.source=local?'local':'ai';
     state.imageStyle=$id('studioImageStyle').value;
-    state.selected=0;state.covers.clear();state.sources=[];state.ideas=[];initialState();
+    state.selected=0;state.covers.clear();state.sources=[];state.ideas=[];state.sourceProvider='';initialState();
     $id('studioGenerate').disabled=true;
     try{
       if(local){
@@ -351,14 +359,14 @@
         if(!Array.isArray(result.ideas)||!result.ideas.length)throw Error('La búsqueda no devolvió propuestas verificables.');
         state.ideas=result.ideas.slice(0,10);
         state.sources=Array.isArray(result.sources)?result.sources:[];
-        state.checkedAt=result.checkedAt||null;
+        state.checkedAt=result.checkedAt||null;state.sourceProvider=String(result.sourceProvider||'');
         setStatus('✓ '+state.ideas.length+' '+(mode==='news'?'noticias vinculadas a fuentes':'propuestas con sinopsis')+
-          '. '+(mode==='news'?'No se inventaron titulares para completar diez.':'Generando sus imágenes de portada…'));
+          '. '+(mode==='news'?'Fuentes: '+state.sourceProvider+'. No se inventaron titulares para completar diez.':'Generando sus imágenes de portada…'));
       }
       state.busy=false;renderCards();renderFeature();
       if(!local&&mode!=='news')void generateCoverImages(epoch);
     }catch(error){
-      setStatus('No se pudieron preparar las portadas: '+String(error?.message||error));
+      setStatus('No se pudo completar la búsqueda de «'+topic+'»: '+String(error?.message||error));
       if(!state.ideas.length)initialState();
     }finally{
       state.busy=false;$id('studioGenerate').disabled=false;renderFeature();
