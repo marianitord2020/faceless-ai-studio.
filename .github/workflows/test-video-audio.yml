@@ -6,6 +6,8 @@ on:
     paths:
       - 'index.html'
       - 'scripts/ai-voice.js'
+      - 'scripts/ai-photos.js'
+      - 'scripts/discover.js'
       - '.github/workflows/test-video-audio.yml'
 
 permissions:
@@ -128,6 +130,77 @@ jobs:
             const bytes=fs.statSync('/tmp/faceless-audio-video.webm').size;
             if(bytes<10000)throw Error('Video demasiado pequeño: '+bytes);
             console.log('VIDEO OK; bytes:',bytes);
+            // Exercise the complete pipeline with deterministic media, without consuming API quota.
+            let imageCalls=0,voiceCalls=0,failSecondPhoto=true,fixtureImage;
+            await page.route('**/faceless-images.marianitord2020.workers.dev/images',async route=>{
+              imageCalls++;
+              if(imageCalls===2&&failSecondPhoto){
+                await route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'Proveedor temporalmente no disponible'})});return;
+              }
+              const png=fixtureImage;
+              await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({provider:'CI fixture',dataURI:png})});
+            });
+            fixtureImage=await page.evaluate(()=>{const c=document.createElement('canvas');c.width=32;c.height=32;c.getContext('2d').fillRect(0,0,32,32);return c.toDataURL('image/png')});
+            const fixture=await page.evaluate(async()=>{
+              const context=new OfflineAudioContext(1,24000,24000),osc=context.createOscillator();
+              osc.connect(context.destination);osc.start();osc.stop(0.8);
+              const wav=facelessAudioToWAV(await context.startRendering());
+              return await new Promise(resolve=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.readAsDataURL(wav)});
+            });
+            await page.route('**/faceless-images.marianitord2020.workers.dev/voice',async route=>{
+              voiceCalls++;
+              await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({provider:'CI fixture',dataURI:fixture})});
+            });
+            await page.evaluate(()=>{
+              const p={id:'ci-complete',topic:'Una historia de prueba',title:'Producción reanudable',
+                platform:'TikTok',duration:4,format:'9:16',style:'Romance',date:new Date().toISOString(),
+                imageStyle:'cinematic',voicePreset:'female',narration:'Uno. Dos.',
+                scenes:[{time:0,duration:2,text:'Uno.',prompt:'A red handbag in a street'},
+                  {time:2,duration:2,text:'Dos.',prompt:'The same red handbag at home'}]};
+              projects.unshift(p);persist();activeId=p.id;tab='video';resetMedia();route('editor');
+            });
+            await page.locator('#productionPass').fill('ci-fixture-passcode-only');
+            await page.locator('#productionStart').click();
+            await page.waitForFunction(()=>!window.facelessProductionBusy && document.getElementById('productionStatus').textContent.includes('reutilizarán'));
+            const retained=await page.evaluate(()=>facelessProjectPhotos('ci-complete').size);
+            if(retained!==1||imageCalls!==2||voiceCalls!==0)throw Error('La recuperación tras fallo de foto no conserva el progreso');
+            failSecondPhoto=false;
+            await page.locator('#productionStart').click();
+            await page.waitForFunction(()=>!window.facelessProductionBusy && document.getElementById('productionStatus').textContent.includes('Video completo listo'),{timeout:30000});
+            if(imageCalls!==3||voiceCalls!==2)throw Error('Se repitieron medios terminados al retomar');
+            if(!await page.locator('#downloadArea a').isVisible())throw Error('Falta descarga del video completo');
+            const completeDownloadPromise=page.waitForEvent('download');
+            await page.locator('#downloadArea a').click();
+            await (await completeDownloadPromise).saveAs('/tmp/faceless-complete-video.webm');
+            await page.reload();
+            await page.waitForFunction(()=>window.facelessStudioReady===true);
+            await page.evaluate(()=>{activeId='ci-complete';tab='video';route('editor')});
+            await page.waitForFunction(()=>facelessProjectPhotos('ci-complete').size===2 && audioFile?.size>1000);
+            const privateLeak=await page.evaluate(async()=>{
+              if(JSON.stringify(localStorage).includes('ci-fixture-passcode-only'))return true;
+              const db=await facelessOpenMedia();
+              const entries=await new Promise(resolve=>{const r=db.transaction('media').objectStore('media').getAll();r.onsuccess=()=>resolve(r.result)});
+              return JSON.stringify(entries).includes('ci-fixture-passcode-only');
+            });
+            if(privateLeak)throw Error('Se guardó el código privado');
+            await page.locator('#productionPass').fill('ci-fixture-passcode-only');
+            await page.locator('#productionStart').click();
+            await page.waitForFunction(()=>document.getElementById('productionStatus').textContent.includes('3 de 3'));
+            await page.locator('#productionStop').click();
+            await page.waitForFunction(()=>!window.facelessProductionBusy);
+            if(imageCalls!==3||voiceCalls!==2)throw Error('Recargar provocó nuevas llamadas a la IA');
+            if(!await page.locator('#productionStart').isEnabled())throw Error('El botón quedó bloqueado tras detener');
+            await page.locator('#aiVoiceOption').selectOption('male');
+            await page.waitForFunction(()=>!audioFile);
+            await page.reload();
+            await page.waitForFunction(()=>window.facelessStudioReady===true);
+            await page.evaluate(async()=>{activeId='ci-complete';tab='video';route('editor');await facelessRestoreMedia(current())});
+            if(await page.evaluate(()=>Boolean(audioFile)))throw Error('Se restauró una voz invalidada al cambiarla');
+            await page.evaluate(async()=>{
+              current().imageStyle='anime';persist();await facelessRestoreMedia(current());
+              if(facelessProjectPhotos(current().id).size)throw Error('Se reutilizaron imágenes de otro estilo');
+            });
+            console.log('PRODUCCIÓN COMPLETA: fallo y reanudación, video con voz, recarga sin llamadas IA, cancelación, invalidación y privacidad: OK');
             await browser.close();
           })().catch(e=>{console.error(e);process.exit(1)});
           JS
@@ -136,5 +209,9 @@ jobs:
           ffprobe -v error -show_entries stream=codec_type,codec_name -of csv=p=0 /tmp/faceless-audio-video.webm | tee /tmp/faceless-tracks.txt
           grep -q 'audio' /tmp/faceless-tracks.txt
           grep -q 'video' /tmp/faceless-tracks.txt
+          ffprobe -v error -show_entries stream=codec_type -of csv=p=0 /tmp/faceless-complete-video.webm | tee /tmp/faceless-complete-tracks.txt
+          grep -q audio /tmp/faceless-complete-tracks.txt
+          grep -q video /tmp/faceless-complete-tracks.txt
           echo "Audio real integrado: VERIFICADO"
           ffmpeg -i /tmp/faceless-audio-video.webm -vn -af volumedetect -f null - 2>&1 | grep -E 'mean_volume|max_volume'
+
