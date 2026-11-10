@@ -51,7 +51,7 @@ export async function generateVerifiedScript(input,env){
   if(idea&&(!idea.title||!idea.synopsis))scriptError('La portada elegida necesita título y sinopsis.',400);
   const date=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Santo_Domingo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
   let proof='',sources=[];
-  if(mode==='noticias'&&idea?.sourceUrl){
+  if(mode!=='ficcion'&&idea?.sourceUrl){
     let origin;
     try{origin=new URL(idea.sourceUrl)}catch{scriptError('La fuente original de esta noticia no tiene un enlace válido.',422)}
     if(origin.protocol!=='https:')scriptError('La fuente original debe usar HTTPS.',422);
@@ -66,7 +66,7 @@ export async function generateVerifiedScript(input,env){
     ].join('\n'),{url:true});
     const metadata=extracted.urlMeta?.urlMetadata||extracted.urlMeta?.url_metadata||[];
     const found=metadata.some(m=>String(m?.urlRetrievalStatus||m?.url_retrieval_status||'').includes('SUCCESS'));
-    if(!found)scriptError('No pude abrir el artículo original para verificar el guion. Prueba otra noticia o consulta la fuente manualmente.',422);
+    if(!found)scriptError('No pude abrir la fuente original para verificar el guion. Prueba otra portada o consulta la fuente manualmente.',422);
     proof=extracted.text.slice(0,14000);
     sources=[{title:idea.title,url:origin.href}];
   }else if(mode!=='ficcion'){
