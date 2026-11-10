@@ -107,7 +107,7 @@ function renderVideoTab(p){
  <div class="notice" style="margin-top:0"><b>Fondos automáticos activados</b> · ${p.scenes.length} escenas · ${p.duration} segundos. Son gráficos diseñados con código, no imágenes generadas con IA.</div>
  <label class="group-label" for="images">Fotografías propias (opcionales)</label><div class="upload"><input type="file" id="images" accept="image/*" multiple></div>
  <p class="smalltext" id="imageCount">No hace falta subir imágenes: utilizaremos fondos animados.</p>
- <label class="group-label" for="audio">Archivo de narración (opcional)</label><div class="upload"><input type="file" id="audio" accept="audio/*"></div><p class="smalltext" id="audioCount">Sin audio: puedes grabar tu voz abajo.</p>
+ <label class="group-label" for="audio">Audio de narración (IA o archivo propio)</label><div class="upload"><input type="file" id="audio" accept="audio/*"></div><p class="smalltext" id="audioCount">Sin audio: puedes grabar tu voz abajo.</p>
  <div class="record-panel"><b>🎙 Grabar narración desde el teléfono</b><p class="smalltext" style="margin:5px 0 8px">Pulsa Grabar, permite usar el micrófono y lee tu guion. Pulsa Detener al terminar. La grabación queda disponible en esta sesión.</p>
  <div class="media-controls"><button class="btn small" id="startMic">● Grabar voz</button><button class="btn small" id="stopMic" disabled>■ Detener</button></div><p id="micStatus" class="status">Micrófono listo, sujeto al permiso del navegador.</p><audio id="micPlayback" controls class="hidden" style="width:100%"></audio></div>
  <div class="notice" style="margin-bottom:12px"><b>Formato de tu navegador:</b> ${ext}. ${ext==='WebM'?'La conversión a MP4 requiere una herramienta adicional.':''}</div>
@@ -116,6 +116,7 @@ function renderVideoTab(p){
  <div class="media-frame"><canvas id="previewCanvas" width="${p.format==='16:9'?960:540}" height="${p.format==='16:9'?540:960}" class="${p.format==='16:9'?'wide':''}"></canvas><video id="videoResult" controls playsinline class="hidden ${p.format==='16:9'?'wide':''}"></video><p class="smalltext" style="text-align:center;margin:8px 0 0">Vista previa ${p.format} · ${p.duration} segundos</p></div></div></div>`;
  const view=$('previewCanvas'),updateView=()=>{drawFrame(0);view.getContext('2d').drawImage(canvas,0,0)};
  mountAIPhotoControls(p,updateView);
+ mountAIVoiceControls(p);
   $('images').addEventListener('change',async ev=>{imgs=[];const selected=[...ev.target.files];for(const file of selected){const im=new Image();const url=URL.createObjectURL(file);try{await new Promise((resolve,reject)=>{im.onload=resolve;im.onerror=reject;im.src=url});imgs.push(im)}catch{toast('No se pudo abrir una imagen.')}finally{URL.revokeObjectURL(url)}}$('imageCount').textContent=imgs.length?`${imgs.length} imágenes cargadas`:'Fondos animados listos';updateView()});
  $('audio').addEventListener('change',ev=>{audioFile=ev.target.files[0]||null;$('audioCount').textContent=audioFile?`Audio seleccionado: ${audioFile.name}`:'Sin audio seleccionado.';if(audioFile){$('micPlayback').classList.add('hidden')}});
  $('startMic').onclick=startMicrophoneRecording;$('stopMic').onclick=stopMicrophoneRecording;
@@ -192,4 +193,4 @@ route('home');
   };
 })();
  
-</script><script src="scripts/ai-photos.js?v=2"></script></body></html>
+</script><script src="scripts/ai-photos.js?v=2"></script><script src="scripts/ai-voice.js?v=1"></script></body></html>
