@@ -161,7 +161,7 @@ jobs:
               window.facelessRecognizeLocal=async()=>[{word:'Hola',start:.1,end:.4},{word:'Lola',start:.5,end:.9},{word:'Grace',start:1.1,end:1.8},{word:'vuelve',start:2,end:2.8}];
             },[wav(1).toString('base64'),wav(2).toString('base64')]);
             await reveal('#aiVoiceGenerate');
-            await page.evaluate(()=>{document.getElementById('aiVoicePasscode').value='fixture-passcode-for-ui';});
+            await page.evaluate(()=>{document.getElementById('productionPass').value='fixture-passcode-for-ui';document.getElementById('aiVoicePasscode').value='fixture-passcode-for-ui';});
             await page.locator('#aiVoiceGenerate').click();
             await page.waitForFunction(()=>current().id==='tts-sync-fixture'&&current().audioAlignment?.method==='speech'&&!facelessVoiceBusy);
             const voiceSync=await page.evaluate(async()=>{
