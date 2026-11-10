@@ -27,10 +27,10 @@
  window.facelessMountMediaEditor=function(p,updatePreview){
   const photoRoot=id('manualPhotoSlots'),audioRoot=id('audioAttachment');if(!photoRoot||!audioRoot)return;
   const status=id('audioSyncStatus');
-  function busy(value){window.facelessMediaBusy=value;for(const n of document.querySelectorAll('#images,#audio,#removeAudio,#syncAudio,#manualPhotoSlots button,#manualPhotoSlots input'))n.disabled=value}
+  function busy(value){window.facelessMediaBusy=value;for(const n of document.querySelectorAll('#images,#audio,#pickOwnPhotos,#pickOwnAudio,#removeAudio,#syncAudio,#manualPhotoSlots button,#manualPhotoSlots input'))n.disabled=value}
   function photoRefresh(projectId){if(projectId!==p.id||!photoRoot.isConnected)return;photoRoot.replaceChildren();let count=0;const photos=facelessProjectPhotos(p.id);
    p.scenes.forEach((s,i)=>{
-    const photo=photos.get(i),card=el('div','', 'media-photo-slot');card.dataset.scene=String(i);
+    const photo=photos.get(i);if(!photo)return;const card=el('div','', 'media-photo-slot');card.dataset.scene=String(i);
     const heading=el('b','Escena '+(i+1));card.append(heading);
     if(photo){count++;const image=el('img');image.src=photo.src;image.alt='Foto de la escena '+(i+1);card.append(image)}else card.append(el('div','Sin foto','media-photo-empty'));
     const input=el('input');input.type='file';input.accept='image/*';input.hidden=true;input.setAttribute('aria-label','Foto para escena '+(i+1));input.onchange=()=>addPhotos([...input.files],i);
@@ -38,6 +38,7 @@
     card.append(input,add);
     if(photo){const remove=el('button','Quitar foto','btn small outline');remove.type='button';remove.setAttribute('aria-label','Quitar foto de escena '+(i+1));remove.disabled=Boolean(window.facelessMediaBusy);remove.onclick=async()=>{if(facelessIsWorking())return;busy(true);try{await facelessRestoreMedia(p);photos.delete(i);await facelessMediaDelete(p.id+':image:'+i);invalidateVideo();photoRefresh(p.id);updatePreview()}finally{busy(false);photoRefresh(p.id)}};const download=el('a','Descargar','media-photo-download');download.href=photo.src;download.download=photo.facelessFilename||'faceless-escena-'+(i+1)+'.png';card.append(remove,download)}photoRoot.append(card);
    });
+   photoRoot.hidden=count===0;id('imageCount').hidden=count===0;
    id('imageCount').textContent=count+' de '+p.scenes.length+' escenas con foto. Las escenas vacías usan fondos animados.';
   }
   window.facelessRefreshPhotoSlots=photoRefresh;
@@ -59,6 +60,8 @@
    }catch(error){toast(String(error.message||'No se pudo cargar la imagen.'))}finally{id('images').value='';busy(false);photoRefresh(p.id)}
   }
   id('images').onchange=event=>addPhotos([...event.target.files]);
+  id('pickOwnPhotos').onclick=()=>{if(!facelessIsWorking())id('images').click()};
+  id('pickOwnAudio').onclick=()=>{if(!facelessIsWorking())id('audio').click()};
   async function sync(file,decoded){
    const pass=password();if(pass.length<16){status.textContent='Duración ajustada al audio. Los subtítulos tienen tiempos estimados. Introduce tu código privado arriba y pulsa Sincronizar con la voz para reconocer las palabras.';return}
    const recognized=await transcribe(decoded,pass,status);
@@ -91,7 +94,9 @@
   };
   window.facelessRefreshAudioAttachment=()=>{
    if(!audioRoot.isConnected)return;
-   const has=Boolean(audioFile&&audioFileProjectId===p.id);id('removeAudio').disabled=!has||Boolean(window.facelessMediaBusy);id('syncAudio').disabled=!has||Boolean(window.facelessMediaBusy);id('syncAudio').hidden=!has||!audioFile.facelessManual;
+   const has=Boolean(audioFile&&audioFileProjectId===p.id);
+   audioRoot.hidden=!has||!audioFile.facelessManual;id('audioCount').hidden=!has;
+   id('pickOwnAudio').querySelector('strong').textContent=has&&audioFile.facelessManual?'Cambiar mi audio':'Añadir mi audio';id('removeAudio').disabled=!has||Boolean(window.facelessMediaBusy);id('syncAudio').disabled=!has||Boolean(window.facelessMediaBusy);id('syncAudio').hidden=!has||!audioFile.facelessManual;
    if(playerURL){URL.revokeObjectURL(playerURL);playerURL=''}
    const player=id('uploadedAudioPlayer');player.pause();player.removeAttribute('src');player.load();player.hidden=!has||!audioFile.facelessManual;
    if(has&&audioFile.facelessManual){playerURL=URL.createObjectURL(audioFile);player.src=playerURL;

@@ -45,15 +45,17 @@ jobs:
             await page.goto('http://127.0.0.1:4173/');
             await page.waitForFunction(()=>window.facelessStudioReady);
             await page.evaluate(()=>{const p={id:'media-fixture',title:'Fotos y voz',topic:'Lola',style:'Misterio',duration:12,platform:'TikTok',format:'9:16',date:new Date().toISOString(),scenes:[{time:0,duration:4,text:'Hola esta es la primera escena.',prompt:'Scene one'},{time:4,duration:4,text:'Ahora contamos una historia sobre Lola.',prompt:'Scene two'},{time:8,duration:4,text:'Al final todos regresan a casa.',prompt:'Scene three'}]};p.narration=p.scenes.map(s=>s.text).join('\n');projects.unshift(p);persist();activeId=p.id;tab='video';route('editor')});
+            assert.equal(await page.locator('#manualPhotoSlots').isVisible(),false);assert.equal(await page.locator('#audioAttachment').isVisible(),false);
             const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a6d8AAAAASUVORK5CYII=','base64');
             const photo=name=>({name,mimeType:'image/png',buffer:png});
-            await page.locator('#images').setInputFiles([photo('primera.png'),photo('segunda.png')]);
+            const photoChooserPromise=page.waitForEvent('filechooser');await page.locator('#pickOwnPhotos').click();const photoChooser=await photoChooserPromise;assert.equal(photoChooser.isMultiple(),true);await photoChooser.setFiles([photo('primera.png'),photo('segunda.png')]);
             await page.waitForFunction(()=>!window.facelessMediaBusy&&facelessProjectPhotos('media-fixture').size===2);
             assert.equal(await page.locator('#manualPhotoSlots .media-photo-slot img').count(),2);
             await page.getByRole('button',{name:'Quitar foto de escena 1',exact:true}).click();
             await page.waitForFunction(()=>!window.facelessMediaBusy&&!facelessProjectPhotos('media-fixture').has(0));
             assert.equal(await page.evaluate(()=>facelessProjectPhotos('media-fixture').has(1)),true);
-            await page.locator('.media-photo-slot[data-scene="0"] input').setInputFiles(photo('nueva.png'));
+            assert.equal(await page.locator('#manualPhotoSlots .media-photo-slot').count(),1);
+            await page.locator('#images').setInputFiles(photo('nueva.png'));
             await page.waitForFunction(()=>!window.facelessMediaBusy&&facelessProjectPhotos('media-fixture').has(0));
             await page.locator('.media-photo-slot[data-scene="1"] input').setInputFiles(photo('reemplazo.png'));
             await page.waitForFunction(()=>!window.facelessMediaBusy&&facelessProjectPhotos('media-fixture').get(1)?.facelessFilename==='reemplazo.png');
@@ -69,7 +71,7 @@ jobs:
               return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({words})});
             });
             await page.locator('#productionPass').fill('fixture-media-passcode-only');
-            await page.locator('#audio').setInputFiles({name:'narracion.wav',mimeType:'audio/wav',buffer:wav(8)});
+            const audioChooserPromise=page.waitForEvent('filechooser');await page.locator('#pickOwnAudio').click();const audioChooser=await audioChooserPromise;assert.equal(audioChooser.isMultiple(),false);await audioChooser.setFiles({name:'narracion.wav',mimeType:'audio/wav',buffer:wav(8)});
             await page.waitForFunction(()=>!window.facelessMediaBusy&&current().audioAlignment?.method==='speech');
             const aligned=await page.evaluate(()=>({duration:current().duration,times:current().scenes.map(s=>s.time),text:current().narration,captions:FacelessTiming.cues(current()).map(c=>c.text).join(' '),caption:facelessCaptionAt(current(),3.1)}));
             assert.equal(aligned.duration,8);assert.deepEqual(aligned.times,[0,3,5]);assert.equal(aligned.captions,aligned.text.replaceAll('\n',' '));assert.equal(aligned.caption,'Ahora contamos una historia sobre Lola.');assert.equal(transcriptions,1);
@@ -82,7 +84,7 @@ jobs:
             assert.equal(await page.evaluate(()=>current().audioAlignment.method),'estimated');assert.equal(await page.evaluate(()=>current().duration),9);
             await page.getByRole('button',{name:'Quitar audio',exact:true}).click();
             await page.waitForFunction(()=>!window.facelessMediaBusy&&!audioFile);
-            assert.equal(await page.evaluate(()=>current().duration),12);
+            assert.equal(await page.evaluate(()=>current().duration),12);assert.equal(await page.locator('#audioAttachment').isVisible(),false);
             await page.getByRole('button',{name:'Quitar foto de escena 1',exact:true}).click();await page.waitForFunction(()=>!window.facelessMediaBusy);
             await page.reload();await page.waitForFunction(()=>window.facelessStudioReady);await page.evaluate(()=>{activeId='media-fixture';tab='video';route('editor')});
             await page.waitForFunction(()=>facelessProjectPhotos('media-fixture').has(1));
