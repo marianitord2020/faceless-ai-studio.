@@ -19,6 +19,7 @@ async function facelessRequestVoice(text, voice, passcode, style) {
   try {
     response = await fetch(FACELESS_VOICE_API, {
       method: 'POST',
+      signal: typeof AbortSignal.timeout==='function'?AbortSignal.timeout(90000):undefined,
       headers: { 'content-type': 'application/json', 'x-app-token': passcode },
       body: JSON.stringify({ text, voice, style })
     });
@@ -217,7 +218,14 @@ function mountAIVoiceControls(project) {
         if (!text) continue;
         if (text.length > 650) throw new Error('La escena ' + (index + 1) + ' supera 650 caracteres. Acorta su texto antes de generar voz.');
         status.textContent = 'Generando voz IA: escena ' + (index + 1) + ' de ' + project.scenes.length + '…';
-        const result = await facelessRequestVoice(text, voice, facelessVoicePassword, mood);
+        const segmentKey=project.id+':voice-segment:'+index;
+        const segmentSignature=JSON.stringify([text,voice,mood]);
+        let cached;
+        try{cached=await facelessMediaGet(segmentKey)}catch{}
+        const result=cached?.signature===segmentSignature?cached.result:
+          await facelessRequestVoice(text, voice, facelessVoicePassword, mood);
+        if(cached?.signature!==segmentSignature)
+          await facelessMediaPut(segmentKey,{signature:segmentSignature,result});
         let decoded;
         try { decoded = await audioCtx.decodeAudioData(facelessDecodeURI(result.dataURI)); }
         catch (_) { throw new Error('No se pudo interpretar el audio de la escena ' + (index + 1) + '.'); }
