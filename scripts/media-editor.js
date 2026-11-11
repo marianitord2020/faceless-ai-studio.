@@ -83,7 +83,7 @@
   window.facelessAttachManualAudio=attach;
   window.facelessEnsureAudioSync=async({force=false}={})=>{
    if(!audioFile||audioFileProjectId!==p.id)return;
-   if((p.audioAlignment?.method==='speech'||(!force&&p.audioAlignment?.method==='manual'))&&p.subtitleTextSignature===FacelessTiming.signature(p))return;
+   if((p.audioAlignment?.method==='speech'||(!force&&['manual','tts-segments'].includes(p.audioAlignment?.method)))&&p.subtitleTextSignature===FacelessTiming.signature(p))return;
    const file=audioFile;busy(true);try{await sync(file,await decode(file));}finally{busy(false);}
   };
   id('audio').onchange=event=>attach(event.target.files[0]);

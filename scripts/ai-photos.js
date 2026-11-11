@@ -381,8 +381,8 @@ function mountFacelessProduction(project){
         throw Error(document.getElementById('aiVoiceStatus').textContent||'No se pudo generar la narración.');
       popup?.stage('captions');
       status.textContent='3 de 4 · Sincronizando palabras, voz e imágenes con IA…';
-      await window.facelessEnsureAudioSync?.({force:true});cancelled();
-      if(project.audioAlignment?.method!=='speech'||project.subtitleTextSignature!==FacelessTiming.signature(project))throw Error('La IA no completó la sincronización de voz. Pulsa Crear video completo para reintentar.');
+      await window.facelessEnsureAudioSync?.();cancelled();
+      if(!['speech','tts-segments','manual'].includes(project.audioAlignment?.method)||project.subtitleTextSignature!==FacelessTiming.signature(project))throw Error('La IA no completó la sincronización de voz. Pulsa Crear video completo para reintentar.');
       popup?.stage('render');
       status.textContent='4 de 4 · Montando el video con voz. Mantén esta página abierta…';
       const exported=await renderVideo(popup?{format:'mp4'}:undefined);cancelled();
