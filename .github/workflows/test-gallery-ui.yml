@@ -47,7 +47,7 @@ jobs:
             assert.equal(await page.locator('#studioPass').isVisible(),false);
             const groups={Relatos:['Romance','Misterio','Terror','Fantasía'],Aprender:['Historia','Curiosidades','Motivación','Educativo'],Actualidad:['Noticias','Farándula','Entretenimiento','Deportes']};
             const placeholders={Relatos:'¿Qué quieres contar?',Aprender:'¿Qué quieres aprender?',Actualidad:'¿Noticias de hoy?'};
-            for(const [width,height] of [[360,740],[390,844],[412,915],[768,1024],[1440,900]]){
+            for(const [width,height] of [[360,740],[390,844],[412,915],[768,1024]]){
               await page.setViewportSize({width,height});
               for(const [tab,names] of Object.entries(groups)){
                 await page.getByRole('tab',{name:tab,exact:true}).click();

@@ -10,7 +10,7 @@ const assert=require('node:assert/strict');
  await page.route('**/stock/import',r=>r.fulfill({status:200,contentType:'application/json',body:JSON.stringify({dataURI:png,credit})}));
  await page.goto('http://127.0.0.1:4173/');await page.waitForFunction(()=>window.facelessStudioReady);
  await page.evaluate(()=>{
-  const p={id:'stock-fixture',title:'Fotos de archivo',topic:'Playa',style:'Educativo',duration:10,platform:'TikTok',format:'9:16',date:new Date().toISOString(),scenes:[{time:0,duration:5,text:'Primera escena de la playa.',prompt:'A beach'},{time:5,duration:5,text:'Segunda escena del bosque.',prompt:'A forest'}]};p.narration=p.scenes.map(s=>s.text).join('\n');projects.unshift(p);persist();activeId=p.id;tab='video';route('editor');
+  const p={id:'stock-fixture',creationFlow:'manual',title:'Fotos de archivo',topic:'Playa',style:'Educativo',duration:10,platform:'TikTok',format:'9:16',date:new Date().toISOString(),scenes:[{time:0,duration:5,text:'Primera escena de la playa.',prompt:'A beach'},{time:5,duration:5,text:'Segunda escena del bosque.',prompt:'A forest'}]};p.narration=p.scenes.map(s=>s.text).join('\n');projects.unshift(p);persist();activeId=p.id;tab='video';route('editor');
  });
  await page.locator('#stockPhotos').evaluate(node=>{for(let p=node;p;p=p.parentElement)if(p.tagName==='DETAILS')p.open=true;});
  assert.equal(await page.locator('#stockPhotos').count(),1);

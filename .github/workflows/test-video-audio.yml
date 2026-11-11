@@ -186,7 +186,7 @@ jobs:
             await reveal('#productionPass');
             await page.locator('#productionPass').fill('ci-fixture-passcode-only');
             await page.locator('#productionStart').click();
-            await page.waitForFunction(()=>document.getElementById('productionStatus').textContent.includes('3 de 3'));
+            await page.waitForFunction(()=>document.getElementById('productionStatus').textContent.includes('4 de 4'));
             await page.locator('#productionStop').click();
             await page.waitForFunction(()=>!window.facelessProductionBusy);
             if(imageCalls!==3||voiceCalls!==3)throw Error('Recargar provocó nuevas llamadas a la IA');
