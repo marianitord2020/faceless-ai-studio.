@@ -1,3 +1,4 @@
+# Run node build-assets.mjs before deploying this Worker.
 name = "faceless-access-prueba"
 main = "worker.js"
 compatibility_date = "2026-11-01"
