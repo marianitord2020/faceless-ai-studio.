@@ -1,5 +1,5 @@
 import {hfEnabled,hfText} from './media-providers.js';
-// Guiones verificados. Ficción solo cuando el usuario la elige expresamente.
+// Hechos verificados con narrativa original; libertad creativa en ficción.
 const SCRIPT_MODEL='gemini-3.5-flash-lite';
 function scriptError(msg,status=502){const e=new Error(msg);e.httpStatus=status;throw e}
 const NEWS_TERMS=/(?:noticias?|actualidad|últimas?|recientes?|\bhoy\b|\bahora\b|\bmomento\b|esta semana|en vivo|última hora|breaking news|news today)/i;
@@ -9,7 +9,7 @@ async function geminiOnlyCall(env,query,options={}){
   if(!key)scriptError('Falta conectar Gemini para crear guiones.',503);
   const model=String(env.GEMINI_SCRIPT_MODEL||SCRIPT_MODEL);
   if(!/^[\w.-]+$/.test(model))scriptError('Modelo de guion no válido.',500);
-  const generationConfig={temperature:options.search?0.05:0.15,maxOutputTokens:options.search?2800:5000};
+  const generationConfig={temperature:options.search?0.05:(options.creative?0.85:0.35),maxOutputTokens:options.search?2800:5000};
   if(options.json)generationConfig.responseMimeType='application/json';
   const request={contents:[{role:'user',parts:[{text:query}]}],generationConfig};
   if(options.search)request.tools=[{google_search:{}}];
@@ -42,7 +42,7 @@ async function geminiGroqCall(env,query,options={}){
     let response;
     try{response=await fetch('https://api.groq.com/openai/v1/chat/completions',{
       method:'POST',headers:{'content-type':'application/json','authorization':'Bearer '+env.GROQ_API_KEY},
-      body:JSON.stringify({model,messages:[{role:'system',content:options.json?'Responde exclusivamente un objeto JSON válido. Conserva los datos y restricciones del usuario.':'Responde en español respetando las fuentes y restricciones.'},{role:'user',content:query}],temperature:0.15,max_completion_tokens:5000,...(model.startsWith('openai/gpt-oss')?{reasoning_effort:'low'}:{}),...(options.json?{response_format:{type:'json_object'}}:{})}),
+      body:JSON.stringify({model,messages:[{role:'system',content:options.json?'Responde exclusivamente un objeto JSON válido. Conserva los datos y restricciones del usuario.':'Responde en español respetando las fuentes y restricciones.'},{role:'user',content:query}],temperature:options.creative?0.85:0.35,max_completion_tokens:5000,...(model.startsWith('openai/gpt-oss')?{reasoning_effort:'low'}:{}),...(options.json?{response_format:{type:'json_object'}}:{})}),
       signal:AbortSignal.timeout(45000)
     })}catch{scriptError('Gemini y el respaldo Groq no están disponibles. Reintenta más tarde.',503)}
     let data;try{data=await response.json()}catch{scriptError('Groq no devolvió una respuesta válida.',502)}
@@ -76,8 +76,9 @@ export async function generateVerifiedScript(input,env){
   const style=['Misterio','Terror','Fantasía','Historia','Curiosidades','Motivación','Noticias','Educativo','Romance','Farándula','Entretenimiento','Deportes'].includes(input.style)?input.style:'Educativo';
   const selected=['informativo','noticias','ficcion'].includes(input.mode)?input.mode:'informativo';
   // Una petición explícita de ficción cuenta incluso con el selector predeterminado.
-  const fiction=selected==='ficcion'||(selected==='informativo'&&FICTION_TERMS.test(topic));
-  const mode=fiction?'ficcion':(selected==='noticias'||style==='Noticias'||NEWS_TERMS.test(topic)?'noticias':'informativo');
+  const factualCategory=['Noticias','Farándula','Entretenimiento'].includes(style);
+  const fiction=!factualCategory&&(selected==='ficcion'||(selected==='informativo'&&FICTION_TERMS.test(topic)));
+  const mode=fiction?'ficcion':(selected==='noticias'||factualCategory||NEWS_TERMS.test(topic)?'noticias':'informativo');
   const count=duration===30?5:duration===60?8:12;
   const idea=input.idea&&typeof input.idea==='object'?{
     title:String(input.idea.title||'').trim().slice(0,140),
@@ -131,25 +132,26 @@ export async function generateVerifiedScript(input,env){
     proof=research.text.slice(0,14000);
   }
   const rules=mode==='ficcion'
-    ?'El usuario ha pedido FICCIÓN. Puedes inventar personajes y acontecimientos; indica claramente que es una historia ficticia.'
-    :'Solo información REAL del resumen verificado. Prohibido inventar nombres, fechas, cifras, citas, sucesos o fuentes. Reparte los hechos confirmados entre escenas sin añadir material no confirmado. No confundas fechas de publicación con fechas de hechos.';
+    ?'El usuario ha pedido FICCIÓN ORIGINAL. Usa tu imaginación para crear personajes memorables, diálogos naturales, conflictos, sorpresas y un desenlace potente. Abre con un gancho propio, desarrolla una historia coherente y crea una acción visual distinta por escena. Evita tramas genéricas y repetidas. Indica claramente que es una historia ficticia.'
+    :'Solo información REAL del resumen verificado. Prohibido inventar nombres, fechas, cifras, citas, sucesos o fuentes. Analiza los hechos y explica su relevancia sin añadir material no confirmado. No confundas fechas de publicación con fechas de hechos.';
   const prompt=[
     'Crea guion para video EN ESPAÑOL sobre la búsqueda literal '+JSON.stringify(topic)+'.',
     ...(idea?['PORTADA ELEGIDA POR EL USUARIO: '+JSON.stringify(idea.title),
-      'SINOPSIS FIJA: '+idea.synopsis,
+      'SINOPSIS ELEGIDA (conserva la premisa, redacta con palabras propias): '+idea.synopsis,
       idea.outline?'TRAMA O ENFOQUE FIJO: '+idea.outline:'',
       idea.sourceUrl?'ARTÍCULO ORIGINAL DE LA PORTADA: '+idea.sourceUrl:'',
-      'OBLIGATORIO: la narración desarrolla esta portada precisa; conserva personajes, sucesos y enfoque. No cambies de historia ni inventes otra noticia.']:[]),
+      mode==='ficcion'?'OBLIGATORIO: desarrolla la premisa y continuidad de la sinopsis elegida con imaginación; puedes inventar acciones, diálogos y giros coherentes.':'OBLIGATORIO: desarrolla el suceso de la portada con un enfoque narrativo propio; conserva los hechos comprobados. No copies su titular, sinopsis ni redacción como narración.']:[]),
     'FECHA: '+date+'. MODO: '+mode+'. DURACIÓN: '+duration+' s. ESCENAS EXACTAS: '+count+'. PLATAFORMA: '+platform+'. ESTILO: '+style+'.',
     input.subcategory?'SUBCATEGORÍA SOLICITADA: '+JSON.stringify(String(input.subcategory).slice(0,80))+'. Conserva el tema y la portada seleccionada.':'',
     rules,
+    mode==='noticias'?'ORIGINALIDAD EDITORIAL: usa la fuente como evidencia de hechos, nunca como guion. Crea un título y gancho propios en la primera escena, reorganiza la información y construye una narración original con contexto, desarrollo y cierre. No copies párrafos, no repitas el titular como apertura y no hagas una paráfrasis oración por oración ni cambies solo sinónimos. El gancho no debe exagerar ni prometer hechos desconocidos. Conserva atribuciones e incertidumbres: una denuncia o rumor no es un hecho confirmado. Inventa la composición visual, encuadres, movimientos y transiciones, no los acontecimientos. Usa recursos ilustrativos y márcalos como ilustración o recreación; no inventes víctimas, testimonios, citas o pruebas ni presentes imágenes generadas como material real del suceso.':'',
     'No cambies ni amplíes el tema: responde SOLO a lo que el usuario pidió.',
     'Título específico, fiel a la búsqueda. Máximo '+Math.floor(duration/count*2.1)+' palabras por escena para que la narración quepa sin correr ni cortar palabras. Total aproximado: '+Math.floor(duration*2.1)+' palabras. Narración natural en español.',
     'Los prompts visuales describen esa escena sin simular fotografías documentales de hechos no probados.',
     'Devuelve exclusivamente JSON {"title":"...","scenes":[{"text":"...","prompt":"..."},...]} con exactamente '+count+' escenas.',
     mode==='ficcion'?'':'INFORMACIÓN DE LA FUENTE ORIGINAL VERIFICADA (ÚNICA BASE PARA LAS AFIRMACIONES):\n'+proof
   ].filter(Boolean).join('\n\n');
-  const out=await geminiScriptCall(env,prompt,{json:true});
+  const out=await geminiScriptCall(env,prompt,{json:true,creative:mode==='ficcion'});
   let data;
   try{data=JSON.parse(out.text)}
   catch{scriptError('Gemini devolvió un guion con formato inválido. Regenera.')}
@@ -162,7 +164,7 @@ export async function generateVerifiedScript(input,env){
     return {text,prompt};
   });
   return {
-    title:idea?.title||String(data.title||topic).slice(0,140),scenes,mode,query:topic,sources,
+    title:String(data.title||idea?.title||topic).slice(0,140),scenes,mode,query:topic,sources,
     checkedAt:mode==='ficcion'?null:new Date().toISOString(),
     provider:out.provider+(mode==='ficcion'?'':idea?.sourceUrl?' + fuente original':' + Google Search')
   };

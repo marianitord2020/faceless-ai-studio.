@@ -27,7 +27,7 @@ export async function generateCoverIdeas(input,env){
  if(topic.length<5||topic.length>220)ideasError('Escribe un tema de 5 a 220 caracteres.',400);
  const subcategory=String(input?.subcategory||'').replace(/\s+/g,' ').trim().slice(0,80);
  const style=String(input?.style||'Misterio').slice(0,40);
- const mode=['fiction','news','factual'].includes(input?.mode)?input.mode:'fiction';
+ const mode=['Noticias','Farándula','Entretenimiento'].includes(style)?'news':(['fiction','news','factual'].includes(input?.mode)?input.mode:'fiction');
  const date=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Santo_Domingo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
  if(mode==='news'){const sourceQuery=[topic,subcategory].filter(Boolean).join(' ');return {...await searchRealNews(sourceQuery,style,env),query:topic,subcategory,sourceQuery}}
  if(mode==='factual'){const sourceQuery=[topic,subcategory].filter(Boolean).join(' ');return {...await generateWikipediaIdeas(sourceQuery,style,env),query:topic,subcategory,sourceQuery}}
@@ -47,7 +47,7 @@ export async function generateCoverIdeas(input,env){
      'Crea ficción ORIGINAL del género solicitado usando únicamente la premisa como inspiración. Cambia personajes, trama y desenlace; no copies ni continúes literalmente el texto. Nunca lo presentes como noticia real.']:[]),
    'Responde solo JSON {"ideas":[{"title":"...","synopsis":"...","outline":"...","coverPrompt":"..."},...]} con exactamente diez objetos.'
   ].join('\n\n');
-  const generated=await geminiScriptCall(env,instructions,{json:true});
+  const generated=await geminiScriptCall(env,instructions,{json:true,creative:true});
   const ideas=ideasFromAI(json(generated.text)?.ideas);
   if(ideas.length!==10)ideasError('Gemini no preparó diez historias diferentes; intenta regenerar las propuestas.');
   let referenceUrl='';
