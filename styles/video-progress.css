@@ -40,3 +40,9 @@
 .vp-action { background: linear-gradient(105deg, #7738db, #4865d2); }
 .vp-action:disabled { background: #484252; color: #e0dbe9; opacity: 1; }
 .vp-preview-button { margin-top: 10px; background: transparent; border-color: #625578; }
+.vp-access label { display: block; margin-bottom: 14px; text-align: left; }
+.vp-access input {
+  display: block; width: 100%; margin-top: 6px; padding: 11px;
+  border: 1px solid #625578; border-radius: 10px;
+  background: #211831; color: #fff;
+}

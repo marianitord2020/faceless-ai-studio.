@@ -23,6 +23,10 @@
       <video class="vp-preview" aria-label="Vista previa del video" controls playsinline preload="metadata" hidden></video>
       <progress class="vp-meter" max="100" value="0" aria-label="Progreso del video"></progress>
       <p class="vp-status" role="status"></p>
+      <form class="vp-access" hidden>
+        <label>Código privado <input type="password" minlength="16" required autocomplete="new-password"></label>
+        <button type="submit" class="vp-action">CONTINUAR</button>
+      </form>
       <button type="button" class="vp-action" disabled>Creando... Por favor espera</button>
       <a class="vp-action vp-download" hidden>⬇️ DESCARGAR VIDEO</a>
       <button type="button" class="vp-preview-button" hidden>VER VISTA PREVIA</button>
@@ -35,6 +39,8 @@
     const action = find('button.vp-action');
     const download = find('.vp-download');
     const play = find('.vp-preview-button');
+    const access = find('.vp-access');
+    const code = access.querySelector('input');
     let current = steps.read;
 
     find('.vp-close').onclick = () => dialog.close();
@@ -53,6 +59,26 @@
     activeDialog = dialog;
     dialog.showModal();
     return {
+      requestAccess(continueWithCode) {
+        title.textContent = 'Introduce tu código privado';
+        status.textContent = 'Necesitas el código de Faceless para crear el video.';
+        action.hidden = true;
+        access.hidden = false;
+        access.onsubmit = (event) => {
+          event.preventDefault();
+          const value = code.value.trim();
+          if (value.length < 16) {
+            status.textContent = 'El código debe tener al menos 16 caracteres.';
+            return;
+          }
+          code.value = '';
+          access.hidden = true;
+          action.hidden = false;
+          title.textContent = 'Creando tu video, espera un momento...';
+          continueWithCode(value);
+        };
+        code.focus();
+      },
       stage(key) {
         current = steps[key];
         meter.value = current[0];

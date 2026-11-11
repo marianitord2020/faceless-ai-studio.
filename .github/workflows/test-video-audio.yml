@@ -84,6 +84,11 @@ jobs:
             });
             console.log('SETUP:',setup);
             if(setup.button!=='Crear y descargar video'||!setup.hasAudio)throw Error('La voz no está integrada en el botón');
+            await page.locator('#renderVideo').click();
+            const progress=page.locator('dialog.video-progress');
+            await progress.getByLabel('Código privado').waitFor({state:'visible'});
+            await progress.getByRole('button',{name:'Cerrar',exact:true}).click();
+            await progress.waitFor({state:'detached'});
             const voiceChange=await page.evaluate(()=>{
               const old=audioFile;
               const area=document.getElementById('aiVoiceAudioArea');
