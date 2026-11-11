@@ -309,6 +309,9 @@
   function renderCards(){
     const cards=$id('studioCards');cards.replaceChildren();
     state.ideas.forEach((idea,index)=>{
+      if(state.mode==='news'&&idea.matchType==='related'&&state.ideas[index-1]?.matchType!=='related'){
+        const label=e('h3',null,'Publicaciones relacionadas');label.style.gridColumn='1 / -1';cards.appendChild(label);
+      }
       const card=e('button','studio-card'+(index===state.selected?' on':''));card.type='button';
       card.setAttribute('aria-pressed',String(index===state.selected));
       const picture=e('div','studio-card-visual');visual(picture,idea,index,false);
@@ -389,6 +392,63 @@
     window.facelessProductionPasscode=pass;
     return data;
   }
+  function newsVariants(topic){
+    const plain=topic.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    if(/^(?:bulin|bullin)(?:\s*47)?$/i.test(plain)){
+      return ['Bulín 47','Bullin 47','Bulin 47 música'].filter(value=>value.toLowerCase()!==topic.toLowerCase()).slice(0,2);
+    }
+    return [...new Set([plain,topic.replace(/^(?:noticias(?:\s+de|\s+sobre)?\s*:?\s*|qué pasó con\s+)/iu,'')])]
+      .filter(value=>value.length>=5&&value!==topic).slice(0,2);
+  }
+  function articleKey(value){
+    try{
+      const url=new URL(value);
+      if(url.protocol!=='https:')return '';
+      for(const key of [...url.searchParams.keys()])if(/^(?:utm_|fbclid$|gclid$)/i.test(key))url.searchParams.delete(key);
+      url.searchParams.sort();
+      return url.hostname.replace(/^www\./i,'')+url.pathname.replace(/\/$/,'')+url.search;
+    }catch{return ''}
+  }
+  async function findNews(query,epoch){
+    const primary=await callEndpoint('/ideas',query).catch(error=>{
+      if(/401|403|sesión|código|429|cuota/i.test(error.message))throw error;
+      return {error};
+    });
+    const first=Array.isArray(primary.ideas)?primary.ideas:[];
+    if(first.length>=3||epoch!==state.epoch)return primary;
+    const variants=newsVariants(query.topic);
+    const alternatives=variants.map(topic=>({...query,topic}));
+    if(alternatives.length<2&&(query.subcategory||/^(?:bulin|bullin)(?:\s*47)?$/i.test(query.topic.normalize('NFD').replace(/[\u0300-\u036f]/g,'')))){
+      alternatives.push({...query,topic:variants[0]||query.topic,style:variants.length?'Farándula':query.style,subcategory:''});
+    }
+    if(!alternatives.length&&!/república dominicana/i.test(query.topic)&&query.topic.length<=130){
+      alternatives.push({...query,topic:query.topic+' República Dominicana'});
+    }
+    if(!alternatives.length){if(primary.error)throw primary.error;return primary;}
+    setStatus('Ampliando la búsqueda de noticias sobre «'+query.topic+'»…');
+    const found=await Promise.allSettled(alternatives.map(payload=>callEndpoint('/ideas',payload)));
+    const exact=[],related=[],sources=new Map(),seen=new Set(),providers=new Set();
+    for(const [index,result] of [primary,...found.map(item=>item.status==='fulfilled'?item.value:null)].entries()){
+      if(!result||!Array.isArray(result.ideas))continue;
+      for(const idea of result.ideas){
+        const key=articleKey(idea.sourceUrl);
+        if(!key||seen.has(key))continue;
+        seen.add(key);
+        const isRelated=index>0||result.matchType==='related'||idea.matchType==='related';
+        const item={...idea,id:'news-'+key,matchType:isRelated?'related':'exact'};
+        if(index>0)item.matchReason='Búsqueda ampliada: «'+alternatives[index-1].topic+'».';
+        (isRelated?related:exact).push(item);
+      }
+      if(result.sourceProvider)providers.add(result.sourceProvider);
+      for(const source of validSources(result.sources)){
+        const key=articleKey(source.url);
+        if(key&&!sources.has(key))sources.set(key,source);
+      }
+    }
+    if(!exact.length&&!related.length){if(primary.error)throw primary.error;return primary;}
+    return {...primary,ideas:[...exact,...related],sources:[...sources.values()],sourceProvider:[...providers].join(' · '),
+      matchType:exact.length?'exact':'related',sourceCoverage:null};
+  }
   const localTemplates={
     Romance:[
       ['El último adiós','Una despedida inesperada cambia el destino de dos enamorados cuando descubren que su separación fue provocada por un secreto familiar.','Despedida; carta oculta; reencuentro'],
@@ -452,7 +512,8 @@
       }else{
         setStatus(mode==='news'?'Buscando publicaciones recientes en medios y redes sociales públicas…':
           'La IA está preparando 10 títulos y sinopsis sobre «'+topic+'»…');
-        const result=await callEndpoint('/ideas',{topic,style,mode,subcategory});
+        const query={topic,style,mode,subcategory};
+        const result=mode==='news'?await findNews(query,epoch):await callEndpoint('/ideas',query);
         if(epoch!==state.epoch)return;
         if(!Array.isArray(result.ideas)||!result.ideas.length)throw Error('La búsqueda no devolvió propuestas verificables.');
         state.ideas=result.ideas.slice(0,10);
