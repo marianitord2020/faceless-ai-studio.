@@ -84,22 +84,22 @@ jobs:
             });
             console.log('SETUP:',setup);
             if(setup.button!=='Crear y descargar video'||!setup.hasAudio)throw Error('La voz no está integrada en el botón');
+            await page.evaluate(()=>{
+              const open=window.open;
+              const modal=HTMLDialogElement.prototype.showModal;
+              window.restorePopupAPIs=()=>{
+                window.open=open;
+                HTMLDialogElement.prototype.showModal=modal;
+              };
+              window.open=()=>{throw new Error('Popup blocked');};
+              HTMLDialogElement.prototype.showModal=()=>{throw new Error('Dialog unavailable');};
+            });
             await page.locator('#renderVideo').click();
-            const progress=page.locator('dialog.video-progress');
+            const progress=page.getByRole('dialog');
             await progress.getByLabel('Código privado').waitFor({state:'visible'});
             await progress.getByRole('button',{name:'Cerrar',exact:true}).click();
             await progress.waitFor({state:'detached'});
-            await page.evaluate(()=>{
-              const original=HTMLDialogElement.prototype.showModal;
-              window.restoreShowModal=()=>{HTMLDialogElement.prototype.showModal=original;};
-              HTMLDialogElement.prototype.showModal=()=>{throw new Error('Simulated unavailable dialog');};
-            });
-            await page.locator('#renderVideo').click();
-            const inlineProgress=page.locator('.vp-overlay .video-progress');
-            await inlineProgress.getByLabel('Código privado').waitFor({state:'visible'});
-            await inlineProgress.getByRole('button',{name:'Cerrar',exact:true}).click();
-            await inlineProgress.waitFor({state:'detached'});
-            await page.evaluate(()=>window.restoreShowModal());
+            await page.evaluate(()=>window.restorePopupAPIs());
             const voiceChange=await page.evaluate(()=>{
               const old=audioFile;
               const area=document.getElementById('aiVoiceAudioArea');

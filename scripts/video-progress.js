@@ -13,8 +13,10 @@
 
   window.facelessOpenVideoProgress = (retry) => {
     closeActive?.();
-    const dialog = document.createElement('dialog');
-    dialog.className = 'video-progress';
+    const dialog = document.createElement('section');
+    dialog.className = 'video-progress vp-inline';
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
     dialog.setAttribute('aria-labelledby', 'videoProgressTitle');
     dialog.innerHTML = `
       <button type="button" class="vp-close" aria-label="Cerrar">×</button>
@@ -43,29 +45,36 @@
     const code = access.querySelector('input');
     let current = steps.read;
 
-    let nativeModal = false;
     let closed = false;
     const opener = document.activeElement;
     const overlay = document.createElement('div');
     overlay.className = 'vp-overlay';
-    function cleanup() {
+    const background = [...document.body.children].filter(element => !element.inert);
+    function close() {
       if (closed) return;
       closed = true;
       preview.pause();
       preview.removeAttribute('src');
       dialog.remove();
       overlay.remove();
+      background.forEach(element => { element.inert = false; });
       if (closeActive === close) closeActive = null;
       if (opener?.isConnected && !opener.disabled) opener.focus();
     }
-    function close() {
-      if (nativeModal && dialog.open) dialog.close();
-      cleanup();
-    }
     find('.vp-close').onclick = close;
-    dialog.addEventListener('close', cleanup, { once: true });
     dialog.addEventListener('keydown', (event) => {
-      if (!nativeModal && event.key === 'Escape') close();
+      if (event.key === 'Escape') close();
+      if (event.key !== 'Tab') return;
+      const focusable = [...dialog.querySelectorAll('button, input, a[href], video[controls]')]
+        .filter(element => !element.disabled && element.getClientRects().length);
+      const first = focusable[0], last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
     });
     play.onclick = async () => {
       try {
@@ -76,22 +85,11 @@
       }
     };
 
-    document.body.append(dialog);
+    overlay.append(dialog);
+    document.body.append(overlay);
+    background.forEach(element => { element.inert = true; });
     closeActive = close;
-    try {
-      dialog.showModal();
-      nativeModal = dialog.open;
-    } catch {
-      // Embedded or older browsers can show the same panel in the page.
-    }
-    if (!nativeModal) {
-      document.body.append(overlay);
-      overlay.append(dialog);
-      dialog.setAttribute('open', '');
-      dialog.setAttribute('role', 'dialog');
-      dialog.classList.add('vp-inline');
-      find('.vp-close').focus();
-    }
+    find('.vp-close').focus();
     return {
       requestAccess(continueWithCode) {
         title.textContent = 'Introduce tu código privado';
