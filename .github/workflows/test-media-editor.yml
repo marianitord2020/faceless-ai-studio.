@@ -86,7 +86,7 @@ jobs:
             assert.equal(await page.locator('.editor-personalize[open]').count(),1);
             await page.locator('#videoVoiceCard summary').first().click();
             const geometry=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,cards:document.querySelector('.editor-video-cards').getBoundingClientRect().height}));
-            assert.ok(geometry.scroll<=geometry.width);assert.ok(geometry.cards<700);
+            assert.ok(geometry.scroll<=geometry.width);assert.equal(await page.locator(".editor-personalize[open]").count(),0);
             assert.equal(await page.locator('#manualPhotoSlots').isVisible(),false);assert.equal(await page.locator('#audioAttachment').isVisible(),false);
             const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a6d8AAAAASUVORK5CYII=','base64');
             const photo=name=>({name,mimeType:'image/png',buffer:png});
