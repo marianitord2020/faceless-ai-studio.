@@ -168,8 +168,8 @@
     '</div></div></div>';
     // La acción pertenece al formulario: en escritorio ocupa la cuarta columna y en Android permanece fija solo mientras el formulario está visible.
     root.querySelector('.studio-menu-view').appendChild(root.querySelector('.studio-fixed-action'));
-    function showMenu(){root.querySelector('.studio-menu-view').hidden=false;root.querySelector('.studio-results-view').hidden=true;root.classList.remove('studio-show-results');window.scrollTo({top:0,behavior:'instant'})}
-    function showResults(){root.querySelector('.studio-menu-view').hidden=true;root.querySelector('.studio-results-view').hidden=false;root.classList.add('studio-show-results');window.scrollTo({top:0,behavior:'instant'})}
+    function showMenu(){root.querySelector('.studio-menu-view').appendChild($id('studioWritten'));root.querySelector('.studio-menu-view').hidden=false;root.querySelector('.studio-results-view').hidden=true;root.classList.remove('studio-show-results');window.scrollTo({top:0,behavior:'instant'})}
+    function showResults(){root.querySelector('.studio-results-view').insertBefore($id('studioWritten'),root.querySelector('.studio-results-head'));root.querySelector('.studio-menu-view').hidden=true;root.querySelector('.studio-results-view').hidden=false;root.classList.add('studio-show-results');window.scrollTo({top:0,behavior:'instant'})}
     window.facelessShowStudioMenu=showMenu;window.facelessShowStudioResults=showResults;
     $id('studioBackToMenu').onclick=showMenu;
     root.querySelectorAll('[data-studio-nav]').forEach(button=>button.onclick=()=>{
@@ -493,11 +493,11 @@
     if(state.busy||state.building)return;
     if(!$id('studioWrittenText').value.trim()&&$id('studioWrittenUrl').value.trim()){if(!await window.facelessReadWrittenURL?.())return;}
     const text=$id('studioWrittenText').value.trim(),title=$id('studioWrittenTitle').value.trim();
-    if($id('studioWrittenLanguage').value!=='es'&&text.length>5000){setStatus('El relato se cargó completo. La traducción gratuita admite hasta 5.000 caracteres por vez: selecciona un fragmento antes de traducir. El original permanece en el campo.');return;}
-    if(text.length<100||!title){setStatus('Escribe un título y pega al menos 100 caracteres del relato.');return}
+    if($id('studioWrittenLanguage').value!=='es'&&text.length>5000){toast('La traducción admite hasta 5.000 caracteres por vez. Selecciona un fragmento. El original sigue en el campo.');return;}
+    if(text.length<100||!title){toast('Escribe un título y pega al menos 100 caracteres del relato.');return}
     let url=$id('studioWrittenUrl').value.trim();
-    try{if(url&&new URL(url).protocol!=='https:')throw Error()}catch{setStatus('El enlace original debe empezar con https://');return}
-    state.busy=true;state.epoch++;$id('studioImportWritten').disabled=true;
+    try{if(url&&new URL(url).protocol!=='https:')throw Error()}catch{toast('El enlace original debe empezar con https://');return}
+    showResults();state.busy=true;state.epoch++;$id('studioImportWritten').disabled=true;
     // Clear stale cards before translating; no previous story can be selected on failure.
     state.ideas=[];state.topic=title;initialState();renderFeature();
     try{

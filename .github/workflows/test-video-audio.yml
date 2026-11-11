@@ -51,7 +51,7 @@ jobs:
               window.facelessRecognizeLocal=async buffer=>{
                 const words=current().scenes.flatMap(scene=>scene.text.trim().split(/\s+/));
                 const step=buffer.duration/words.length;
-                return words.map((text,index)=>({text,start:index*step,end:(index+1)*step}));
+                return words.map((text,index)=>({word:text,start:index*step,end:(index+1)*step}));
               };
             });
             const setup=await page.evaluate(()=>{

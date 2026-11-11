@@ -95,3 +95,9 @@
  #discover .studio-menu-view .studio-intro{grid-row:2}
  #discover .studio-menu-view .compact-title{grid-row:1}
 }
+
+@media (max-width: 480px) {
+  #discover .studio-intro { display: none; }
+  #discover .compact-title { font-size: 25px; margin-bottom: 12px; }
+  #discover .studio-models { padding: 10px 12px; margin-bottom: 10px; }
+}
