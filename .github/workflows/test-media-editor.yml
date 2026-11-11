@@ -74,8 +74,8 @@ jobs:
             await page.evaluate(()=>window.scrollTo({top:document.documentElement.scrollHeight,behavior:'instant'}));
             const lastCard=await page.locator('#videoVoiceCard').boundingBox(),barBox=await page.locator('.editor-export-bar').boundingBox();assert.ok(lastCard.y+lastCard.height<=barBox.y,'Toolbar covers the last card');
             await page.evaluate(()=>{renderTab();window.scrollTo({top:0,behavior:'instant'})});
-            assert.equal(await page.locator('.editor-video-card').count(),3);
-            assert.deepEqual(await page.locator('.editor-video-card h3').allTextContents(),['Video automático sin créditos','Fotografías automáticas con IA','Narración automática en español']);
+            assert.equal(await page.locator('#videoAutoCard,#videoPhotosCard,#videoVoiceCard').count(),3);
+            assert.deepEqual(await page.locator('#videoAutoCard h3,#videoPhotosCard h3,#videoVoiceCard h3').allTextContents(),['Video automático sin créditos','Fotografías automáticas con IA','Narración automática en español']);
             assert.equal(await page.locator('.editor-personalize[open]').count(),0);
             assert.equal(await page.locator('#productionPass').isVisible(),false);
             assert.equal(await page.locator('#aiVoiceOption').isVisible(),false);
