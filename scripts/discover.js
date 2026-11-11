@@ -447,7 +447,7 @@
     }
     if(!exact.length&&!related.length){if(primary.error)throw primary.error;return primary;}
     return {...primary,ideas:[...exact,...related],sources:[...sources.values()],sourceProvider:[...providers].join(' · '),
-      matchType:exact.length?'exact':'related',sourceCoverage:null};
+      matchType:exact.length?'exact':'related'};
   }
   const localTemplates={
     Romance:[
@@ -500,7 +500,7 @@
     state.pass=studioAccess();
     state.topic=topic;state.style=style;state.subcategory=subcategory;state.mode=mode;state.source=local?'local':'ai';
     state.imageStyle=$id('studioImageStyle').value;
-    state.selected=0;state.covers.clear();state.sources=[];state.ideas=[];state.sourceProvider='';state.matchType='exact';state.sourceCoverage=null;initialState();
+    state.selected=0;state.covers.clear();state.sources=[];state.ideas=[];state.sourceProvider='';state.matchType='exact';state.sourceCoverage=null;$id('studioCoverage').hidden=true;initialState();
     $id('studioGenerate').disabled=true;
     try{
       if(local){
@@ -519,7 +519,7 @@
         state.ideas=result.ideas.slice(0,10);
         state.sources=Array.isArray(result.sources)?result.sources:[];
         state.checkedAt=result.checkedAt||null;state.sourceProvider=String(result.sourceProvider||'');state.matchType=result.matchType||'exact';state.sourceCoverage=result.sourceCoverage||null;
-        if(state.sourceCoverage){const c=state.sourceCoverage;$id('studioCoverage').textContent='Catálogo: '+c.publishers+' medios, '+c.dominicanPublishers+' dominicanos. En esta búsqueda: '+c.queriedPublishers.length+' medios consultados, además del índice GDELT. Cada resultado mantiene su fuente.';}
+        if(state.sourceCoverage){const c=state.sourceCoverage,coverage=$id('studioCoverage');coverage.hidden=false;coverage.textContent='Catálogo: '+c.publishers+' medios, '+c.dominicanPublishers+' dominicanos. Medios que respondieron a la consulta principal: '+c.queriedPublishers.length+'.';}
         setStatus((state.matchType==='related'?'No encontré coincidencias exactas. Estas son '+state.ideas.length+' opciones relacionadas':'✓ '+state.ideas.length+' '+(mode==='news'?'noticias vinculadas a fuentes':'propuestas con sinopsis'))+
           '. '+(mode==='news'?'Fuentes: '+state.sourceProvider+'. No se inventaron titulares para completar diez.':'Generando sus imágenes de portada…'));
       }
