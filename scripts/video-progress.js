@@ -9,10 +9,10 @@
     captions: [70, 'Generando voz... Añadiendo subtítulos...', 'la sincronización de subtítulos'],
     render: [85, 'Uniendo video, voz y subtítulos...', 'el montaje del video'],
   };
-  let activeDialog;
+  let closeActive;
 
   window.facelessOpenVideoProgress = (retry) => {
-    if (activeDialog?.open) activeDialog.close();
+    closeActive?.();
     const dialog = document.createElement('dialog');
     dialog.className = 'video-progress';
     dialog.setAttribute('aria-labelledby', 'videoProgressTitle');
@@ -27,7 +27,7 @@
         <label>Código privado <input type="password" minlength="16" required autocomplete="new-password"></label>
         <button type="submit" class="vp-action">CONTINUAR</button>
       </form>
-      <button type="button" class="vp-action" disabled>Creando... Por favor espera</button>
+      <button type="button" class="vp-action vp-working" disabled>Creando... Por favor espera</button>
       <a class="vp-action vp-download" hidden>⬇️ DESCARGAR VIDEO</a>
       <button type="button" class="vp-preview-button" hidden>VER VISTA PREVIA</button>
     `;
@@ -36,28 +36,62 @@
     const preview = find('video');
     const meter = find('progress');
     const status = find('.vp-status');
-    const action = find('button.vp-action');
+    const action = find('.vp-working');
     const download = find('.vp-download');
     const play = find('.vp-preview-button');
     const access = find('.vp-access');
     const code = access.querySelector('input');
     let current = steps.read;
 
-    find('.vp-close').onclick = () => dialog.close();
-    dialog.addEventListener('close', () => {
+    let nativeModal = false;
+    let closed = false;
+    const opener = document.activeElement;
+    const overlay = document.createElement('div');
+    overlay.className = 'vp-overlay';
+    function cleanup() {
+      if (closed) return;
+      closed = true;
       preview.pause();
       preview.removeAttribute('src');
       dialog.remove();
-      if (activeDialog === dialog) activeDialog = null;
-    }, { once: true });
-    play.onclick = () => {
-      preview.focus();
-      preview.play().catch(() => { status.textContent = 'Pulsa play en la vista previa.'; });
+      overlay.remove();
+      if (closeActive === close) closeActive = null;
+      if (opener?.isConnected && !opener.disabled) opener.focus();
+    }
+    function close() {
+      if (nativeModal && dialog.open) dialog.close();
+      cleanup();
+    }
+    find('.vp-close').onclick = close;
+    dialog.addEventListener('close', cleanup, { once: true });
+    dialog.addEventListener('keydown', (event) => {
+      if (!nativeModal && event.key === 'Escape') close();
+    });
+    play.onclick = async () => {
+      try {
+        if (preview.ended) preview.currentTime = 0;
+        await preview.play();
+      } catch {
+        status.textContent = 'Pulsa ▶ en el reproductor. Si el navegador bloquea el video, puedes descargarlo y reproducirlo en tu dispositivo.';
+      }
     };
 
     document.body.append(dialog);
-    activeDialog = dialog;
-    dialog.showModal();
+    closeActive = close;
+    try {
+      dialog.showModal();
+      nativeModal = dialog.open;
+    } catch {
+      // Embedded or older browsers can show the same panel in the page.
+    }
+    if (!nativeModal) {
+      document.body.append(overlay);
+      overlay.append(dialog);
+      dialog.setAttribute('open', '');
+      dialog.setAttribute('role', 'dialog');
+      dialog.classList.add('vp-inline');
+      find('.vp-close').focus();
+    }
     return {
       requestAccess(continueWithCode) {
         title.textContent = 'Introduce tu código privado';
@@ -88,7 +122,7 @@
         if (!file?.href || !file.download.toLowerCase().endsWith('.mp4')) {
           throw new Error('No se pudo preparar el archivo MP4.');
         }
-        if (!dialog.open) return;
+        if (closed) return;
         meter.value = 100;
         title.textContent = '¡Tu video está listo!';
         status.textContent = '100% · MP4 listo para descargar';
@@ -102,14 +136,14 @@
         action.hidden = true;
       },
       fail(error) {
-        if (!dialog.open) return;
+        if (closed) return;
         title.textContent = 'Hubo un error en ' + current[2] + ', inténtalo de nuevo';
         status.textContent = error.message || String(error);
         action.textContent = 'REINTENTAR';
         action.disabled = false;
         action.onclick = () => {
           action.disabled = true;
-          dialog.close();
+          close();
           retry();
         };
       },

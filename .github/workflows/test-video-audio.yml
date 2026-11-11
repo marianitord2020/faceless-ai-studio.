@@ -89,6 +89,17 @@ jobs:
             await progress.getByLabel('Código privado').waitFor({state:'visible'});
             await progress.getByRole('button',{name:'Cerrar',exact:true}).click();
             await progress.waitFor({state:'detached'});
+            await page.evaluate(()=>{
+              const original=HTMLDialogElement.prototype.showModal;
+              window.restoreShowModal=()=>{HTMLDialogElement.prototype.showModal=original;};
+              HTMLDialogElement.prototype.showModal=()=>{throw new Error('Simulated unavailable dialog');};
+            });
+            await page.locator('#renderVideo').click();
+            const inlineProgress=page.locator('.vp-overlay .video-progress');
+            await inlineProgress.getByLabel('Código privado').waitFor({state:'visible'});
+            await inlineProgress.getByRole('button',{name:'Cerrar',exact:true}).click();
+            await inlineProgress.waitFor({state:'detached'});
+            await page.evaluate(()=>window.restoreShowModal());
             const voiceChange=await page.evaluate(()=>{
               const old=audioFile;
               const area=document.getElementById('aiVoiceAudioArea');

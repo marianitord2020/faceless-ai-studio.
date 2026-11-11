@@ -46,3 +46,12 @@
   border: 1px solid #625578; border-radius: 10px;
   background: #211831; color: #fff;
 }
+
+.vp-overlay {
+  position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center;
+  overflow: auto; background: #140c27d9;
+}
+.video-progress.vp-inline {
+  position: relative; display: block; margin: 14px auto; overflow: auto;
+  max-height: calc(100vh - 28px); max-height: calc(100dvh - 28px);
+}
