@@ -1,0 +1,22 @@
+name = "faceless-access-prueba"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+workers_dev = true
+preview_urls = false
+
+[assets]
+directory = "./.assets"
+binding = "ASSETS"
+run_worker_first = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "faceless-cuentas"
+database_id = "REEMPLAZAR_CON_ID_D1"
+
+[[services]]
+binding = "MEDIA"
+service = "faceless-images"
+
+[triggers]
+crons = ["17 4 * * *"]
