@@ -56,9 +56,26 @@
    cancel.hidden=false;let words;
    try{words=recognitionCache.get(file)||await facelessRecognizeLocal(decoded,message=>{if(status.isConnected)status.textContent=message});recognitionCache.set(file,words);}finally{cancel.hidden=true;}
    if(ticket!==operation||audioFile!==file||current()?.id!==p.id||FacelessTiming.signature(p)!==signature)throw Error('El proyecto o el audio cambió durante el análisis. Vuelve a sincronizar.');
-   const aligned=p.scenes.some(scene=>!String(scene.text||'').trim())?FacelessTiming.transcribed(p,words,decoded.duration):FacelessTiming.align(p,words,decoded.duration);
+   let aligned;
+   try{
+    aligned=p.scenes.some(scene=>!String(scene.text||'').trim())?FacelessTiming.transcribed(p,words,decoded.duration):FacelessTiming.align(p,words,decoded.duration);
+   }catch(error){
+    // Only reuse estimates for audio generated from this exact project and script.
+    if(file.facelessManual||file.facelessSignature!==facelessVoiceSignature(p))throw error;
+    const lengths=p.scenes.map(scene=>Number(scene.duration));
+    const total=lengths.reduce((sum,length)=>sum+length,0);
+    const validCuts=lengths.every(length=>Number.isFinite(length)&&length>0)&&Math.abs(total-decoded.duration)<0.25;
+    aligned=validCuts
+      ?FacelessTiming.fromSegments(p,lengths,total/decoded.duration)
+      :FacelessTiming.estimated(p,decoded.duration);
+    aligned.audioAlignment.method='tts-estimated';
+   }
    applyTiming(p,aligned);
    invalidateVideo();await saveAudio(p,file,Boolean(file.facelessManual));photoRefresh(p.id);window.facelessRefreshManualTiming?.();const captions=id('manualCaptions');if(captions)captions.value=p.scenes.map(s=>s.text).join('\n');updatePreview();
+   if(aligned.audioAlignment.method==='tts-estimated'){
+    status.textContent='✓ Narración recuperada. Los subtítulos usan tiempos aproximados sobre la duración real del audio.';
+    return;
+   }
    status.textContent='✓ IA local: voz reconocida y alineada con el guion ('+aligned.audioAlignment.coverage+' % de coincidencia). La vista previa y la descarga usarán los mismos tiempos. Revisa el resultado antes de compartirlo.';
   }
   window.facelessSyncGeneratedAudio=async(project,file,decoded)=>{
@@ -83,7 +100,7 @@
   window.facelessAttachManualAudio=attach;
   window.facelessEnsureAudioSync=async({force=false}={})=>{
    if(!audioFile||audioFileProjectId!==p.id)return;
-   if((p.audioAlignment?.method==='speech'||(!force&&['manual','tts-segments'].includes(p.audioAlignment?.method)))&&p.subtitleTextSignature===FacelessTiming.signature(p))return;
+   if((p.audioAlignment?.method==='speech'||(!force&&['manual','tts-segments','tts-estimated'].includes(p.audioAlignment?.method)))&&p.subtitleTextSignature===FacelessTiming.signature(p))return;
    const file=audioFile;busy(true);try{await sync(file,await decode(file));}finally{busy(false);}
   };
   id('audio').onchange=event=>attach(event.target.files[0]);

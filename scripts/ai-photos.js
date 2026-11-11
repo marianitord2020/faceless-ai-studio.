@@ -382,7 +382,7 @@ function mountFacelessProduction(project){
       popup?.stage('captions');
       status.textContent='3 de 4 · Sincronizando palabras, voz e imágenes con IA…';
       await window.facelessEnsureAudioSync?.();cancelled();
-      if(!['speech','tts-segments','manual'].includes(project.audioAlignment?.method)||project.subtitleTextSignature!==FacelessTiming.signature(project))throw Error('La IA no completó la sincronización de voz. Pulsa Crear video completo para reintentar.');
+      if(!['speech','tts-segments','tts-estimated','manual'].includes(project.audioAlignment?.method)||project.subtitleTextSignature!==FacelessTiming.signature(project))throw Error('La IA no completó la sincronización de voz. Pulsa Crear video completo para reintentar.');
       popup?.stage('render');
       status.textContent='4 de 4 · Montando el video con voz. Mantén esta página abierta…';
       const exported=await renderVideo(popup?{format:'mp4'}:undefined);cancelled();

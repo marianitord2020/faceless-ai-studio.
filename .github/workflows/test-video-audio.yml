@@ -144,7 +144,17 @@ jobs:
             await page.waitForFunction(()=>Boolean(previewTimer));
             await page.locator('#previewVideo').click();
             await page.evaluate(()=>window.restoreMediaPlay());
+            await page.evaluate(()=>{
+              audioFile.facelessSignature=facelessVoiceSignature(current());
+              const original=window.facelessRecognizeLocal;
+              window.restoreRecognition=()=>{window.facelessRecognizeLocal=original;};
+              window.facelessRecognizeLocal=async()=>[{word:'diferente',start:0,end:1}];
+            });
             const exported=await page.evaluate(()=>renderVideo());
+            const timingMethod=await page.evaluate(()=>current().audioAlignment?.method);
+            if(timingMethod!=='tts-estimated')throw Error('La voz guardada debe exportar con tiempos aproximados');
+            await page.evaluate(()=>window.restoreRecognition());
+
             if(!exported)throw Error(await page.locator('#renderStatus').textContent());
             const result=await page.evaluate(()=>({
               status:document.getElementById('renderStatus')?.textContent,
