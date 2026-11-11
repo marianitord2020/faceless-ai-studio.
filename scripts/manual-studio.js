@@ -60,8 +60,10 @@
    if(tool==='scene'){
     inspector.append(node('h4','','Escena '+(selected+1)));
     const actions=node('div','cut-scene-actions');inspector.append(actions);
-    const change=button('▧ Reemplazar foto',()=>{photoTarget=editIndex;scenePhotoInput.click();});
-    const remove=button('Quitar foto',()=>{const slot=id('manualPhotoSlots')?.querySelector('[data-scene="'+editIndex+'"]');const target=[...(slot?.querySelectorAll('button')||[])].find(b=>b.textContent==='Quitar foto');if(target)target.click();else feedback.textContent='Esta escena todavía no tiene foto.';});actions.append(change,remove);
+    const addPhotos=button('＋ Agregar fotos',()=>id('pickOwnPhotos').click());
+    const hasPhoto=facelessProjectPhotos(p.id).has(editIndex);
+    const change=button(hasPhoto?'Reemplazar foto':'Agregar foto a esta escena',()=>{photoTarget=editIndex;scenePhotoInput.click();});
+    const remove=button('Quitar foto',()=>{const slot=id('manualPhotoSlots')?.querySelector('[data-scene="'+editIndex+'"]');const target=[...(slot?.querySelectorAll('button')||[])].find(b=>b.textContent==='Quitar foto');if(target)target.click();else feedback.textContent='Esta escena todavía no tiene foto.';});actions.append(addPhotos,change,remove);
     const start=field('Inicio de escena (s)','number',scene.time.toFixed(2)),end=field('Fin de escena (s)','number',(scene.time+scene.duration).toFixed(2));for(const f of [start,end]){f.step='.01';f.min='0';f.max=p.duration;}start.disabled=selected===0;end.disabled=selected===p.scenes.length-1;
     button('Guardar duración',()=>{try{const before=JSON.stringify(p);FacelessSceneEdit.bounds(p,editIndex,editIndex===0?0:Number(start.value),editIndex===p.scenes.length-1?p.duration:Number(end.value));history.push(before);if(history.length>20)history.shift();id('cutUndo').disabled=false;commit('Tiempos de escena guardados. El audio conserva su sincronización.');}catch(error){feedback.textContent=error.message;}});
     inspector.append(node('p','cut-hint','Ajusta el encuadre y el movimiento de esta escena.'));
