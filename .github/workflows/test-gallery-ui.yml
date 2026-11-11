@@ -90,6 +90,13 @@ jobs:
             assert.equal(project.duration,30);assert.equal(project.voice,'male');assert.equal(project.image,'anime');assert.equal(project.showSources,false);assert.equal(project.sources,1);assert.ok(project.text.includes('La Romana'));
             assert.equal(await page.evaluate(()=>JSON.stringify(localStorage).includes('fixture-compact-passcode')),false);
             await page.evaluate(()=>route('discover'));assert.equal(await page.locator('.studio-menu-view').isVisible(),true);assert.equal(await page.locator('.studio-results-view').isVisible(),false);
+            await page.evaluate(()=>{document.getElementById('studioPass').value='';});
+            await page.locator('#studioTopic').fill('Otra historia en La Romana');
+            await page.locator('#studioGenerate').click();
+            await page.waitForFunction(()=>document.querySelectorAll('#studioCards .studio-card').length===10);
+            assert.equal(request.topic,'Otra historia en La Romana');
+            assert.equal(await page.evaluate(()=>JSON.stringify(sessionStorage).includes('fixture-compact-passcode')),false);
+            await page.locator('#studioBackToMenu').click();
             await page.getByRole('tab',{name:'Actualidad',exact:true}).click();await page.locator('[data-menu="studioGenre"] [data-choice="Deportes"]').click();
             assert.equal(await page.locator('#studioMode').inputValue(),'news');
             await page.locator('#studioSource').selectOption('local');assert.equal(await page.locator('#studioWritten').isVisible(),true);

@@ -188,7 +188,7 @@
       let text='Ajustes opcional • '+$id('studioDuration').value+'s • '+names[$id('studioImageStyle').value];
       if($id('studioVoice').value!=='automatic')text+=' • Voz '+$id('studioVoice').selectedOptions[0].textContent;
       if(!$id('studioShowSources').checked)text+=' • Sin fuentes';
-      if($id('studioPass').value.trim())text+=' • Acceso listo';
+      if(studioAccess())text+=' • Acceso listo';
       $id('studioVideoSummary').textContent=text;
     }
     for(const key of ['studioDuration','studioImageStyle','studioVoice','studioShowSources'])$id(key).addEventListener('change',updateVideoSummary);
@@ -246,9 +246,8 @@
       $id('studioMode').value=local?'fiction':['Noticias','Farándula','Entretenimiento','Deportes'].includes(genre.value)?'news':['Historia','Curiosidades','Motivación','Educativo'].includes(genre.value)?'factual':'fiction';
       $id('studioReddit').href='https://www.reddit.com/search/?'+new URLSearchParams({q:$id('studioTopic').value});
     };
-    const readerAccess=()=>[$id('studioPass').value.trim(),state.pass,window.facelessProductionPasscode,typeof facelessImagePasscode==='string'?facelessImagePasscode:'',typeof facelessVoicePassword==='string'?facelessVoicePassword:''].find(code=>typeof code==='string'&&code.length>=16)||'';
     const setReaderAccess=code=>{state.pass=code;$id('studioPass').value=code;window.facelessProductionPasscode=code;$id('studioPass').dispatchEvent(new Event('input',{bubbles:true}));};
-    window.facelessMountUrlReader?.({read:async url=>{state.pass=readerAccess();return callEndpoint('/read-url',{url});},getAccess:readerAccess,setAccess:setReaderAccess,busy:()=>state.busy||state.building});
+    window.facelessMountUrlReader?.({read:async url=>{state.pass=studioAccess();return callEndpoint('/read-url',{url});},getAccess:studioAccess,setAccess:setReaderAccess,busy:()=>state.busy||state.building});
     $id('studioImportWritten').onclick=importWritten;
     $id('studioTopic').addEventListener('input',()=>{$id('studioReddit').href='https://www.reddit.com/search/?'+new URLSearchParams({q:$id('studioTopic').value})});
     $id('studioDuration').onchange=renderFeature;
@@ -378,6 +377,7 @@
       feature.appendChild(details);
     }
   }
+  const studioAccess=()=>[$id('studioPass')?.value.trim(),state.pass,window.facelessProductionPasscode,typeof facelessImagePasscode==='string'?facelessImagePasscode:'',typeof facelessVoicePassword==='string'?facelessVoicePassword:''].find(code=>typeof code==='string'&&code.length>=16)||'';
   async function callEndpoint(path,payload){
     const pass=state.pass;
     if(pass.length<16)throw Error('Introduce el mismo APP_PASSCODE de fotos y voces (mínimo 16 caracteres).');
@@ -386,6 +386,7 @@
     let data;
     try{data=await response.json()}catch{throw Error('La API no devolvió una respuesta válida.')}
     if(!response.ok)throw Error(String(data?.error||'HTTP '+response.status).slice(0,400));
+    window.facelessProductionPasscode=pass;
     return data;
   }
   const localTemplates={
@@ -432,11 +433,11 @@
     const mode=requestedMode;
     if(topic.length<5){$id('studioTopic').setCustomValidity('Escribe un tema de al menos cinco caracteres.');$id('studioTopic').reportValidity();return}
     $id('studioTopic').setCustomValidity('');
-    if(!local&&($id('studioPass').value.trim()||state.pass).length<16){$id('studioVideoOptions').open=true;$id('studioPass').setCustomValidity('Introduce tu código de acceso (mínimo 16 caracteres).');$id('studioPass').reportValidity();return}
+    if(!local&&studioAccess().length<16){$id('studioVideoOptions').open=true;$id('studioPass').setCustomValidity('Introduce tu código de acceso (mínimo 16 caracteres).');$id('studioPass').reportValidity();return}
     if(local&&mode!=='fiction'){setStatus('Las noticias y los documentales reales requieren IA y fuentes actuales. Cambia el origen a «IA — Gemini».');return}
     window.facelessShowStudioResults();
     state.busy=true;state.epoch++;const epoch=state.epoch;
-    state.pass=$id('studioPass').value.trim()||state.pass;
+    state.pass=studioAccess();
     state.topic=topic;state.style=style;state.subcategory=subcategory;state.mode=mode;state.source=local?'local':'ai';
     state.imageStyle=$id('studioImageStyle').value;
     state.selected=0;state.covers.clear();state.sources=[];state.ideas=[];state.sourceProvider='';state.matchType='exact';state.sourceCoverage=null;initialState();
@@ -473,7 +474,7 @@
   async function adaptWritten(){
     if(state.busy||state.building)return;
     const idea=selectedIdea();if(!idea)return;
-    state.pass=$id('studioPass').value.trim()||state.pass;
+    state.pass=studioAccess();
     if(state.pass.length<16){setStatus('Para crear una historia nueva con IA necesitas el APP_PASSCODE. El texto publicado sigue disponible sin IA.');return}
     state.busy=true;state.epoch++;renderFeature();
     try{
@@ -600,7 +601,7 @@
     const idea=selectedIdea();if(!idea)return;
     state.epoch++; // Stop background covers before developing the chosen story.
     state.imageStyle=$id('studioImageStyle').value;
-    state.pass=$id('studioPass').value.trim()||state.pass;
+    state.pass=studioAccess();
     state.building=true;renderFeature();
     const duration=Number($id('studioDuration').value)||60;
     const written=state.source==='local';
