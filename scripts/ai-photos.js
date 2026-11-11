@@ -189,10 +189,15 @@ function mountAIPhotoControls(project, updatePreview) {
           cartoon:'Caricatura ilustrada de gran calidad con colores vivos.',
           historical:'Recreación histórica artística respetuosa de la época y vestimenta, personajes reales reconocibles cuando corresponda, no fingir una fotografía histórica auténtica.'
         };
-        const prompt = String(scene.prompt || ('Escena ' + (i + 1) + ': ' + scene.text + '. ' + project.topic)) +
-          '. Tema exacto: '+project.topic+'. '+(visualPresets[imageStyleSelect.value]||visualPresets.cinematic)+
-          ' Personajes y escenario consistentes entre escenas. Sin letras ni marcas de agua. ' +
-          'Estilo narrativo: ' + project.style + '. Formato ' + project.format + '.';
+        const prompt = [
+          'Crea una sola imagen que represente la acción, el sujeto y el lugar de esta escena.',
+          'Narración exacta de la escena: ' + String(scene.text||'').trim().slice(0,650),
+          'Tema del video: ' + String(project.topic||'').trim().slice(0,160),
+          scene.prompt ? 'Guía visual secundaria, úsala solo si coincide con la narración: ' + String(scene.prompt).trim().slice(0,220) : '',
+          'Si la narración es abstracta, muestra un objeto o una acción concreta que explique su idea principal. Evita imágenes genéricas.',
+          project.scriptMode==='noticias'||project.scriptMode==='news' ? 'Ilustración editorial. Si faltan datos visuales, usa detalles verificables o elementos contextuales. Evita recrear como real un hecho sin evidencia.' : '',
+          (visualPresets[imageStyleSelect.value]||visualPresets.cinematic)+' Formato '+project.format+'. Mantén la continuidad visual cuando se repitan personajes o lugares. Sin letras ni marcas de agua.'
+        ].filter(Boolean).join('\n');
         const data = await facelessFetchPhoto(facelessImagePasscode, prompt, project.format);
         const photo = new Image();
         await new Promise((resolve, reject) => {
