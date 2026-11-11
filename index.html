@@ -145,18 +145,18 @@ function renderVideoTab(p){
  $('startMic').onclick=startMicrophoneRecording;$('stopMic').onclick=stopMicrophoneRecording;
  updateView();
  updateAudioAttachmentUI();
- $('previewVideo').onclick=async()=>{
+ $('previewVideo').onclick=()=>{
    if(window.facelessMediaBusy||rendering)return;
    if(previewTimer){stopPreview();$('previewVideo').textContent='Vista previa';return}
    stopPreview();
-   if(audioFile){try{await window.facelessEnsureAudioSync?.();}catch(error){$('renderStatus').textContent='No se pudo sincronizar la vista previa: '+error.message;return;}}
    $('videoResult').pause();
    $('videoResult').classList.add('hidden');
    view.classList.remove('hidden');
    if(audioFile){
      previewAudioURL=URL.createObjectURL(audioFile);
      previewAudio=new Audio(previewAudioURL);previewAudio.volume=FacelessSceneEdit.volume(p);
-     previewAudio.play().catch(()=>{const el=$('renderStatus');if(el)el.textContent='El navegador bloqueó el sonido. Escucha la narración desde el reproductor de voz.';stopPreview();$('previewVideo').textContent='Vista previa'});
+     const playingAudio=previewAudio;
+     playingAudio.play().catch(()=>{if(previewAudio!==playingAudio)return;stopPreview();$('renderStatus').textContent='No se pudo reproducir el audio. Pulsa Vista previa para reintentar.';});
    }
    window.facelessPlayOwnVideo?.().catch(error=>toast(error.message));
    const start=performance.now(),duration=p.duration*1000;
@@ -338,5 +338,5 @@ route('home');
   };
 })();;
  
-</script><script src="scripts/video-progress.js?v=2"></script><script src="scripts/ai-photos.js?v=13"></script><script src="scripts/ai-voice.js?v=12"></script><script src="scripts/written-stories.js?v=1"></script><script src="scripts/cinematic-video.js?v=6"></script><script src="scripts/media-timing.js?v=4"></script><script src="scripts/manual-timing.js?v=2"></script><script src="scripts/local-speech.js?v=2"></script><script src="scripts/ai-client.js?v=1"></script><script src="scripts/stock-photos.js?v=4"></script><script src="scripts/media-editor.js?v=12"></script><script src="scripts/studio-menus.js?v=2"></script><script src="scripts/editor-layout.js?v=9"></script><script src="scripts/url-reader.js?v=2"></script><script src="scripts/discover.js?v=19"></script><script src="scripts/vendor/fix-webm-duration.js?v=1"></script><script src="scripts/video-export.js?v=1"></script><script src="scripts/own-video.js?v=4"></script><script src="scripts/scene-edit.js?v=1"></script><script src="scripts/manual-studio.js?v=1"></script><script src="scripts/flows.js?v=4"></script></body></html>
+</script><script src="scripts/video-progress.js?v=2"></script><script src="scripts/ai-photos.js?v=13"></script><script src="scripts/ai-voice.js?v=12"></script><script src="scripts/written-stories.js?v=1"></script><script src="scripts/cinematic-video.js?v=6"></script><script src="scripts/media-timing.js?v=4"></script><script src="scripts/manual-timing.js?v=2"></script><script src="scripts/local-speech.js?v=2"></script><script src="scripts/ai-client.js?v=1"></script><script src="scripts/stock-photos.js?v=4"></script><script src="scripts/media-editor.js?v=12"></script><script src="scripts/studio-menus.js?v=2"></script><script src="scripts/editor-layout.js?v=9"></script><script src="scripts/url-reader.js?v=2"></script><script src="scripts/discover.js?v=19"></script><script src="scripts/vendor/fix-webm-duration.js?v=1"></script><script src="scripts/video-export.js?v=1"></script><script src="scripts/own-video.js?v=4"></script><script src="scripts/scene-edit.js?v=1"></script><script src="scripts/manual-studio.js?v=2"></script><script src="scripts/flows.js?v=4"></script></body></html>
 

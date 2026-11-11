@@ -108,6 +108,17 @@ jobs:
             });
             console.log('CAMBIO DE VOZ:',voiceChange);
             if(!voiceChange.ok||voiceChange.button!=='Crear y descargar video')throw Error('La voz anterior no se reemplazó correctamente');
+            const syncCallsBeforePreview=await page.evaluate(()=>{
+              window.previewSyncCalls=0;
+              const sync=window.facelessEnsureAudioSync;
+              window.facelessEnsureAudioSync=(...args)=>{window.previewSyncCalls++;return sync(...args);};
+              return window.previewSyncCalls;
+            });
+            await page.locator('#previewVideo').click();
+            await page.waitForFunction(()=>previewAudio?.currentTime>0);
+            await page.locator('#previewVideo').click();
+            if(await page.evaluate(()=>window.previewSyncCalls)!==syncCallsBeforePreview)
+              throw Error('La vista previa esperó por la sincronización');
             const exported=await page.evaluate(()=>renderVideo());
             if(!exported)throw Error(await page.locator('#renderStatus').textContent());
             const result=await page.evaluate(()=>({

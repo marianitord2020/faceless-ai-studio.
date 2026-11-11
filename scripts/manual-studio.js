@@ -34,7 +34,6 @@
   async function toggle(){
    if(window.facelessMediaBusy||rendering)return;if(previewTimer){stopPreview();renderInspector();return;}
    try{
-    if(audioFile)await window.facelessEnsureAudioSync?.();
     if(destroyed||!shell.isConnected)return;
     if(seconds>=p.duration-.05)seconds=0;
     id('videoResult').pause();id('videoResult').classList.add('hidden');view.classList.remove('hidden');
