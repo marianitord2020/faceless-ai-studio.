@@ -46,10 +46,18 @@ jobs:
             const reveal=async selector=>{await page.locator(selector).evaluate(el=>{for(let parent=el.parentElement;parent;parent=parent.parentElement)if(parent.tagName==='DETAILS')parent.open=true;});await page.waitForTimeout(30);};
             await page.goto('http://127.0.0.1:4173/');
             await page.waitForFunction(()=>window.facelessStudioReady===true,{timeout:15000});
+            // Supply deterministic word timings for the test audio, which is a tone.
+            await page.evaluate(()=>{
+              window.facelessRecognizeLocal=async buffer=>{
+                const words=current().scenes.flatMap(scene=>scene.text.trim().split(/\s+/));
+                const step=buffer.duration/words.length;
+                return words.map((text,index)=>({text,start:index*step,end:(index+1)*step}));
+              };
+            });
             const setup=await page.evaluate(()=>{
               const proj={
                 id:'ci-audio',topic:'Video con voz integrada',title:'Prueba de audio',
-                platform:'TikTok',duration:4,format:'9:16',style:'Curiosidades',
+                platform:'TikTok',duration:4,format:'9:16',style:'Curiosidades',exportFormat:'webm',exportHeight:720,
                 date:new Date().toISOString(),narration:'Narración de prueba',
                 hook:'Narración de prueba',
                 scenes:[{time:0,duration:4,text:'Narración de prueba',prompt:'Prueba visual'}]
@@ -95,8 +103,8 @@ jobs:
             });
             console.log('CAMBIO DE VOZ:',voiceChange);
             if(!voiceChange.ok||voiceChange.button!=='Crear y descargar video')throw Error('La voz anterior no se reemplazó correctamente');
-            await page.locator('#renderVideo').click();
-            await page.waitForFunction(()=>!rendering,{timeout:30000});
+            const exported=await page.evaluate(()=>renderVideo());
+            if(!exported)throw Error(await page.locator('#renderStatus').textContent());
             const result=await page.evaluate(()=>({
               status:document.getElementById('renderStatus')?.textContent,
               videoUrl:previewURL,
@@ -138,7 +146,7 @@ jobs:
             await page.evaluate(()=>{
               const p={id:'ci-complete',topic:'Una historia de prueba',title:'Producción reanudable',
                 platform:'TikTok',duration:4,format:'9:16',style:'Romance',date:new Date().toISOString(),
-                imageStyle:'cinematic',voicePreset:'female',narration:'Uno. Dos.',
+                imageStyle:'cinematic',voicePreset:'female',narration:'Uno. Dos.',exportFormat:'webm',exportHeight:720,
                 scenes:[{time:0,duration:2,text:'Uno.',prompt:'A red handbag in a street'},
                   {time:2,duration:2,text:'Dos.',prompt:'The same red handbag at home'}]};
               projects.unshift(p);persist();activeId=p.id;tab='video';resetMedia();route('editor');
@@ -155,7 +163,7 @@ jobs:
             if(imageCalls!==3||voiceCalls!==2)throw Error('La voz no se detuvo en la segunda escena');
             failSecondVoice=false;
             await page.locator('#productionStart').click();
-            await page.waitForFunction(()=>!window.facelessProductionBusy && document.getElementById('productionStatus').textContent.includes('Video completo listo'),{timeout:30000});
+            await page.waitForFunction(()=>!window.facelessProductionBusy && document.getElementById('productionStatus').textContent.includes('Video completo listo'),null,{timeout:30000});
             if(imageCalls!==3||voiceCalls!==3)throw Error('Se repitieron medios terminados al retomar');
             if(!await page.locator('#downloadArea a').isVisible())throw Error('Falta descarga del video completo');
             const completeDownloadPromise=page.waitForEvent('download');

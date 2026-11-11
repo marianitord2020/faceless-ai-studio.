@@ -11,7 +11,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
  });
  await page.goto('http://127.0.0.1:4173/');await page.waitForFunction(()=>window.facelessStudioReady);
  await page.locator('#home [data-flow="ai"]').click();
- await page.locator('#studioSourceQuick').selectOption('local');
+ await page.locator('#studioSource').selectOption('local');
  await page.locator('#studioWrittenUrl').fill('https://example.org/story');
  await page.locator('#studioUrlAccess').waitFor({state:'visible'});
  assert.equal(calls,0,'Do not make unauthenticated requests or erase text.');

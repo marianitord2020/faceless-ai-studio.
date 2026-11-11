@@ -39,7 +39,8 @@ jobs:
             const page=await browser.newPage({viewport:{width:390,height:844}});
             const errors=[];page.on('pageerror',e=>errors.push(e.message));
             await page.goto('http://127.0.0.1:4173/');await page.waitForFunction(()=>window.facelessStudioReady);
-            assert.equal(await page.locator('.compact-title').textContent(),'Tu próximo video');
+            await page.locator('#home [data-flow=ai]').click();
+            assert.equal(await page.locator('.compact-title').textContent(),'Generador de Relatos y Noticias con IA');
             assert.equal(await page.locator('#studioVideoOptions').getAttribute('open'),null);
             assert.equal(await page.locator('.studio-results-view').isVisible(),false);
             assert.equal(await page.locator('.choice-copy small:visible').count(),0);
@@ -88,10 +89,10 @@ jobs:
             const project=await page.evaluate(()=>({title:current().title,duration:current().duration,voice:current().voicePreset,image:current().imageStyle,sources:current().sources.length,showSources:current().showSources,text:current().narration}));
             assert.equal(project.duration,30);assert.equal(project.voice,'male');assert.equal(project.image,'anime');assert.equal(project.showSources,false);assert.equal(project.sources,1);assert.ok(project.text.includes('La Romana'));
             assert.equal(await page.evaluate(()=>JSON.stringify(localStorage).includes('fixture-compact-passcode')),false);
-            await page.getByRole('button',{name:'Crear video',exact:true}).click();assert.equal(await page.locator('.studio-menu-view').isVisible(),true);assert.equal(await page.locator('.studio-results-view').isVisible(),false);
+            await page.evaluate(()=>route('discover'));assert.equal(await page.locator('.studio-menu-view').isVisible(),true);assert.equal(await page.locator('.studio-results-view').isVisible(),false);
             await page.getByRole('tab',{name:'Actualidad',exact:true}).click();await page.locator('[data-menu="studioGenre"] [data-choice="Deportes"]').click();
             assert.equal(await page.locator('#studioMode').inputValue(),'news');
-            await page.locator('[data-menu="studioSource"] [data-choice="local"]').click();assert.equal(await page.locator('#studioWritten').isVisible(),false);
+            await page.locator('#studioSource').selectOption('local');assert.equal(await page.locator('#studioWritten').isVisible(),true);
             assert.deepEqual(errors,[]);console.log('PASS: reference order, three tabs with four cards each, 2x2 at all sizes, 1.5-screen limit, five collapsed settings, summary updates, fixed CTA, exact topic, sports news, voice/image/source persistence and separate results view');
             await browser.close();
           })().catch(e=>{console.error(e);process.exit(1)});

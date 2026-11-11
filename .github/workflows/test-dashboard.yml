@@ -38,7 +38,7 @@ jobs:
               const page=await browser.newPage({viewport:size});
               const errors=[];page.on('pageerror',e=>errors.push(e.message));
               await page.goto('http://127.0.0.1:4173/');
-              await page.getByRole('button',{name:'Crear video',exact:true}).click();
+              await page.locator('#home [data-flow=ai]').click();
               assert.equal(await page.locator('#studioGenre').count(),1);
               assert.equal(await page.locator('#studioMode').count(),1);
               assert.equal(await page.locator('#studioImageStyle option').count(),7);
