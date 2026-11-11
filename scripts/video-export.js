@@ -25,8 +25,10 @@
  async function runWorker(blob,format,onStatus,action='convert',force=false,duration){
   if(!force&&action==='convert'&&blob.type.startsWith('video/'+format))return blob;
   if(!root.Worker)throw Error('Este navegador no puede convertir al formato elegido. Selecciona el formato nativo.');
-  onStatus(action==='extract'?'Extrayendo el audio del video en este dispositivo…':'Preparando conversión local a '+format.toUpperCase()+'… La primera vez descarga el conversor.');
-  const worker=new Worker(new URL('transcode-worker.js',scriptURL),{type:'module'});
+  onStatus(action==='remux'?'Preparando MP4 para publicar…':action==='extract'?'Extrayendo el audio del video en este dispositivo…':'Preparando conversión local a '+format.toUpperCase()+'… La primera vez descarga el conversor.');
+  const workerURL=new URL('transcode-worker.js',scriptURL);
+  workerURL.search=new URL(scriptURL).search;
+  const worker=new Worker(workerURL,{type:'module'});
   const data=await blob.arrayBuffer();
   return new Promise((resolve,reject)=>{
    const timer=setTimeout(()=>finish(Error('La conversión tardó demasiado. Prueba 720p o el otro formato.')),12*60*1000);
@@ -53,7 +55,12 @@
    const expected=dimensions(p);if(video.videoWidth!==expected.width||video.videoHeight!==expected.height)throw Error('La resolución del archivo no coincide con la calidad elegida.');
   }finally{video.removeAttribute('src');video.load();URL.revokeObjectURL(url);}
  }
- const convert=(blob,format,onStatus,force=false)=>runWorker(blob,format,onStatus,'convert',force);
+ const convert=(blob,format,onStatus,force=false)=>{
+  // MediaRecorder MP4 can carry its duration only in fragments. Consolidate it
+  // into a standard seekable MP4 with the video track first for social uploads.
+  const action=format==='mp4'&&blob.type==='video/mp4'&&!force?'remux':'convert';
+  return runWorker(blob,format,onStatus,action,force);
+ };
  async function verifyOrRepair(blob,p,onStatus){
   try{await verify(blob,p);return blob;}catch(error){
    if(error.code!=='VIDEO_DURATION_MISMATCH'||!Number.isFinite(error.actualDuration)||error.actualDuration<=p.duration+.5)throw error;
