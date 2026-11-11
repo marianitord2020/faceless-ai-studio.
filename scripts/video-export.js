@@ -7,7 +7,7 @@
  function mime(format,supported=t=>root.MediaRecorder?.isTypeSupported(t)){return (types[format]||[]).find(supported)||'';}
  function recordingMime(p){const format=settings(p).format;return mime(format)||mime(format==='mp4'?'webm':'mp4')||(root.MediaRecorder?.isTypeSupported('video/mp4')?'video/mp4':'');}
  function dimensions(p,exporting=true){if(!exporting)return p.format==='16:9'?{width:960,height:540}:{width:540,height:960};const s=settings(p);return {width:Math.round(s.width),height:Math.round(s.frameHeight)};}
- async function runWorker(blob,format,onStatus,action='convert',force=false){
+ async function runWorker(blob,format,onStatus,action='convert',force=false,duration){
   if(!force&&action==='convert'&&blob.type.startsWith('video/'+format))return blob;
   if(!root.Worker)throw Error('Este navegador no puede convertir al formato elegido. Selecciona el formato nativo.');
   onStatus(action==='extract'?'Extrayendo el audio del video en este dispositivo…':'Preparando conversión local a '+format.toUpperCase()+'… La primera vez descarga el conversor.');
@@ -19,7 +19,7 @@
    root.facelessCancelConversion=()=>finish(Error('Conversión detenida.'));
    worker.onerror=()=>finish(Error('No se pudo cargar el conversor local. Comprueba tu conexión y prueba 720p.'));
    worker.onmessage=({data})=>{if(data.error)finish(Error(data.error));else if(data.output)finish(null,new Blob([data.output],{type:action==='extract'?'audio/wav':'video/'+format}));else if(data.progress!=null)onStatus('Convirtiendo a '+format.toUpperCase()+': '+data.progress+' %');};
-   worker.postMessage({input:data,source:blob.type.includes('mp4')?'mp4':'webm',format,action},[data]);
+   worker.postMessage({input:data,source:blob.type.includes('mp4')?'mp4':'webm',format,action,duration},[data]);
   });
  }
  async function verify(blob,p){
@@ -28,13 +28,28 @@
   if(!valid)throw Error('El archivo no tiene un contenedor '+format.toUpperCase()+' válido.');
   const video=document.createElement('video'),url=URL.createObjectURL(blob);video.preload='metadata';
   try{await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('No se pudo comprobar el video exportado.')),15000);video.onloadedmetadata=()=>{clearTimeout(timer);resolve();};video.onerror=()=>{clearTimeout(timer);reject(Error('El navegador no pudo abrir el video exportado.'));};video.src=url;});
-   if(!Number.isFinite(video.duration)||Math.abs(video.duration-p.duration)>.5)throw Error('No se pudo validar la duración del video. Vuelve a exportar.');
+   if(!Number.isFinite(video.duration)||Math.abs(video.duration-p.duration)>.5){
+    const actual=Number.isFinite(video.duration)?video.duration.toFixed(1)+' s':'desconocida';
+    const error=Error('Duración esperada: '+p.duration.toFixed(1)+' s. Duración del archivo: '+actual+'. Prueba WebM o 720p.');
+    error.code='VIDEO_DURATION_MISMATCH';
+    error.actualDuration=video.duration;
+    throw error;
+   }
    const expected=dimensions(p);if(video.videoWidth!==expected.width||video.videoHeight!==expected.height)throw Error('La resolución del archivo no coincide con la calidad elegida.');
   }finally{video.removeAttribute('src');video.load();URL.revokeObjectURL(url);}
  }
  const convert=(blob,format,onStatus,force=false)=>runWorker(blob,format,onStatus,'convert',force);
+ async function verifyOrRepair(blob,p,onStatus){
+  try{await verify(blob,p);return blob;}catch(error){
+   if(error.code!=='VIDEO_DURATION_MISMATCH'||!Number.isFinite(error.actualDuration)||error.actualDuration<=p.duration+.5)throw error;
+   onStatus('Ajustando la duración del archivo a '+p.duration.toFixed(1)+' s…');
+   const repaired=await runWorker(blob,settings(p).format,onStatus,'convert',true,p.duration);
+   await verify(repaired,p);
+   return repaired;
+  }
+ }
  const extractAudio=(blob,onStatus)=>runWorker(blob,'wav',onStatus,'extract');
- const api={settings,mime,recordingMime,dimensions,convert,extractAudio,verify};root.FacelessExport=api;if(typeof module!=='undefined')module.exports=api;
+ const api={settings,mime,recordingMime,dimensions,convert,extractAudio,verify,verifyOrRepair};root.FacelessExport=api;if(typeof module!=='undefined')module.exports=api;
  if(typeof document==='undefined')return;
  root.facelessMountExportOptions=(p,host)=>{
   if(document.getElementById('exportQuality'))return;

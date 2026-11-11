@@ -202,9 +202,10 @@ async function startMicrophoneRecording(){
 function stopMicTracks(){if(micStream){micStream.getTracks().forEach(t=>t.stop());micStream=null}const a=$('startMic'),b=$('stopMic');if(a)a.disabled=false;if(b)b.disabled=true}
 function stopMicrophoneRecording(){if(micRecorder?.state==='recording'){micRecorder.stop();$('micStatus').textContent='Procesando grabación...';}else stopMicTracks()}
 function stopPreview(){window.facelessOnPreviewStopped?.();window.facelessStopOwnVideo?.();const previewButton=$('previewVideo');if(previewButton)previewButton.textContent='▶ Vista previa';if(previewTimer)cancelAnimationFrame(previewTimer);previewTimer=null;if(previewAudio){previewAudio.pause();previewAudio.removeAttribute('src');previewAudio.remove();previewAudio=null}if(previewAudioURL){URL.revokeObjectURL(previewAudioURL);previewAudioURL=null}}
-async function renderVideo({format,onVisibility}={}){
+async function renderVideo({format,onVisibility,onProgress}={}){
  if(rendering||window.facelessMediaBusy)return false;
  const p=current(),status=$('renderStatus'),btn=$('renderVideo');if(!p)return false;
+ const report=message=>{status.textContent=message;onProgress?.(message);};
  stopPreview();rendering=true;window.facelessExportCancelled=false;
  const controls=[...document.querySelectorAll('button,input,select,textarea')].filter(el=>!el.closest('.video-progress')&&!['productionStop','cancelVideoExport'].includes(el.id)).map(el=>[el,el.disabled]);controls.forEach(([el])=>el.disabled=true);
  const cancel=$('cancelVideoExport');if(cancel){cancel.hidden=false;cancel.disabled=false;}
@@ -275,20 +276,22 @@ async function renderVideo({format,onVisibility}={}){
        if(pausedAt!==null){raf=requestAnimationFrame(tick);return;}
        const elapsed=Math.min(duration,Math.max(0,audioSource?(audioCtx.currentTime-audioStartedAt)*1000:now-startTime-pausedTotal));
        const sec=Math.min(p.duration-0.001,elapsed/1000);drawFrame(FacelessTiming.sceneAt(p,sec),sec);
-       status.textContent='Exportando '+profile.height+'p: '+Math.floor(elapsed/duration*100)+' %';
+       report('Grabando '+profile.height+'p: '+Math.floor(elapsed/duration*100)+' %');
        if(elapsed<duration)raf=requestAnimationFrame(tick);else resolve();
       }catch(error){reject(error);}
      };raf=requestAnimationFrame(tick);
    });
    if(abortVisibility)document.removeEventListener('visibilitychange',abortVisibility);
+   report('Guardando la grabación…');
    rec.stop();await completion;
    if(!chunks.some(c=>c.size))throw Error('No se generaron datos de video. Prueba 720p.');
    const nativeType=(rec.mimeType||mime).startsWith('video/mp4')?'video/mp4':'video/webm';
    let blob=new Blob(chunks,{type:nativeType});if(blob.size<1000)throw Error('El archivo de video está vacío.');
    window.facelessStopOwnVideo?.();if(audioSource){audioSource.stop();audioSource=null;}
    if(nativeType==='video/webm')blob=await window.ysFixWebmDuration(blob,p.duration*1000,{logger:false});
-   blob=await FacelessExport.convert(blob,profile.format,message=>status.textContent=message,profile.format==='mp4'&&!/avc1/i.test(rec.mimeType||mime));
-   await FacelessExport.verify(blob,exportProject);
+   blob=await FacelessExport.convert(blob,profile.format,report,profile.format==='mp4'&&!/avc1/i.test(rec.mimeType||mime));
+   report('Comprobando la duración y resolución…');
+   blob=await FacelessExport.verifyOrRepair(blob,exportProject,report);
    if(window.facelessExportCancelled||(window.facelessProductionBusy&&window.facelessProductionCancelled))throw Error('Exportación detenida.');
    if(previewURL)URL.revokeObjectURL(previewURL);previewURL=URL.createObjectURL(blob);
    $('videoResult').src=previewURL;$('videoResult').classList.remove('hidden');$('previewCanvas').classList.add('hidden');
@@ -386,5 +389,5 @@ route('home');
   };
 })();;
  
-</script><script src="scripts/video-progress.js?v=4"></script><script src="scripts/ai-photos.js?v=16"></script><script src="scripts/ai-voice.js?v=12"></script><script src="scripts/written-stories.js?v=1"></script><script src="scripts/cinematic-video.js?v=6"></script><script src="scripts/media-timing.js?v=4"></script><script src="scripts/manual-timing.js?v=2"></script><script src="scripts/local-speech.js?v=2"></script><script src="scripts/ai-client.js?v=1"></script><script src="scripts/stock-photos.js?v=4"></script><script src="scripts/media-editor.js?v=14"></script><script src="scripts/studio-menus.js?v=2"></script><script src="scripts/editor-layout.js?v=9"></script><script src="scripts/url-reader.js?v=2"></script><script src="scripts/discover.js?v=19"></script><script src="scripts/vendor/fix-webm-duration.js?v=1"></script><script src="scripts/video-export.js?v=1"></script><script src="scripts/own-video.js?v=4"></script><script src="scripts/scene-edit.js?v=1"></script><script src="scripts/manual-studio.js?v=2"></script><script src="scripts/flows.js?v=4"></script></body></html>
+</script><script src="scripts/video-progress.js?v=5"></script><script src="scripts/ai-photos.js?v=17"></script><script src="scripts/ai-voice.js?v=12"></script><script src="scripts/written-stories.js?v=1"></script><script src="scripts/cinematic-video.js?v=6"></script><script src="scripts/media-timing.js?v=4"></script><script src="scripts/manual-timing.js?v=2"></script><script src="scripts/local-speech.js?v=2"></script><script src="scripts/ai-client.js?v=1"></script><script src="scripts/stock-photos.js?v=4"></script><script src="scripts/media-editor.js?v=14"></script><script src="scripts/studio-menus.js?v=2"></script><script src="scripts/editor-layout.js?v=9"></script><script src="scripts/url-reader.js?v=2"></script><script src="scripts/discover.js?v=19"></script><script src="scripts/vendor/fix-webm-duration.js?v=1"></script><script src="scripts/video-export.js?v=2"></script><script src="scripts/own-video.js?v=4"></script><script src="scripts/scene-edit.js?v=1"></script><script src="scripts/manual-studio.js?v=2"></script><script src="scripts/flows.js?v=4"></script></body></html>
 

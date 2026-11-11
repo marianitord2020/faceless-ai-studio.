@@ -9,7 +9,8 @@ self.onmessage=async({data})=>{
   const input='source.'+data.source,output='result.'+data.format;
   engine.FS.writeFile(input,new Uint8Array(data.input));
   const encoding=data.action==='extract'?['-vn','-ac','1','-ar','16000','-c:a','pcm_s16le']:data.format==='mp4'?['-c:v','libx264','-preset','ultrafast','-crf','21','-pix_fmt','yuv420p','-c:a','aac','-movflags','+faststart']:['-c:v','libvpx','-deadline','realtime','-cpu-used','8','-b:v','5M','-c:a','libopus'];
-  engine.setTimeout(11*60*1000);engine.exec('-i',input,...encoding,output);
+  engine.setTimeout(11*60*1000);const limit=Number.isFinite(data.duration)&&data.duration>0?['-t',String(data.duration)]:[];
+  engine.exec('-i',input,...limit,...encoding,output);
   if(engine.ret!==0)throw Error(data.action==='extract'?'No se pudo extraer una pista de voz. Puedes añadir tu audio por separado.':'El dispositivo no pudo convertir el video. Prueba 720p o el formato nativo.');
   const bytes=engine.FS.readFile(output);self.postMessage({output:bytes.buffer},[bytes.buffer]);
  }catch(error){self.postMessage({error:String(error.message||error)});}

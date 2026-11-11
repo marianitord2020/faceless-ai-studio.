@@ -118,19 +118,22 @@
         meter.value = current[0];
         status.textContent = current[0] + '% · ' + current[1];
       },
+      progress(message) {
+        if (!closed) status.textContent = '85% · ' + message;
+      },
       visibility(paused) {
         if (!closed) status.textContent = paused
           ? '85% · Montaje pausado. Vuelve a esta pestaña para continuar.'
           : '85% · ' + steps.render[1];
       },
       ready(file) {
-        if (!file?.href || !file.download.toLowerCase().endsWith('.mp4')) {
-          throw new Error('No se pudo preparar el archivo MP4.');
+        if (!file?.href || !/\.(mp4|webm)$/i.test(file.download)) {
+          throw new Error('No se pudo preparar el archivo de video.');
         }
         if (closed) return;
         meter.value = 100;
         title.textContent = '¡Tu video está listo!';
-        status.textContent = '100% · MP4 listo para descargar';
+        status.textContent = '100% · ' + file.download.split('.').pop().toUpperCase() + ' listo para descargar';
         find('.vp-check').hidden = false;
         preview.src = file.href;
         preview.hidden = false;

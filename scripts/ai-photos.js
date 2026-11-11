@@ -349,7 +349,7 @@ function mountFacelessProduction(project){
     try{
       if(showProgress)popup=progress||window.facelessOpenVideoProgress(retry);
       popup?.stage('read');
-      if(showProgress&&!FacelessExport.recordingMime({...project,exportFormat:'mp4'}))
+      if(showProgress&&!FacelessExport.recordingMime(project))
         throw Error('Este navegador no permite grabar video. Usa Chrome actualizado.');
       // Start audio in the original tap, before network requests, for Android.
       const AudioCtx=window.AudioContext||window.webkitAudioContext;
@@ -385,7 +385,7 @@ function mountFacelessProduction(project){
       if(!['speech','tts-segments','tts-estimated','manual'].includes(project.audioAlignment?.method)||project.subtitleTextSignature!==FacelessTiming.signature(project))throw Error('La IA no completó la sincronización de voz. Pulsa Crear video completo para reintentar.');
       popup?.stage('render');
       status.textContent='4 de 4 · Montando el video con voz. Mantén esta página abierta…';
-      const exported=await renderVideo(popup?{format:'mp4',onVisibility:popup.visibility}:undefined);cancelled();
+      const exported=await renderVideo(popup?{onVisibility:popup.visibility,onProgress:popup.progress}:undefined);cancelled();
       const file=document.querySelector('#downloadArea a');
       if(!exported||!file)throw Error(document.getElementById('renderStatus').textContent||'No se pudo montar el video.');
       popup?.ready(file);
