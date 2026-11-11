@@ -67,13 +67,13 @@ window.facelessCompactVideoEditor = function (project) {
   const shareCode=()=>{['aiPhotosPasscode','aiVoicePasscode'].forEach(id=>{byId(id).value=code.value;});};code.addEventListener('input',shareCode);shareCode();
   ['productionStart','aiPhotosStart','aiVoiceGenerate'].forEach(id=>{
     const button=byId(id), original=button.onclick;
-    button.onclick=async function(event){
+    button.onclick=async function(event,options){
       shareCode();
       if(code.value.trim().length<16){custom[0].open=true;advanced.open=true;code.focus();byId('productionStatus').textContent='Introduce tu código privado.';return;}
-      return original.call(this,event);
+      return original.call(this,event,options);
     };
   });
-  byId('renderVideo').onclick=()=>byId('productionStart').onclick();
+  byId('renderVideo').onclick=()=>byId('productionStart').onclick(null,{showProgress:true});
   const showPreview=()=>{custom[0].open=true;frame.hidden=false;};
   const preview=byId('previewVideo'), originalPreview=preview.onclick;
   preview.onclick=function(event){showPreview();frame.scrollIntoView({block:'center',behavior:'smooth'});return originalPreview.call(this,event);};
