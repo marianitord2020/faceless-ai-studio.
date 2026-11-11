@@ -234,11 +234,13 @@ function mountAIVoiceControls(project) {
         if (text.length > 650) throw new Error('La escena ' + (index + 1) + ' supera 650 caracteres. Acorta su texto antes de generar voz.');
         status.textContent = 'Generando voz IA: escena ' + (index + 1) + ' de ' + project.scenes.length + '…';
         const segmentKey=project.id+':voice-segment:'+index;
-        const segmentSignature=JSON.stringify([text,voice,mood]);
+        const expressiveOpening=project.creationFlow==='ai'&&moodSelect.value==='automatic'&&index===0&&['entertainment','energetic','neutral'].includes(mood);
+        const sceneMood=expressiveOpening?'energetic':mood;
+        const segmentSignature=JSON.stringify([text,voice,sceneMood]);
         let cached;
         try{cached=await facelessMediaGet(segmentKey)}catch{}
         const result=cached?.signature===segmentSignature?cached.result:
-          await facelessRequestVoice(text, voice, facelessVoicePassword, mood);
+          await facelessRequestVoice(text, voice, facelessVoicePassword, sceneMood);
         if(cached?.signature!==segmentSignature)
           await facelessMediaPut(segmentKey,{signature:segmentSignature,result});
         let decoded;
