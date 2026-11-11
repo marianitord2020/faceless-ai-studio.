@@ -325,7 +325,7 @@
     $id('studioGalleryTitle').textContent=state.matchType==='related'?'Temas relacionados con «'+state.topic+'»':state.mode==='news'?'Noticias encontradas':(state.mode==='factual'?'Documentales para elegir':'Historias para elegir');
     if(state.source==='local'){$id('studioGalleryTitle').textContent=state.ideas.length+' texto'+(state.ideas.length===1?'':'s')+' publicado'+(state.ideas.length===1?'':'s');$id('studioGalleryTag').textContent=state.ideas.length+' resultado'+(state.ideas.length===1?'':'s')}
     $id('studioGallerySubtitle').textContent=state.matchType==='related'?'No hubo coincidencias exactas. Estos resultados son cercanos a tu búsqueda; revisa el motivo y su fecha.':state.mode==='news'
-      ?'Solo noticias vinculadas a fuentes reales. Selecciona una y consulta su fecha y origen.'
+      ?'Publicaciones verificables de medios, creadores y páginas públicas en español. Selecciona una y revisa su fecha y fuente.'
       :'Selecciona una portada, lee la sinopsis y luego llévala a creación.';
   }
   function renderFeature(){
@@ -449,7 +449,7 @@
         state.ideas=result.ideas;state.sources=result.sources;state.sourceProvider=result.sourceProvider;state.matchType=result.matchType;
         setStatus('✓ '+state.ideas.length+' textos publicados'+(state.matchType==='related'?' relacionados con el género elegido':'')+'. La descripción es un fragmento de la fuente, sin reescritura con IA.');
       }else{
-        setStatus(mode==='news'?'Consultando GDELT para noticias reales y fuentes actuales…':
+        setStatus(mode==='news'?'Buscando publicaciones recientes en la web en español y medios de respaldo…':
           'La IA está preparando 10 títulos y sinopsis sobre «'+topic+'»…');
         const result=await callEndpoint('/ideas',{topic,style,mode,subcategory});
         if(epoch!==state.epoch)return;
