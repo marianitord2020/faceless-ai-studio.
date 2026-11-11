@@ -118,6 +118,11 @@
         meter.value = current[0];
         status.textContent = current[0] + '% · ' + current[1];
       },
+      visibility(paused) {
+        if (!closed) status.textContent = paused
+          ? '85% · Montaje pausado. Vuelve a esta pestaña para continuar.'
+          : '85% · ' + steps.render[1];
+      },
       ready(file) {
         if (!file?.href || !file.download.toLowerCase().endsWith('.mp4')) {
           throw new Error('No se pudo preparar el archivo MP4.');

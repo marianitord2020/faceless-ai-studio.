@@ -202,7 +202,7 @@ async function startMicrophoneRecording(){
 function stopMicTracks(){if(micStream){micStream.getTracks().forEach(t=>t.stop());micStream=null}const a=$('startMic'),b=$('stopMic');if(a)a.disabled=false;if(b)b.disabled=true}
 function stopMicrophoneRecording(){if(micRecorder?.state==='recording'){micRecorder.stop();$('micStatus').textContent='Procesando grabación...';}else stopMicTracks()}
 function stopPreview(){window.facelessOnPreviewStopped?.();window.facelessStopOwnVideo?.();const previewButton=$('previewVideo');if(previewButton)previewButton.textContent='▶ Vista previa';if(previewTimer)cancelAnimationFrame(previewTimer);previewTimer=null;if(previewAudio){previewAudio.pause();previewAudio.removeAttribute('src');previewAudio.remove();previewAudio=null}if(previewAudioURL){URL.revokeObjectURL(previewAudioURL);previewAudioURL=null}}
-async function renderVideo({format}={}){
+async function renderVideo({format,onVisibility}={}){
  if(rendering||window.facelessMediaBusy)return false;
  const p=current(),status=$('renderStatus'),btn=$('renderVideo');if(!p)return false;
  stopPreview();rendering=true;window.facelessExportCancelled=false;
@@ -218,7 +218,6 @@ async function renderVideo({format}={}){
    const exportProject=format?{...p,exportFormat:format}:p;
    const withAudio=Boolean(audioFile),mime=FacelessExport.recordingMime(exportProject),profile=FacelessExport.settings(exportProject);
    if(!mime||!canvas.captureStream)throw Error('Este navegador no permite grabar video. Usa Chrome actualizado.');
-   if(document.hidden)throw Error('Mantén visible esta pantalla para exportar el video.');
    try{wakeLock=await navigator.wakeLock?.request('screen');}catch{}
    $('downloadArea').replaceChildren();status.textContent='Preparando '+profile.height+'p con '+(withAudio?'audio sincronizado':'subtítulos')+'…';
    drawFrame(0,0);stream=canvas.captureStream(30);
@@ -240,11 +239,41 @@ async function renderVideo({format}={}){
    if(audioSource){audioStartedAt=audioCtx.currentTime;audioSource.start(audioStartedAt);}
    const duration=p.duration*1000,startTime=performance.now();
    await new Promise((resolve,reject)=>{
-     failRecorder=reject;abortVisibility=()=>{if(document.hidden)reject(Error('La pantalla se ocultó y se detuvo la exportación para evitar desajustes. Vuelve a exportar con la página visible.'));};document.addEventListener('visibilitychange',abortVisibility);
+     let pausedAt=null,pausedTotal=0,transition=Promise.resolve();
+     const ownVideo=window.facelessOwnVideo?.();
+     failRecorder=reject;
+     abortVisibility=()=>{
+       const hidden=document.hidden;
+       // Pause capture before yielding so the hidden page cannot record a frozen frame.
+       if(hidden&&pausedAt===null&&rec.state==='recording'){
+         pausedAt=performance.now();
+         rec.pause();
+         ownVideo?.pause();
+         status.textContent='Montaje pausado. Vuelve a esta pestaña para continuar.';
+         if(typeof onVisibility==='function')onVisibility(true);
+         transition=transition.then(()=>audioSource?audioCtx.suspend():undefined);
+       }
+       if(!hidden&&pausedAt!==null){
+         transition=transition.then(async()=>{
+           if(document.hidden||rec.state!=='paused')return;
+           if(audioSource)await audioCtx.resume();
+           if(document.hidden){if(audioSource)await audioCtx.suspend();return;}
+           pausedTotal+=performance.now()-pausedAt;
+           pausedAt=null;
+           rec.resume();
+           if(ownVideo)await ownVideo.play();
+           if(typeof onVisibility==='function')onVisibility(false);
+         });
+       }
+       transition.catch(reject);
+     };
+     document.addEventListener('visibilitychange',abortVisibility);
+     abortVisibility();
      const tick=now=>{
       try{
        if(window.facelessExportCancelled||(window.facelessProductionBusy&&window.facelessProductionCancelled))throw Error('Exportación detenida. Tus archivos siguen guardados.');
-       const elapsed=Math.min(duration,Math.max(0,audioSource?(audioCtx.currentTime-audioStartedAt)*1000:now-startTime));
+       if(pausedAt!==null){raf=requestAnimationFrame(tick);return;}
+       const elapsed=Math.min(duration,Math.max(0,audioSource?(audioCtx.currentTime-audioStartedAt)*1000:now-startTime-pausedTotal));
        const sec=Math.min(p.duration-0.001,elapsed/1000);drawFrame(FacelessTiming.sceneAt(p,sec),sec);
        status.textContent='Exportando '+profile.height+'p: '+Math.floor(elapsed/duration*100)+' %';
        if(elapsed<duration)raf=requestAnimationFrame(tick);else resolve();
@@ -357,5 +386,5 @@ route('home');
   };
 })();;
  
-</script><script src="scripts/video-progress.js?v=3"></script><script src="scripts/ai-photos.js?v=15"></script><script src="scripts/ai-voice.js?v=12"></script><script src="scripts/written-stories.js?v=1"></script><script src="scripts/cinematic-video.js?v=6"></script><script src="scripts/media-timing.js?v=4"></script><script src="scripts/manual-timing.js?v=2"></script><script src="scripts/local-speech.js?v=2"></script><script src="scripts/ai-client.js?v=1"></script><script src="scripts/stock-photos.js?v=4"></script><script src="scripts/media-editor.js?v=14"></script><script src="scripts/studio-menus.js?v=2"></script><script src="scripts/editor-layout.js?v=9"></script><script src="scripts/url-reader.js?v=2"></script><script src="scripts/discover.js?v=19"></script><script src="scripts/vendor/fix-webm-duration.js?v=1"></script><script src="scripts/video-export.js?v=1"></script><script src="scripts/own-video.js?v=4"></script><script src="scripts/scene-edit.js?v=1"></script><script src="scripts/manual-studio.js?v=2"></script><script src="scripts/flows.js?v=4"></script></body></html>
+</script><script src="scripts/video-progress.js?v=4"></script><script src="scripts/ai-photos.js?v=16"></script><script src="scripts/ai-voice.js?v=12"></script><script src="scripts/written-stories.js?v=1"></script><script src="scripts/cinematic-video.js?v=6"></script><script src="scripts/media-timing.js?v=4"></script><script src="scripts/manual-timing.js?v=2"></script><script src="scripts/local-speech.js?v=2"></script><script src="scripts/ai-client.js?v=1"></script><script src="scripts/stock-photos.js?v=4"></script><script src="scripts/media-editor.js?v=14"></script><script src="scripts/studio-menus.js?v=2"></script><script src="scripts/editor-layout.js?v=9"></script><script src="scripts/url-reader.js?v=2"></script><script src="scripts/discover.js?v=19"></script><script src="scripts/vendor/fix-webm-duration.js?v=1"></script><script src="scripts/video-export.js?v=1"></script><script src="scripts/own-video.js?v=4"></script><script src="scripts/scene-edit.js?v=1"></script><script src="scripts/manual-studio.js?v=2"></script><script src="scripts/flows.js?v=4"></script></body></html>
 

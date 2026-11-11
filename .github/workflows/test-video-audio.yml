@@ -150,7 +150,18 @@ jobs:
               window.restoreRecognition=()=>{window.facelessRecognizeLocal=original;};
               window.facelessRecognizeLocal=async()=>[{word:'diferente',start:0,end:1}];
             });
-            const exported=await page.evaluate(()=>renderVideo());
+            const pendingExport=page.evaluate(()=>renderVideo());
+            await page.waitForFunction(()=>document.getElementById('renderStatus').textContent.startsWith('Exportando'));
+            await page.evaluate(()=>{
+              Object.defineProperty(document,'hidden',{configurable:true,value:true});
+              document.dispatchEvent(new Event('visibilitychange'));
+            });
+            await page.waitForFunction(()=>document.getElementById('renderStatus').textContent.includes('Montaje pausado'));
+            await page.evaluate(()=>{
+              delete document.hidden;
+              document.dispatchEvent(new Event('visibilitychange'));
+            });
+            const exported=await pendingExport;
             const timingMethod=await page.evaluate(()=>current().audioAlignment?.method);
             if(timingMethod!=='tts-estimated')throw Error('La voz guardada debe exportar con tiempos aproximados');
             await page.evaluate(()=>window.restoreRecognition());
