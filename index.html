@@ -152,15 +152,34 @@ function renderVideoTab(p){
    $('videoResult').pause();
    $('videoResult').classList.add('hidden');
    view.classList.remove('hidden');
-   if(audioFile){
+   const start=performance.now(),duration=p.duration*1000;
+   if(audioFile&&audioFileProjectId===p.id){
      previewAudioURL=URL.createObjectURL(audioFile);
-     previewAudio=new Audio(previewAudioURL);previewAudio.volume=FacelessSceneEdit.volume(p);
-     const playingAudio=previewAudio;
-     playingAudio.play().catch(()=>{if(previewAudio!==playingAudio)return;stopPreview();$('renderStatus').textContent='No se pudo reproducir el audio. Pulsa Vista previa para reintentar.';});
+     const player=document.createElement('audio');
+     player.controls=true;
+     player.preload='auto';
+     player.setAttribute('aria-label','Audio de la vista previa');
+     player.style.cssText='display:block;width:100%;margin-top:12px';
+     player.src=previewAudioURL;
+     player.volume=FacelessSceneEdit.volume(p);
+     view.after(player);
+     previewAudio=player;
+     player.play().catch(()=>{
+       if(previewAudio===player)player.setAttribute('aria-label','Pulsa reproducir para activar el audio de la vista previa');
+     });
    }
    window.facelessPlayOwnVideo?.().catch(error=>toast(error.message));
-   const start=performance.now(),duration=p.duration*1000;
-   const tick=()=>{const elapsed=performance.now()-start,sec=Math.min(p.duration-0.01,previewAudio?previewAudio.currentTime:elapsed/1000);const i=FacelessTiming.sceneAt(p,sec);drawFrame(i,sec);view.getContext('2d').drawImage(canvas,0,0,view.width,view.height);if(previewAudio?!previewAudio.ended:elapsed<duration){previewTimer=requestAnimationFrame(tick)}else{stopPreview();$('previewVideo').textContent='Vista previa'}};
+   const tick=()=>{
+     const elapsed=performance.now()-start;
+     const audio=previewAudio;
+     const audioClock=audio&&!audio.error&&(!audio.paused&&audio.currentTime>0||audio.ended);
+     const time=audioClock?audio.currentTime:elapsed/1000;
+     const sec=Math.max(0,Math.min(p.duration-0.01,time));
+     drawFrame(FacelessTiming.sceneAt(p,sec),sec);
+     view.getContext('2d').drawImage(canvas,0,0,view.width,view.height);
+     if(audioClock?!audio.ended:elapsed<duration)previewTimer=requestAnimationFrame(tick);
+     else stopPreview();
+   };
    previewTimer=requestAnimationFrame(tick);
    $('previewVideo').textContent='Detener vista previa';
  };
@@ -182,7 +201,7 @@ async function startMicrophoneRecording(){
 }
 function stopMicTracks(){if(micStream){micStream.getTracks().forEach(t=>t.stop());micStream=null}const a=$('startMic'),b=$('stopMic');if(a)a.disabled=false;if(b)b.disabled=true}
 function stopMicrophoneRecording(){if(micRecorder?.state==='recording'){micRecorder.stop();$('micStatus').textContent='Procesando grabación...';}else stopMicTracks()}
-function stopPreview(){window.facelessOnPreviewStopped?.();window.facelessStopOwnVideo?.();const previewButton=$('previewVideo');if(previewButton)previewButton.textContent='▶ Vista previa';if(previewTimer)cancelAnimationFrame(previewTimer);previewTimer=null;if(previewAudio){previewAudio.pause();previewAudio.src='';previewAudio=null}if(previewAudioURL){URL.revokeObjectURL(previewAudioURL);previewAudioURL=null}}
+function stopPreview(){window.facelessOnPreviewStopped?.();window.facelessStopOwnVideo?.();const previewButton=$('previewVideo');if(previewButton)previewButton.textContent='▶ Vista previa';if(previewTimer)cancelAnimationFrame(previewTimer);previewTimer=null;if(previewAudio){previewAudio.pause();previewAudio.removeAttribute('src');previewAudio.remove();previewAudio=null}if(previewAudioURL){URL.revokeObjectURL(previewAudioURL);previewAudioURL=null}}
 async function renderVideo({format}={}){
  if(rendering||window.facelessMediaBusy)return false;
  const p=current(),status=$('renderStatus'),btn=$('renderVideo');if(!p)return false;

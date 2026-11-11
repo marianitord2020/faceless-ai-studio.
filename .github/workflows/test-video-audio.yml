@@ -119,6 +119,20 @@ jobs:
             await page.locator('#previewVideo').click();
             if(await page.evaluate(()=>window.previewSyncCalls)!==syncCallsBeforePreview)
               throw Error('La vista previa esperó por la sincronización');
+            await page.evaluate(()=>{
+              const play=HTMLMediaElement.prototype.play;
+              window.restoreMediaPlay=()=>{HTMLMediaElement.prototype.play=play;};
+              HTMLMediaElement.prototype.play=function(){
+                if(this.getAttribute('aria-label')==='Audio de la vista previa')
+                  return Promise.reject(new DOMException('Simulated blocked playback','NotAllowedError'));
+                return play.call(this);
+              };
+            });
+            await page.locator('#previewVideo').click();
+            await page.getByLabel('Pulsa reproducir para activar el audio de la vista previa').waitFor();
+            await page.waitForFunction(()=>Boolean(previewTimer));
+            await page.locator('#previewVideo').click();
+            await page.evaluate(()=>window.restoreMediaPlay());
             const exported=await page.evaluate(()=>renderVideo());
             if(!exported)throw Error(await page.locator('#renderStatus').textContent());
             const result=await page.evaluate(()=>({
