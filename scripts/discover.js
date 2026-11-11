@@ -449,7 +449,7 @@
         state.ideas=result.ideas;state.sources=result.sources;state.sourceProvider=result.sourceProvider;state.matchType=result.matchType;
         setStatus('✓ '+state.ideas.length+' textos publicados'+(state.matchType==='related'?' relacionados con el género elegido':'')+'. La descripción es un fragmento de la fuente, sin reescritura con IA.');
       }else{
-        setStatus(mode==='news'?'Buscando publicaciones recientes en la web en español y medios de respaldo…':
+        setStatus(mode==='news'?'Buscando publicaciones recientes en medios y redes sociales públicas…':
           'La IA está preparando 10 títulos y sinopsis sobre «'+topic+'»…');
         const result=await callEndpoint('/ideas',{topic,style,mode,subcategory});
         if(epoch!==state.epoch)return;

@@ -14,5 +14,8 @@ globalThis.fetch=async(url,options)=>{
 const result=await searchRealNews('Bullin 47 viral hoy','Farándula',{GEMINI_API_KEY:'fixture'});
 assert.equal(result.ideas.length,1);assert.match(result.ideas[0].sourceUrl,/youtube.com/);assert.match(result.sourceProvider,/Google Search/);
 assert.match(seen[0].contents[0].parts[0].text,/No te limites a periódicos/);
+for(const domain of ['facebook.com','tiktok.com','instagram.com','youtube.com']){
+ assert.ok(seen[0].contents[0].parts[0].text.includes('site:'+domain));
+}
 assert.match(result.ideas[0].synopsis,/anunció una canción/);
 console.log('PASS: public Spanish web and creator sources, name variants, grounded source validation, dated relevant proposals and publisher outage fallback');
