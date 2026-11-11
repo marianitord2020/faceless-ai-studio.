@@ -616,12 +616,15 @@
         const original=await window.facelessWrittenStories.read(idea);
         writtenData=window.facelessWrittenStories.scenes(original,duration,idea.title);
       }
+      const openingDirection=state.mode==='fiction'
+        ? 'Abre la narración directamente con una acción, un conflicto o un diálogo específico de esta trama. La primera frase debe ser breve y entendible en tres segundos. Presenta el hecho que provoca la reacción antes de describirla. Empieza en la acción, sin avisos ni saludos.'
+        : 'Abre con el hecho concreto más interesante que sostienen las fuentes. La primera frase debe ser breve. Conserva los nombres y el contexto esenciales y evita añadir datos sin verificar.';
       const data=local?{title:idea.title,scenes:written?writtenData.scenes:createLocalScenes(idea,duration),
         sources:written?state.sources:[],provider:written?'Texto publicado / sin IA generativa':'Relato local',mode:written?'texto_publicado':'ficcion',checkedAt:null}:await callEndpoint('/script',{
         topic:creationTopic,
         duration,platform:choice.platform||'TikTok',style:state.style,subcategory:state.subcategory,
         mode:state.mode==='fiction'?'ficcion':state.mode==='news'?'noticias':'informativo',
-        idea:{title:idea.title,synopsis:idea.synopsis,outline:idea.outline,sourceUrl:idea.sourceUrl||''}
+        idea:{title:idea.title,synopsis:idea.synopsis,outline:[openingDirection,idea.outline].filter(Boolean).join(' '),sourceUrl:idea.sourceUrl||''}
       });
       const count=duration===30?5:duration===60?8:12;
       if(!Array.isArray(data.scenes)||data.scenes.length!==count)throw Error('El guion no respetó la duración. Intenta de nuevo.');
@@ -629,7 +632,11 @@
       let time=0;
       const scenes=data.scenes.map((s,i)=>{
         const seconds=base+(i<extra?1:0);
-        const scene={time,duration:seconds,text:String(s.text||'').trim(),
+        const originalText=String(s.text||'').trim();
+        const spokenText=i===0&&!local&&state.mode==='fiction'
+          ? originalText.replace(/^(?:esta es una )?(?:historia|narraci[oó]n) ficticia\s*[.:!—–-]+\s*/iu,'').trim()
+          : originalText;
+        const scene={time,duration:seconds,text:spokenText||originalText,
           prompt:String(s.prompt||'').trim()+'. Estilo visual: '+state.imageStyle+'.'};
         time+=seconds;return scene;
       });
