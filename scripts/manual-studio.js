@@ -10,6 +10,7 @@
   const legacy=node('details','cut-source-tools');const summary=node('summary','','Archivos y herramientas');legacy.append(summary);cards.append(legacy);
   for(const card of [...cards.children])if(card!==shell&&card!==legacy&&!card.classList.contains('export-options'))legacy.append(card);
   // Downloads and the native output player stay in the existing frame/containers.
+  const syncStatus=id('audioSyncStatus');if(syncStatus)shell.append(syncStatus);const cancelSync=id('cancelLocalSpeech');if(cancelSync)shell.append(cancelSync);
   const feedback=shell.querySelector('.cut-feedback'),inspector=shell.querySelector('.cut-inspector'),seek=id('cutSeek'),play=id('cutPlay'),track=shell.querySelector('.cut-timeline');
   let seconds=0,selected=0,selectedCue=0,tool='scene',destroyed=false,paintFrame=null,history=[],waveFile=null,wave=[];
   const scenePhotoInput=node('input');scenePhotoInput.type='file';scenePhotoInput.accept='image/*';scenePhotoInput.hidden=true;shell.append(scenePhotoInput);let photoTarget=0;scenePhotoInput.onchange=async()=>{const file=scenePhotoInput.files[0],target=photoTarget;if(file){await window.facelessReplaceScenePhoto?.(p.id,target,file);if(!destroyed){jump(p.scenes[target].time+Math.min(.5,p.scenes[target].duration/2));feedback.textContent='Foto actualizada en la escena '+(target+1)+'.';}}scenePhotoInput.value='';};
@@ -60,10 +61,9 @@
    if(tool==='scene'){
     inspector.append(node('h4','','Escena '+(selected+1)));
     const actions=node('div','cut-scene-actions');inspector.append(actions);
-    const addPhotos=button('＋ Agregar fotos',()=>id('pickOwnPhotos').click());
     const hasPhoto=facelessProjectPhotos(p.id).has(editIndex);
-    const change=button(hasPhoto?'Reemplazar foto':'Agregar foto a esta escena',()=>{photoTarget=editIndex;scenePhotoInput.click();});
-    const remove=button('Quitar foto',()=>{const slot=id('manualPhotoSlots')?.querySelector('[data-scene="'+editIndex+'"]');const target=[...(slot?.querySelectorAll('button')||[])].find(b=>b.textContent==='Quitar foto');if(target)target.click();else feedback.textContent='Esta escena todavía no tiene foto.';});actions.append(addPhotos,change,remove);
+    if(hasPhoto)actions.append(button('Reemplazar foto',()=>{photoTarget=editIndex;scenePhotoInput.click();}));
+    if(hasPhoto)actions.append(button('Quitar foto',()=>{const slot=id('manualPhotoSlots')?.querySelector('[data-scene="'+editIndex+'"]');const target=[...(slot?.querySelectorAll('button')||[])].find(b=>b.textContent==='Quitar foto');if(target)target.click();else feedback.textContent='Esta escena todavía no tiene foto.';}));
     const start=field('Inicio de escena (s)','number',scene.time.toFixed(2)),end=field('Fin de escena (s)','number',(scene.time+scene.duration).toFixed(2));for(const f of [start,end]){f.step='.01';f.min='0';f.max=p.duration;}start.disabled=selected===0;end.disabled=selected===p.scenes.length-1;
     button('Guardar duración',()=>{try{const before=JSON.stringify(p);FacelessSceneEdit.bounds(p,editIndex,editIndex===0?0:Number(start.value),editIndex===p.scenes.length-1?p.duration:Number(end.value));history.push(before);if(history.length>20)history.shift();id('cutUndo').disabled=false;commit('Tiempos de escena guardados. El audio conserva su sincronización.');}catch(error){feedback.textContent=error.message;}});
     inspector.append(node('p','cut-hint','Ajusta el encuadre y el movimiento de esta escena.'));
@@ -73,6 +73,7 @@
    }else if(tool==='text'){
     const cues=FacelessTiming.cues(p);selectedCue=Math.max(0,Math.min(selectedCue,cues.length-1));
     inspector.append(node('h4','','Subtítulos en pantalla'));
+    if(audioFile)button('Generar subtítulos del audio',()=>id('syncAudio').click());
     if(cues.length){const choice=node('select','cut-caption-select');choice.setAttribute('aria-label','Subtítulo para editar');cues.forEach((c,i)=>{const option=node('option','',display(c.start)+' · '+c.text.slice(0,55));option.value=i;choice.append(option);});choice.value=selectedCue;choice.onchange=()=>{selectedCue=Number(choice.value);jump(cues[selectedCue].start+.01);showTool('text');};inspector.append(choice);
      const cueIndex=selectedCue,text=field('Texto del subtítulo','textarea',cues[cueIndex].text);text.rows=2;
      button('Aplicar texto',()=>{record();FacelessSceneEdit.caption(p,cueIndex,text.value,FacelessTiming);commit('Subtítulo actualizado sin regenerar tu audio.');renderInspector();});

@@ -11,8 +11,14 @@ self.onmessage = async ({data}) => {
   });
   self.postMessage({id,status:'recognizing'});
   const result=await recognizer(audio,{language:'spanish',task:'transcribe',return_timestamps:'word',chunk_length_s:30,stride_length_s:5});
-  const words=(result.chunks||[]).map(c=>({word:c.text,start:c.timestamp?.[0],end:c.timestamp?.[1]}));
-  if(!words.length||words.some(w=>!Number.isFinite(w.start)||!Number.isFinite(w.end)))throw Error('La IA no devolvió tiempos de voz válidos.');
+  const chunks=result.chunks||[];
+  const duration=audio.length/16000;
+  const words=chunks.map((chunk,index)=>{
+   const start=chunk.timestamp?.[0];
+   const end=chunk.timestamp?.[1]??chunks[index+1]?.timestamp?.[0]??duration;
+   return {word:chunk.text,start,end:Math.min(end,duration)};
+  }).filter(word=>Number.isFinite(word.start)&&word.end>word.start);
+  if(!words.length)throw Error('La IA no devolvió tiempos de voz válidos.');
   self.postMessage({id,words});
  }catch(error){recognizer=null;self.postMessage({id,error:String(error.message||error)});}
 };

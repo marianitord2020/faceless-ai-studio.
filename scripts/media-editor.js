@@ -61,14 +61,21 @@
     aligned=p.scenes.some(scene=>!String(scene.text||'').trim())?FacelessTiming.transcribed(p,words,decoded.duration):FacelessTiming.align(p,words,decoded.duration);
    }catch(error){
     // Only reuse estimates for audio generated from this exact project and script.
-    if(file.facelessManual||file.facelessSignature!==facelessVoiceSignature(p))throw error;
-    const lengths=p.scenes.map(scene=>Number(scene.duration));
-    const total=lengths.reduce((sum,length)=>sum+length,0);
-    const validCuts=lengths.every(length=>Number.isFinite(length)&&length>0)&&Math.abs(total-decoded.duration)<0.25;
-    aligned=validCuts
-      ?FacelessTiming.fromSegments(p,lengths,total/decoded.duration)
-      :FacelessTiming.estimated(p,decoded.duration);
-    aligned.audioAlignment.method='tts-estimated';
+    if(file.facelessManual&&window.facelessFlow==='manual'){
+     aligned=FacelessTiming.transcribed(p,words,decoded.duration);
+     aligned.scenes.forEach((scene,i)=>{if(String(p.scenes[i]?.text||'').trim())scene.text=p.scenes[i].text;});
+     aligned.narration=aligned.scenes.map(scene=>scene.text).join('\n');
+     aligned.subtitleTextSignature=FacelessTiming.signature(aligned);
+    }else{
+     if(file.facelessManual||file.facelessSignature!==facelessVoiceSignature(p))throw error;
+     const lengths=p.scenes.map(scene=>Number(scene.duration));
+     const total=lengths.reduce((sum,length)=>sum+length,0);
+     const validCuts=lengths.every(length=>Number.isFinite(length)&&length>0)&&Math.abs(total-decoded.duration)<0.25;
+     aligned=validCuts
+       ?FacelessTiming.fromSegments(p,lengths,total/decoded.duration)
+       :FacelessTiming.estimated(p,decoded.duration);
+     aligned.audioAlignment.method='tts-estimated';
+    }
    }
    applyTiming(p,aligned);
    invalidateVideo();await saveAudio(p,file,Boolean(file.facelessManual));photoRefresh(p.id);window.facelessRefreshManualTiming?.();const captions=id('manualCaptions');if(captions)captions.value=p.scenes.map(s=>s.text).join('\n');updatePreview();
@@ -76,6 +83,7 @@
     status.textContent='✓ Narración recuperada. Los subtítulos usan tiempos aproximados sobre la duración real del audio.';
     return;
    }
+   if(aligned.audioAlignment.source==='transcription'){status.textContent='✓ Subtítulos generados a partir de la narración.';return;}
    status.textContent='✓ IA local: voz reconocida y alineada con el guion ('+aligned.audioAlignment.coverage+' % de coincidencia). La vista previa y la descarga usarán los mismos tiempos. Revisa el resultado antes de compartirlo.';
   }
   window.facelessSyncGeneratedAudio=async(project,file,decoded)=>{
@@ -121,7 +129,7 @@
    if(playerURL){URL.revokeObjectURL(playerURL);playerURL=''}
    const player=id('uploadedAudioPlayer');player.pause();player.removeAttribute('src');player.load();player.hidden=!has||!audioFile.facelessManual;
    if(has&&audioFile.facelessManual){playerURL=URL.createObjectURL(audioFile);player.src=playerURL;
-    if(!window.facelessMediaBusy&&p.subtitleTextSignature!==FacelessTiming.signature(p))status.textContent='El guion cambió. Pulsa Sincronizar con IA para recalcular los tiempos.';
+    if(!window.facelessMediaBusy&&!status.textContent&&p.subtitleTextSignature!==FacelessTiming.signature(p))status.textContent='El guion cambió. Pulsa Sincronizar con IA para recalcular los tiempos.';
    }
    if(has&&!window.facelessMediaBusy&&p.audioAlignment?.method==='speech'&&p.subtitleTextSignature===FacelessTiming.signature(p))status.textContent='✓ IA local: voz, fotos y subtítulos sincronizados. Revisa las palabras reconocidas antes de exportar.';
    id('audioFileName').textContent=has?(audioFile.name||'Narración añadida'):'No hay audio añadido';
