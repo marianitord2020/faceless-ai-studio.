@@ -33,3 +33,5 @@ body[data-screen="home"] .nav,body[data-screen="home"] .footer{display:none}
 @media(max-width:600px){body[data-flow="manual"] .actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) 36px;gap:5px;align-items:center}body[data-flow="manual"] .actions .btn{font-size:11px;padding:10px 3px;gap:3px}body[data-flow="manual"] .tabs{gap:4px}body[data-flow="manual"] .tabs button{min-width:0;font-size:11px;padding-inline:1px}}
 
 .export-options h3{font-size:17px;margin-bottom:16px}.export-option-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.export-option-grid label{font-size:13px;min-width:0}.export-option-grid select{display:block;margin-top:8px;padding:12px 10px;font-size:14px;width:100%;min-width:0}.export-options>.smalltext{margin:12px 0 6px;font-size:12px;line-height:1.5}.export-options>.smalltext:empty{display:none}.export-options{padding-bottom:16px}.export-options #cancelVideoExport{margin:12px 0 0}
+
+.export-options #exportDestination { margin: 6px 0 14px; }

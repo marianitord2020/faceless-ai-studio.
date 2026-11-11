@@ -3,7 +3,22 @@
  'use strict';
  const scriptURL=typeof document!=='undefined'?document.currentScript?.src:null;
  const types={mp4:['video/mp4;codecs="avc1.42E028,mp4a.40.2"','video/mp4;codecs="avc1.4D4028,mp4a.40.2"','video/mp4;codecs="avc1,mp4a.40.2"'],webm:['video/webm;codecs=vp8,opus','video/webm;codecs=vp9,opus','video/webm']};
- function settings(p){const height=Number(p.exportHeight)===720?720:1080;const format=p.exportFormat==='webm'?'webm':'mp4';return {height,format,width:p.format==='16:9'?height*16/9:height,frameHeight:p.format==='16:9'?height:height*16/9,bitrate:height===1080?8_000_000:5_000_000};}
+ const destinations={
+  facebook:{label:'Facebook · Inicio',aspect:'1:1'},
+  tiktok:{label:'TikTok',aspect:'9:16'},
+  instagram:{label:'Instagram · Reels',aspect:'9:16'},
+  shorts:{label:'YouTube Shorts',aspect:'9:16'},
+  youtube:{label:'YouTube · Video normal',aspect:'16:9'},
+ };
+ function settings(p){
+  const height=Number(p.exportHeight)===720?720:1080;
+  const format=p.exportFormat==='webm'?'webm':'mp4';
+  const aspect=Object.hasOwn(destinations,p.exportDestination)
+   ?destinations[p.exportDestination].aspect
+   :p.format==='16:9'?'16:9':'9:16';
+  return {height,format,aspect,width:aspect==='16:9'?height*16/9:height,
+   frameHeight:aspect==='9:16'?height*16/9:height,bitrate:height===1080?8_000_000:5_000_000};
+ }
  function mime(format,supported=t=>root.MediaRecorder?.isTypeSupported(t)){return (types[format]||[]).find(supported)||'';}
  function recordingMime(p){const format=settings(p).format;return mime(format)||mime(format==='mp4'?'webm':'mp4')||(root.MediaRecorder?.isTypeSupported('video/mp4')?'video/mp4':'');}
  function dimensions(p,exporting=true){if(!exporting)return p.format==='16:9'?{width:960,height:540}:{width:540,height:960};const s=settings(p);return {width:Math.round(s.width),height:Math.round(s.frameHeight)};}
@@ -49,14 +64,45 @@
   }
  }
  const extractAudio=(blob,onStatus)=>runWorker(blob,'wav',onStatus,'extract');
- const api={settings,mime,recordingMime,dimensions,convert,extractAudio,verify,verifyOrRepair};root.FacelessExport=api;if(typeof module!=='undefined')module.exports=api;
+ const api={destinations,settings,mime,recordingMime,dimensions,convert,extractAudio,verify,verifyOrRepair};root.FacelessExport=api;if(typeof module!=='undefined')module.exports=api;
  if(typeof document==='undefined')return;
  root.facelessMountExportOptions=(p,host)=>{
   if(document.getElementById('exportQuality'))return;
   const card=document.createElement('section');card.className='editor-video-card export-options';
-  card.innerHTML='<h3>Calidad y descarga</h3><div class="export-option-grid"><div><label for="exportQuality">Resolución</label><select id="exportQuality" aria-label="Resolución"><option value="1080">1080p · Full HD</option><option value="720">720p · HD</option></select></div><div><label for="exportContainer">Formato</label><select id="exportContainer" aria-label="Formato"><option value="mp4">MP4</option><option value="webm">WebM</option></select></div></div><p class="smalltext">El audio, las imágenes y los subtítulos usan la misma línea de tiempo. Mantén esta pantalla visible durante la exportación.</p><p id="exportSupport" class="smalltext"></p><button type="button" id="cancelVideoExport" class="btn small outline" hidden>Detener exportación</button>';
-  host.append(card);card.querySelector('#cancelVideoExport').onclick=()=>{root.facelessExportCancelled=true;root.facelessCancelLocalSpeech?.();root.facelessCancelConversion?.();};const quality=card.querySelector('#exportQuality'),container=card.querySelector('#exportContainer');quality.value=String(settings(p).height);container.value=settings(p).format;
-  const refresh=()=>{const format=container.value;card.querySelector('#exportSupport').textContent=mime(format)?'Exportación directa en '+format.toUpperCase()+'.':'Conversión local a '+format.toUpperCase()+' al terminar. Puede tardar en el móvil.';};
-  const change=()=>{if(facelessIsWorking()){quality.value=String(settings(p).height);container.value=settings(p).format;return;}p.exportHeight=Number(quality.value);p.exportFormat=container.value;persist();refresh();const note=document.getElementById('mediaFormatNote');if(note)note.textContent='Exportación: '+quality.value+'p · '+container.value.toUpperCase();document.getElementById('downloadArea')?.replaceChildren();};quality.onchange=change;container.onchange=change;refresh();
+  card.innerHTML='<h3>Calidad y descarga</h3><label for="exportDestination">Dónde vas a publicar</label><select id="exportDestination"><option value="">Formato del proyecto</option></select><div class="export-option-grid"><div><label for="exportQuality">Resolución</label><select id="exportQuality" aria-label="Resolución"><option value="1080">1080p · Full HD</option><option value="720">720p · HD</option></select></div><div><label for="exportContainer">Formato</label><select id="exportContainer" aria-label="Formato"><option value="mp4">MP4</option><option value="webm">WebM</option></select></div></div><p class="smalltext">El audio, las imágenes y los subtítulos usan la misma línea de tiempo. Mantén esta pantalla visible durante la exportación.</p><p id="exportSupport" class="smalltext"></p><button type="button" id="cancelVideoExport" class="btn small outline" hidden>Detener exportación</button>';
+  host.append(card);
+  card.querySelector('#cancelVideoExport').onclick=()=>{
+   root.facelessExportCancelled=true;root.facelessCancelLocalSpeech?.();root.facelessCancelConversion?.();
+  };
+  const destination=card.querySelector('#exportDestination');
+  const quality=card.querySelector('#exportQuality');
+  const container=card.querySelector('#exportContainer');
+  for(const [value,option] of Object.entries(destinations)){
+   destination.add(new Option(option.label+' · '+option.aspect,value));
+  }
+  const reset=()=>{
+   destination.value=Object.hasOwn(destinations,p.exportDestination)?p.exportDestination:'';
+   quality.value=String(settings(p).height);
+   container.value=settings(p).format;
+  };
+  const refresh=()=>{
+   const {format,aspect}=settings(p),size=dimensions(p);
+   card.querySelector('#exportSupport').textContent=aspect+' · '+size.width+' × '+size.height+' · '+
+    (mime(format)?'Exportación directa en '+format.toUpperCase()+'.':'Conversión a '+format.toUpperCase()+' al terminar.');
+  };
+  const change=()=>{
+   if(facelessIsWorking()){reset();return;}
+   p.exportDestination=destination.value;
+   p.exportHeight=Number(quality.value);
+   p.exportFormat=container.value;
+   persist();
+   refresh();
+   const note=document.getElementById('mediaFormatNote');
+   if(note)note.textContent='Exportación: '+settings(p).aspect+' · '+quality.value+'p · '+container.value.toUpperCase();
+   document.getElementById('downloadArea')?.replaceChildren();
+  };
+  reset();
+  destination.onchange=quality.onchange=container.onchange=change;
+  refresh();
  };
 })(typeof window==='undefined'?globalThis:window);

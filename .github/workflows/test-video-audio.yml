@@ -150,6 +150,7 @@ jobs:
               window.restoreRecognition=()=>{window.facelessRecognizeLocal=original;};
               window.facelessRecognizeLocal=async()=>[{word:'diferente',start:0,end:1}];
             });
+            await page.locator('#exportDestination').selectOption('facebook');
             const pendingExport=page.evaluate(()=>renderVideo());
             await page.waitForFunction(()=>document.getElementById('renderStatus').textContent.startsWith('Grabando'));
             await page.evaluate(()=>{
@@ -312,6 +313,7 @@ jobs:
           })().catch(e=>{console.error(e);process.exit(1)});
           JS
           command -v ffprobe || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
+          test "$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0 /tmp/faceless-audio-video.webm)" = "720,720"
           echo "Pistas del video:"
           ffprobe -v error -show_entries stream=codec_type,codec_name -of csv=p=0 /tmp/faceless-audio-video.webm | tee /tmp/faceless-tracks.txt
           grep -q 'audio' /tmp/faceless-tracks.txt

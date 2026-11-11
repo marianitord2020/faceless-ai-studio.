@@ -4,6 +4,14 @@ for(const height of [720,1080])for(const format of ['mp4','webm'])for(const aspe
  const p={exportHeight:height,exportFormat:format,format:aspect};const size=exp.dimensions(p);
  assert.equal(Math.min(size.width,size.height),height);assert.equal(size.width/size.height,aspect==='16:9'?16/9:9/16);assert.equal(exp.settings(p).format,format);
 }
+for(const height of [720,1080]){
+ const vertical={width:height,height:height*16/9};
+ assert.deepEqual(exp.dimensions({exportHeight:height,format:'9:16',exportDestination:'facebook'}),{width:height,height});
+ for(const exportDestination of ['tiktok','instagram','shorts'])
+  assert.deepEqual(exp.dimensions({exportHeight:height,format:'16:9',exportDestination}),vertical);
+ assert.deepEqual(exp.dimensions({exportHeight:height,format:'9:16',exportDestination:'youtube'}),{width:height*16/9,height});
+}
+assert.deepEqual(exp.dimensions({format:'9:16',exportDestination:'facebook'},false),{width:540,height:960});
 assert.deepEqual(exp.dimensions({exportHeight:360,format:'9:16'}),{width:1080,height:1920});
 assert.deepEqual(exp.dimensions({format:'9:16'},false),{width:540,height:960});
 assert.equal(exp.mime('mp4',t=>t==='video/mp4'),'');
