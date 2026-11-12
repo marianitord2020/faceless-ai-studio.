@@ -1,28 +1,28 @@
 /* Faceless Studio · pantallas interiores visuales, aditivas y responsivas */
 :root{--faceless-violet:#a74bf1;--faceless-soft:#d8b5ff;--faceless-panel:#171125;--faceless-line:#5b3674}
 /* CREAR */
-#\63 reate.fc-complete-create{max-width:770px;margin:0 auto}
-#\63 reate.fc-complete-create .screen-head{margin:12px 0 14px}
-#\63 reate.fc-complete-create .screen-head h1{font-size:clamp(27px,6vw,40px);font-weight:850;letter-spacing:-1px;color:#fff}
-#\63 reate.fc-complete-create .screen-head p{color:#b7a8ca;font-size:14px}
+#create.fc-complete-create{max-width:770px;margin:0 auto}
+#create.fc-complete-create .screen-head{margin:12px 0 14px}
+#create.fc-complete-create .screen-head h1{font-size:clamp(27px,6vw,40px);font-weight:850;letter-spacing:-1px;color:#fff}
+#create.fc-complete-create .screen-head p{color:#b7a8ca;font-size:14px}
 .fc-creator-banner{position:relative;border-radius:22px 22px 0 0;padding:21px 22px 10px;background:radial-gradient(circle at 85% 10%,#7d30c34d,transparent 43%),linear-gradient(140deg,#211135,#171026);border:1px solid #6a3988;border-bottom:0}
 .fc-creator-kicker{color:#d0a1ff;font-size:10px;letter-spacing:2px;font-weight:900}
 .fc-creator-banner h2{font-weight:900;color:#fff;font-size:clamp(23px,5vw,31px);letter-spacing:-.7px;margin:9px 0 5px}
 .fc-creator-banner p{color:#c9b9da;font-size:14px;line-height:1.5;margin:0}
-#\63 reate .fc-create-box{border-radius:0 0 22px 22px;border-color:#6a3988;border-top:0;background:linear-gradient(145deg,#1c122d,#100e20);padding:21px 22px}
-#\63 reate .fc-create-box textarea{min-height:158px;background:#100d1d;border:1px solid #65417b;color:#fff;border-radius:15px;padding:16px;font-size:15px;line-height:1.6;resize:vertical}
-#\63 reate .fc-create-box textarea:focus{border-color:#bd73f5;outline:2px solid #9341e88c}
-#\63 reate .fc-create-box label{font-weight:790;font-size:14px}
-#\63 reate .fc-create-actions{grid-template-columns:1fr 1fr;gap:12px}
-#\63 reate .fc-create-actions :is(button,a){display:flex;align-items:center;justify-content:center;text-align:center;font-weight:800;border:1px solid #6d398f;border-radius:14px;min-height:59px}
-#\63 reate .fc-create-actions .btn.primary{background:linear-gradient(110deg,#ce36ec,#733ef5);border-color:#ba67ff;color:#fff;box-shadow:0 8px 25px #631ad144}
-#\63 reate .fc-create-actions .btn:not(.primary){background:#281837;color:#ece0f4}
-#\63 reate .fc-create-box .hint{color:#a99bbd;font-size:12px;margin:12px 0 0}
+#create .fc-create-box{border-radius:0 0 22px 22px;border-color:#6a3988;border-top:0;background:linear-gradient(145deg,#1c122d,#100e20);padding:21px 22px}
+#create .fc-create-box textarea{min-height:158px;background:#100d1d;border:1px solid #65417b;color:#fff;border-radius:15px;padding:16px;font-size:15px;line-height:1.6;resize:vertical}
+#create .fc-create-box textarea:focus{border-color:#bd73f5;outline:2px solid #9341e88c}
+#create .fc-create-box label{font-weight:790;font-size:14px}
+#create .fc-create-actions{grid-template-columns:1fr 1fr;gap:12px}
+#create .fc-create-actions :is(button,a){display:flex;align-items:center;justify-content:center;text-align:center;font-weight:800;border:1px solid #6d398f;border-radius:14px;min-height:59px}
+#create .fc-create-actions .btn.primary{background:linear-gradient(110deg,#ce36ec,#733ef5);border-color:#ba67ff;color:#fff;box-shadow:0 8px 25px #631ad144}
+#create .fc-create-actions .btn:not(.primary){background:#281837;color:#ece0f4}
+#create .fc-create-box .hint{color:#a99bbd;font-size:12px;margin:12px 0 0}
 .fc-creation-hints{display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap;margin-top:18px}
 .fc-creation-hints span{font-size:11px;color:#c7a7ed;border:1px solid #533367;background:#211831;border-radius:100px;padding:7px 9px}
-#\63 reate .fc-legacy-options{margin-top:24px}
-#\63 reate .fc-legacy-options summary{color:#d3bfeb;background:#191127;border:1px solid #5e347a;border-radius:15px;padding:16px;font-size:14px;font-weight:800}
-#\63 reate .fc-legacy-options .form-card{background:#191326;border:1px solid #473059;border-radius:15px}
+#create .fc-legacy-options{margin-top:24px}
+#create .fc-legacy-options summary{color:#d3bfeb;background:#191127;border:1px solid #5e347a;border-radius:15px;padding:16px;font-size:14px;font-weight:800}
+#create .fc-legacy-options .form-card{background:#191326;border:1px solid #473059;border-radius:15px}
 /* DESCUBRIR */
 #discover{--fc-text:#f9f0ff}
 #discover .studio-layout{background:transparent}
@@ -124,7 +124,7 @@
 .fc-timeline-scene:nth-child(even){background:linear-gradient(135deg,#41558f,#332453);border-color:#7986c9}
 .fc-video-timeline p{font-size:12px;line-height:1.4;color:#ad9dbf;margin:0}
 @media(max-width:760px){
- #\63 reate .fc-create-actions{grid-template-columns:1fr}
+ #create .fc-create-actions{grid-template-columns:1fr}
  #discover .studio-menu-view{padding:15px!important}
  #discover .studio-results-view{padding:13px!important}
  #projects .projects-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
