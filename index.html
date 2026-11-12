@@ -159,6 +159,7 @@ function updateAudioAttachmentUI(){
  window.facelessRefreshAudioAttachment?.();
 }
 function renderVideoTab(p){
+ window.FacelessSceneVideos?.restore(p).catch(error=>console.warn('Clips de escena: '+error.message));
  if(audioFileProjectId!==p.id){audioFile=generatedVoiceByProject.get(p.id)||null;audioFileProjectId=p.id}
  const mime=safeMime(Boolean(audioFile)),ext=mime.startsWith('video/mp4')?'MP4':mime?'WebM':'No disponible';
  $('tabBody').innerHTML=`<div class="detail"><h3>✦ Video automático sin créditos</h3><p>La aplicación crea <b>fondos animados para cada escena</b> sin necesidad de imágenes. Si subes fotos, las utilizará en su lugar. Agrega audio o graba tu narración con el micrófono del Android.</p>
