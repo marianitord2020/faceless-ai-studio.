@@ -87,12 +87,6 @@ body:is([data-screen="create"],[data-screen="discover"],[data-screen="editor"],[
  border:1px solid #635071!important;border-radius:14px!important;min-height:45px;
 }
 #discover.ref-news .compact-search input{font-size:13px!important}
-#discover.ref-news .boceto-news-filter{display:grid}
-#discover .boceto-news-filter{display:none;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:12px 0}
-#discover .boceto-news-filter label{display:flex;align-items:center;gap:5px;padding:8px 9px;min-width:0;background:#1d172b;border:1px solid #563b71;border-radius:13px}
-#discover .boceto-news-filter label span{font-size:11px;white-space:nowrap;color:#dcc2f7}
-#discover .boceto-news-filter select{border:0;width:100%;min-width:0;background:transparent;color:#f9f4ff;padding:5px 0;font-size:11px}
-#discover .boceto-news-filter option{background:#241a31;color:white}
 #discover.ref-news .studio-menu-view .studio-fixed-action{margin-top:13px!important}
 #discover.ref-news .studio-menu-view #studioVideoOptions{
  display:block!important;border:1px solid #5d3c77!important;
@@ -110,12 +104,6 @@ body:is([data-screen="create"],[data-screen="discover"],[data-screen="editor"],[
 #discover.ref-news .ref-news-results-tags{gap:6px}
 #discover.ref-news .ref-news-results-tags button{min-height:34px;padding:6px 11px}
 #discover.ref-news .ref-news-results-tags button:first-child{border-color:#b262ef;background:linear-gradient(100deg,#9f26d3,#6b23be)}
-#discover.ref-news .boceto-results-meta{display:flex;align-items:center;justify-content:space-between;margin:0 1px 14px}
-#discover .boceto-results-meta{display:none}
-#discover .boceto-results-meta>div{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%}
-#discover .boceto-results-meta label{background:#21162c;border:1px solid #67447c;border-radius:12px;color:#eee;padding:9px;font-size:12px}
-#discover .boceto-results-meta select{background:transparent;border:0;color:#fff;width:auto;font-size:12px;padding:0}
-#discover .boceto-results-meta span{padding:9px;background:#22152f;color:#deb5f6;border:1px solid #613e7c;border-radius:12px;font-size:11px}
 #discover.ref-news .studio-results-layout{gap:8px!important}
 #discover.ref-news .studio-cards{gap:8px!important}
 #discover.ref-news .studio-cards .studio-card{
@@ -153,37 +141,7 @@ body:is([data-screen="create"],[data-screen="discover"],[data-screen="editor"],[
 #editor .editor-hero{margin:0!important;padding:0 0 4px!important}
 #editor .editor-hero #editorTitle{font-size:15px!important;color:#ddd1eb;line-height:1.3}
 #editor .editor-hero #editorPills{font-size:12px;margin:2px 0!important;color:#aba2b5}
-#editor .boceto-tabs{
- display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
- gap:6px;background:#1b172a;border:1px solid #4b355f;border-radius:14px;padding:5px!important;
- margin:9px 0 17px;
-}
-#editor .boceto-tabs button{font-size:14px!important;min-height:44px!important;border:1px solid transparent!important;border-radius:11px!important}
-#editor .boceto-tabs button.active{background:linear-gradient(125deg,#ab2be6,#6925c3);box-shadow:0 4px 12px #b035e651}
-#editor .boceto-tabs button[data-ref-tab="video"],
-#editor .boceto-tabs button[data-ref-tab="subs"]{
- font-size:11px!important;min-height:33px!important;color:#d6bfe7;border:1px solid #553c67!important;
-}
-#editor .boceto-tabs button[data-ref-tab="video"].active,
-#editor .boceto-tabs button[data-ref-tab="subs"].active{color:white}
 #editor .ref-editor-actions{background:#171023}
-#editor .ref-narration-intro{display:none!important}
-#editor .boceto-hook-panel{padding:5px 2px 18px;display:grid;gap:10px}
-#editor .boceto-hook-title h3{font-size:17px;font-weight:800;color:#fff;margin:0}
-#editor .boceto-story-summary{display:grid;grid-template-columns:112px minmax(0,1fr);gap:12px;align-items:center;padding:8px;border:1px solid #53376b;background:#20182d;border-radius:13px}
-#editor .boceto-story-photo{height:83px;border-radius:10px;background:linear-gradient(130deg,#562682,#150d27);display:grid;place-items:center;overflow:hidden}
-#editor .boceto-story-photo>span{font-size:37px}
-#editor .boceto-story-photo img{width:100%;height:100%;object-fit:cover}
-#editor .boceto-story-summary b{display:block;font-size:15px;font-weight:790;line-height:1.3}
-#editor .boceto-story-summary small{display:block;margin-top:7px;font-size:12px;color:#c3b2d3}
-#editor .boceto-hook-prompt{font-size:17px;margin:9px 1px 0}
-#editor .boceto-hook-choices{border:0;padding:0;margin:0;min-width:0;display:grid;gap:9px}
-#editor .boceto-hook-option{display:flex;align-items:center;gap:10px;min-height:56px;border:1px solid #4e3b62;background:#161120;color:#eee9fb;border-radius:12px;padding:10px;cursor:pointer;font-size:13px;line-height:1.4}
-#editor .boceto-hook-option.selected{border:1.5px solid #de79fd;background:linear-gradient(105deg,#8026b7,#431664)}
-#editor .boceto-hook-option input{accent-color:#d851f1;width:18px;height:18px;flex:0 0 18px}
-#editor .boceto-use-hook{width:100%;margin-top:8px}
-#editor:has(.boceto-hook-panel) #tabBody>.detail{margin-top:14px!important}
-#editor:has(.boceto-hook-panel) #tabBody>.detail>h3{font-size:15px}
 #editor .ref-scene-editor{display:grid;gap:11px}
 #editor .boceto-editor-note{font-size:12px;color:#b7a0d0;margin:2px 2px 0}
 #editor .ref-media-display{aspect-ratio:16/9;border:1.5px solid #b778f1;border-radius:16px}
@@ -226,15 +184,11 @@ body:is([data-screen="create"],[data-screen="discover"],[data-screen="editor"],[
 #projects .project .project-bottom .selection-panel .btn{min-height:38px;border-radius:10px}
 @media(max-width:420px){
  body:is([data-screen="create"],[data-screen="discover"],[data-screen="editor"],[data-screen="projects"]) .main{width:calc(100% - 12px)!important}
- #editor .boceto-story-summary{grid-template-columns:96px minmax(0,1fr)}
- #editor .boceto-story-photo{height:71px}
  #projects .project{grid-template-columns:100px minmax(0,1fr)}
  #discover.ref-news .ref-news-categories button{font-size:11px!important;padding:9px 2px!important}
 }
 @media(max-width:360px){
  #create .boceto-page-top h1{font-size:22px}
- #discover.ref-news .boceto-news-filter label{flex-direction:column;align-items:stretch}
- #editor .boceto-hook-option{font-size:12px}
  #projects .fcx-project-tabs button{font-size:10px!important}
 }
 
@@ -242,16 +196,6 @@ body:is([data-screen="create"],[data-screen="discover"],[data-screen="editor"],[
 /* Ajuste final del boceto: dos pestañas principales, herramientas sin ruido. */
 #editor .boceto-tabs{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
 #editor .boceto-tabs button{min-height:48px!important;font-size:15px!important;}
-#editor .boceto-extra-tools{margin:-7px 2px 14px;border:1px solid #493262;border-radius:12px;background:#171121;padding:0 11px 10px;}
-#editor .boceto-extra-tools:not([open]){padding-bottom:0;}
-#editor .boceto-extra-tools summary{cursor:pointer;color:#c9a8e0;padding:11px 0;font-size:12px;list-style:none;}
-#editor .boceto-extra-tools summary::-webkit-details-marker{display:none;}
-#editor .boceto-extra-tools button{min-height:39px;padding:9px 14px;border-radius:10px;border:1px solid #73508c;background:#2c193c;color:#f9e8ff;font-size:12px;margin:0 7px 4px 0;}
-#editor .boceto-extra-tools button.active{background:linear-gradient(115deg,#a32ae3,#6321bc);border-color:#e492ff;}
-#editor .boceto-script-advanced{margin:11px 0 20px;border:1px solid #51386c;border-radius:14px;background:#161022;}
-#editor .boceto-script-advanced summary{padding:13px 15px;cursor:pointer;font-size:13px;font-weight:740;color:#e0c4f2;}
-#editor .boceto-script-advanced .detail{border:0!important;background:transparent!important;margin:0!important;padding:10px!important;}
-#editor .boceto-script-advanced .detail textarea{font-size:13px;line-height:1.6;}
 #editor .ref-media-display{position:relative;isolation:isolate;background:#090615;}
 #editor .boceto-scene-preview{position:absolute;inset:0;width:100%;height:100%;z-index:1;background:#090615;object-fit:contain;}
 #editor .boceto-video-controls{z-index:3;}
@@ -274,7 +218,6 @@ body:is([data-screen="create"],[data-screen="discover"],[data-screen="editor"],[
 }
 #discover.ref-news .compact-story{order:0}
 #discover.ref-news .ref-news-categories{order:1}
-#discover.ref-news .boceto-news-filter{order:2}
 #projects .project:has(.fc-project-state) .boceto-project-status{display:none!important}
 #projects .project .fc-project-thumb{
  grid-column:1!important;grid-row:1/span 4!important;
