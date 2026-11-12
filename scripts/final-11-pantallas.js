@@ -68,7 +68,6 @@ $("finalVoice").onchange=e=>config.voice=e.target.value;
 $("finalFormat").onchange=e=>config.format=e.target.value;
 $("finalGenerate").onclick=()=>{
  if(source==="manual"){window.location.href="editar-sin-ia/";return;}
- const idea=config.topic.trim()||config.genre==="Noticias"?"":""; // checked below; use exact typed topic.
  const topic=config.topic.trim();
  if(topic.length<5){$("finalNote").textContent="Escribe un tema de al menos 5 caracteres.";$("finalTopic").focus();return;}
  window.facelessFlow="ai";document.body.dataset.flow="ai";routing("discover");window.facelessShowStudioMenu?.();
