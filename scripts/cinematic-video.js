@@ -4,11 +4,24 @@
  const captionStyles={highlight:{name:'Resaltado amarillo',active:'#ffe14a',text:'#ffffff',box:'#060814c9'},purple:{name:'Karaoke violeta',active:'#c49aff',text:'#ffffff',box:'#060814c9'},classic:{name:'Clásico',text:'#ffffff',box:'#060814c9'},neon:{name:'Neón',text:'#59ffe1',glow:true},paper:{name:'Caja blanca',active:'#9856ed',text:'#14121d',box:'#fffffff2',activeText:'#ffffff'},outline:{name:'Contorno',text:'#ffffff'},minimal:{name:'Minimalista',text:'#ffffff',weight:600},comic:{name:'Cómic',text:'#ffe14a',weight:900}};
  const clamp=(n,a=0,b=1)=>Math.max(a,Math.min(b,n));
  const ease=n=>(1-Math.cos(Math.PI*clamp(n)))/2;
- function camera(w,h,iw,ih,progress,index){
-  const t=ease(progress),zoom=1.06+.12*(index%2?1-t:t),scale=Math.max(w/iw,h/ih)*zoom;
-  const width=iw*scale,height=ih*scale;
-  const direction=index%3===0?t:index%3===1?1-t:.5+.18*Math.sin(t*Math.PI);
-  return {x:-(width-w)*(.25+.5*direction),y:-(height-h)*(.35+.3*(index%2?t:1-t)),width,height};
+ function camera(w,h,iw,ih,progress,index,preset='auto',intensity=50){
+  const t=ease(progress),power=clamp((Number(intensity)||50)/100,.1,1);
+  // Auto conserva el movimiento cinematográfico anterior de los proyectos guardados.
+  if(preset==='auto'||!['zoom','pan','vertical','dramatic'].includes(preset)){
+   const zoom=1.06+.12*(index%2?1-t:t),scale=Math.max(w/iw,h/ih)*zoom;
+   const width=iw*scale,height=ih*scale;
+   const direction=index%3===0?t:index%3===1?1-t:.5+.18*Math.sin(t*Math.PI);
+   return {x:-(width-w)*(.25+.5*direction),y:-(height-h)*(.35+.3*(index%2?t:1-t)),width,height};
+  }
+  let z=1.08+power*.09;
+  if(preset==='zoom')z=1.02+(power*.28)*t;
+  if(preset==='dramatic')z=1.02+(power*.4)*Math.min(1,t*1.6);
+  if(preset==='pan'||preset==='vertical')z=1.12+power*.12;
+  const scale=Math.max(w/iw,h/ih)*z,width=iw*scale,height=ih*scale;
+  const dx=Math.max(0,width-w),dy=Math.max(0,height-h);
+  const x=preset==='pan'?(-dx*(.08+.84*t)):-dx*.5;
+  const y=preset==='vertical'?(-dy*(.1+.8*t)):-dy*.5;
+  return {x,y,width,height};
  }
  function captionState(cues,seconds){
   const cue=cues.find(c=>seconds>=c.start&&seconds<c.end);if(!cue)return null;
@@ -19,7 +32,7 @@
   const w=ctx.canvas.width,h=ctx.canvas.height,s=p.scenes[index]||p.scenes[0];
   const t=clamp((seconds-s.time)/Math.max(.01,s.duration));
   const video=root.facelessOwnVideo?.();if(video&&video.readyState>=2&&!image){ctx.fillStyle='#080b17';ctx.fillRect(0,0,w,h);const scale=(s.imageFit==='contain'?Math.min:Math.max)(w/video.videoWidth,h/video.videoHeight);ctx.drawImage(video,(w-video.videoWidth*scale)/2,(h-video.videoHeight*scale)/2,video.videoWidth*scale,video.videoHeight*scale);return;}
-  if(image){const iw=image.naturalWidth||image.width,ih=image.naturalHeight||image.height;let r;if(s.imageFit==='contain'||s.imageMotion==='static'){const scale=(s.imageFit==='contain'?Math.min:Math.max)(w/iw,h/ih);r={x:(w-iw*scale)/2,y:(h-ih*scale)/2,width:iw*scale,height:ih*scale};ctx.fillStyle='#080b17';ctx.fillRect(0,0,w,h);}else r=camera(w,h,iw,ih,t,index);ctx.drawImage(image,r.x,r.y,r.width,r.height);return;}
+  if(image){const iw=image.naturalWidth||image.width,ih=image.naturalHeight||image.height;let r;if(s.imageFit==='contain'||s.imageMotion==='static'){const scale=(s.imageFit==='contain'?Math.min:Math.max)(w/iw,h/ih);r={x:(w-iw*scale)/2,y:(h-ih*scale)/2,width:iw*scale,height:ih*scale};ctx.fillStyle='#080b17';ctx.fillRect(0,0,w,h);}else r=camera(w,h,iw,ih,t,index,s.photoMotion||'auto',s.photoIntensity||50);ctx.drawImage(image,r.x,r.y,r.width,r.height);return;}
   const palettes={Romance:['#261335','#46234e','#78406f'],Terror:['#070c17','#1b2535','#482a53'],Historia:['#311b20','#704739','#976b42'],Curiosidades:['#132d48','#175d71','#177d94'],Motivación:['#471c5b','#913266','#c77352'],Noticias:['#101e39','#235b93','#267fbd'],Educativo:['#0c2846','#126c7d','#258d88']};
   const colors=palettes[p.style]||['#030f2d','#13275f','#6b21a8'],g=ctx.createLinearGradient(0,0,w,h);colors.forEach((c,i)=>g.addColorStop(i/2,c));ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
   for(let k=0;k<7;k++){const f=k*1.93+index*2.7,r=w*(.1+k%4*.07),x=w*(.15+(k*.17)%.9)+Math.sin(seconds*.31+f)*w*.11,y=h*(.14+(k*.13)%.78)+Math.cos(seconds*.23+f)*h*.06;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fillStyle=k%2?'#ffffff0e':'#a473ff1c';ctx.fill();}
