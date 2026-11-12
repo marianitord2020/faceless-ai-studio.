@@ -150,8 +150,9 @@ function mountAIPhotoControls(project, updatePreview) {
     // IMPORTANTE: el Worker de guiones y el de fotos tienen códigos distintos.
     // Nunca reutilizar geminiPass ni una clave API de otro servicio.
     const passInput = panel.querySelector('#aiPhotosPasscode');
-    const newPass = passInput.value.trim();
+    const newPass = window.facelessAccess?.current()||passInput.value.trim()||window.facelessProductionPasscode||'';
     if (newPass) facelessImagePasscode = newPass;
+    if (newPass&&!window.facelessAccess?.current())void window.facelessAccess?.authorize(newPass).catch(()=>{});
     if (!facelessImagePasscode) {
       status.textContent = 'Introduce aquí el valor exacto del secreto APP_PASSCODE que guardaste en GitHub.';
       passInput.focus();
