@@ -202,8 +202,9 @@ function mountAIVoiceControls(project) {
   start.onclick = async () => {
     if (window.facelessMediaBusy||facelessVoiceBusy) return;
     cancel.onclick=()=>{facelessVoiceCancel=true;window.facelessCancelLocalSpeech?.();};
-    const pass = passwordInput.value.trim();
+    const pass = window.facelessAccess?.current()||passwordInput.value.trim()||window.facelessProductionPasscode||'';
     if (pass) facelessVoicePassword = pass;
+    if(pass&&!window.facelessAccess?.current())void window.facelessAccess?.authorize(pass).catch(()=>{});
     if (!facelessVoicePassword || facelessVoicePassword.length < 16) {
       status.textContent = 'Introduce el código APP_PASSCODE de mínimo 16 caracteres, el mismo que utilizaste para las fotos.';
       passwordInput.focus();
