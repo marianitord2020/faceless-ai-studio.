@@ -38,7 +38,7 @@ body.editor-mode #editor .editor-export-bar {
   transform:none!important;width:100%!important;max-width:none!important;
   margin:10px 0 16px!important;z-index:auto!important;
   display:grid!important;grid-template-columns:1fr!important;
-  grid-template-rows:auto auto!important;gap:6px!important;
+  grid-template-rows:auto auto!important;gap:12px!important;
   padding:10px 12px!important;box-sizing:border-box!important;
   border:1px solid #65378d!important;border-radius:14px!important;
   background:linear-gradient(135deg,#29173b,#150b25)!important;
