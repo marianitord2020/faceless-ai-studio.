@@ -188,9 +188,9 @@ jobs:
             const downloadPromise=page.waitForEvent('download');
             await page.locator('#bocetoEditorNav [data-boceto-tab="exportar"]').click();
             await page.locator('#downloadArea a').click();
-            await page.locator('#bocetoEditorNav [data-boceto-tab="video"]').click();
             const download=await downloadPromise;
             await download.saveAs('/tmp/faceless-audio-video.webm');
+            await page.locator('#bocetoEditorNav [data-boceto-tab="video"]').click();
             const bytes=fs.statSync('/tmp/faceless-audio-video.webm').size;
             if(bytes<10000)throw Error('Video demasiado pequeño: '+bytes);
             console.log('VIDEO OK; bytes:',bytes);
