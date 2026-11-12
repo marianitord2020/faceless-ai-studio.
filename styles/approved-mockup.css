@@ -162,3 +162,6 @@ body .fc-bottom button[aria-current=page]{color:#fff!important;background:linear
  #discover .fcx-discover-chips{margin-bottom:8px}
  #editor .fcx-style-row{gap:5px}
 }
+
+/* The standard legacy return control is redundant with the new explorer arrow. */
+body.studio-mode #discoverFlowBack{display:none!important}
