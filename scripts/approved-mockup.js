@@ -153,7 +153,7 @@ function augmentEditor(){
  if(videoTab==='video'){
    if(!tools){
      const wrap=document.createElement('section');wrap.id='fcx-visual-toolbar';wrap.className='fcx-editor-style';
-     wrap.innerHTML='<h3>Estilo visual</h3><div class="fcx-style-row">'+styleTiles()+'</div>';
+     wrap.innerHTML='<h3>Estilo visual</h3><div class="fcx-style-row" aria-label="Estilos visuales disponibles">'+styleTiles(7)+'</div>';
      const stage=editor.querySelector('.fc-video-timeline')||videoSection.firstElementChild;
      stage?.before(wrap);
      wrap.addEventListener('click',e=>{const b=e.target.closest('[data-fcx-style]');if(b){setStyle(b.dataset.fcxStyle);p.imageStyle=style;if(typeof persist==='function')persist()}});
