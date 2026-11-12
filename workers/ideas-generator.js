@@ -1,6 +1,7 @@
 import { geminiScriptCall, trustedSources } from './script-generator.js';
 import { searchRealNews } from './news-search.js';
 import { generateWikipediaIdeas } from './wiki-search.js';
+import {regionForQuery,regionDate} from './news-geography.js';
 function ideasError(message,status=502){const e=new Error(message);e.httpStatus=status;throw e}
 function json(raw){
  try{return JSON.parse(raw)}catch{
@@ -28,7 +29,7 @@ export async function generateCoverIdeas(input,env){
  const subcategory=String(input?.subcategory||'').replace(/\s+/g,' ').trim().slice(0,80);
  const style=String(input?.style||'Misterio').slice(0,40);
  const mode=['Noticias','Farándula','Entretenimiento'].includes(style)?'news':(['fiction','news','factual'].includes(input?.mode)?input.mode:'fiction');
- const date=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Santo_Domingo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+ const date=regionDate(new Date(),regionForQuery(topic));
  if(mode==='news'){const sourceQuery=[topic,subcategory].filter(Boolean).join(' ');return {...await searchRealNews(sourceQuery,style,env,{page:input?.page}),query:topic,subcategory,sourceQuery}}
  if(mode==='factual'){const sourceQuery=[topic,subcategory].filter(Boolean).join(' ');return {...await generateWikipediaIdeas(sourceQuery,style,env),query:topic,subcategory,sourceQuery}}
  if(mode==='fiction'){
