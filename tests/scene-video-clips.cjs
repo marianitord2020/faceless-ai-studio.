@@ -36,8 +36,7 @@ const assert=require('node:assert/strict');
  assert.ok(colors.red[0]>colors.red[2],'La primera escena debe mostrar el clip rojo: '+colors.red);
  assert.ok(colors.blue[2]>colors.blue[0],'La segunda escena debe mostrar el clip azul: '+colors.blue);
  // Ajustar el inicio del segundo clip sin alterar la duración total.
- await page.locator('.scene-clip-trim input').fill('0.5');
- await page.locator('.scene-clip-trim input').dispatchEvent('change');
+ await page.locator('.scene-clip-trim input').evaluate(el=>{el.value='0.5';el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));});
  assert.equal(await page.evaluate(()=>current().scenes[1].clipStart),.5);
  await page.reload();
  await page.waitForFunction(()=>window.facelessStudioReady);
