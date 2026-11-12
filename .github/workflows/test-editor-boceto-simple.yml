@@ -40,7 +40,10 @@ jobs:
           python3 -m http.server 4173 --bind 127.0.0.1 > "$RUNNER_TEMP/editor-http.log" 2>&1 &
           sleep 2
       - name: Probar Android, escritorio, tabs y controles reales
-        run: node tests/editor-boceto-simple.cjs
+        run: |
+          node tests/editor-boceto-simple.cjs
+          node tests/scene-video-clips.cjs
+          ffprobe -v error -show_entries stream=codec_type -of csv=p=0 /tmp/scene-clips-export.webm | grep -q video
       - name: Adjuntar capturas del editor
         if: always()
         uses: actions/upload-artifact@v4
