@@ -196,3 +196,14 @@ body .topbar .bar .final-account{flex:0 0 39px;width:39px;height:39px;border-rad
 #editor .fc-timeline-head .fc-timeline-meta{grid-column:1;grid-row:2}
 #editor .fc-timeline-hero-jump{grid-column:2;grid-row:1/span 2;border:1px solid #b760ea;border-radius:11px;background:linear-gradient(120deg,#7934bb,#361956);color:#fff;min-height:39px;min-width:104px;padding:8px 9px;font-size:12px;font-weight:800}
 #editor .fc-timeline-hero-jump:focus-visible{outline:2px solid #fff;outline-offset:2px}
+
+
+/* Acceso seguro: la autorización se introduce donde inicia el video, no en un segundo formulario. */
+#create .final-access{margin:10px 0 12px;padding:12px;border:1px solid #a965db;border-radius:13px;background:linear-gradient(130deg,#27143d,#170d28)}
+#create .final-access[hidden]{display:none!important}
+#create .final-access summary{cursor:pointer;font-size:14px;font-weight:800;color:#f8e9ff;list-style:none}
+#create .final-access summary:before{content:"🔒";padding-right:8px}
+#create .final-access p{font-size:12px;color:#d5bee7;line-height:1.5;margin:8px 0 10px}
+#create .final-access label{display:block;font-size:12px;color:#eee0fb;font-weight:750;margin-bottom:7px}
+#create #finalAccessCode{width:100%;height:46px;background:#140b21;border:1px solid #9362bd;border-radius:10px;color:white;font-size:14px;padding:10px 12px}
+#create .final-note:not(:empty){background:#271335;color:#f4cfff;border:1px solid #76408c;border-radius:10px;padding:9px 11px;line-height:1.35}
