@@ -93,3 +93,14 @@ body.editor-mode #editor .editor-hero,#editor .tabs,#editor .editor-video-card{b
 }
 
 #discover .fc-news-more{display:block;grid-column:1/-1;width:100%;min-height:52px;border:1px solid #944fea;border-radius:14px;background:#32174d;color:#f8eeff;font-size:14px;font-weight:850;cursor:pointer;margin:10px 0 25px}#discover .fc-news-more:disabled{opacity:.7;cursor:wait}
+
+/* Ilustraciones originales optimizadas y servidas por el mismo dominio. */
+.fc-category{background-size:cover!important;background-position:center!important;box-shadow:inset 0 -62px 72px #0d0826d9,0 12px 24px #0006}
+.fc-category[data-category=noticias]{background-image:linear-gradient(0deg,#0a0b21f5 0%,#11132618 82%),url('../assets/home-noticias.svg')}
+.fc-category[data-category=farandula]{background-image:linear-gradient(0deg,#140a24f5 0%,#1b103010 85%),url('../assets/home-farandula.svg')}
+.fc-category[data-category=relatos]{background-image:linear-gradient(0deg,#090c25f3 0%,#14152811 85%),url('../assets/home-relatos.svg')}
+.fc-category[data-category=documentales]{background-image:linear-gradient(0deg,#221222f0 0%,#26192511 85%),url('../assets/home-documentales.svg')}
+.fc-category[data-category=aprender]{background-image:linear-gradient(0deg,#0a132bf1 0%,#191b3a13 85%),url('../assets/home-aprender.svg')}
+.fc-category[data-category=tendencias]{background-image:linear-gradient(0deg,#2b1029f4 0%,#38173a34 88%),url('../assets/home-farandula.svg')}
+.fc-category .fc-art{opacity:.05}
+.fc-category::before{background:none}
