@@ -286,3 +286,19 @@ body[data-screen="projects"] .main{padding-bottom:98px!important}
  #discover .ref-news-results-title strong{font-size:19px}
  #discover .ref-news-results-tags button{padding:7px 9px;font-size:10px}
 }
+
+/* Seguridad visual regresiva: controles de escritorio continúan accesibles. */
+@media(min-width:761px){
+ #discover.ref-news .compact-category{display:block!important}
+ #discover.ref-news .studio-models{display:block!important}
+ #discover.ref-news .compact-origin{display:block!important}
+ #discover.ref-news #studioVideoOptions{display:block!important}
+}
+#editor .ref-editor-actions #saveProject{
+ width:36px!important;min-width:36px!important;max-width:36px!important;
+ height:36px!important;min-height:36px!important;flex:0 0 36px!important;
+ border-radius:50%!important;
+}
+@media(max-width:760px){
+ #editor .editor-export-bar{bottom:0px!important}
+}
