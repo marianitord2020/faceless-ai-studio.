@@ -83,6 +83,7 @@ jobs:
             assert.equal(await page.locator('#projects .project').count(),1);
             await page.locator('#projects [data-project=open]').first().click();
             assert.equal(await page.locator('body').getAttribute('data-screen'),'editor');
+            await page.evaluate(()=>{tab='video';renderEditor()});
             await page.waitForTimeout(200);
             await page.screenshot({path:'approved-screens/'+width+'-editor.png',fullPage:true});
             assert.equal(await page.locator('#editor .fcx-stepper button').count(),4);
