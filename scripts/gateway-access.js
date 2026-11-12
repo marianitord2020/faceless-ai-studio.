@@ -6,6 +6,7 @@
  const ACCESS_HOST='faceless-access-prueba.marianitord2020.workers.dev';
  const LEGACY_ORIGIN='https://faceless-images.marianitord2020.workers.dev';
  const enabled=location.hostname.toLowerCase()===ACCESS_HOST;
+ document.documentElement.classList.toggle('faceless-d1',enabled);
  const ensurePath=path=>{
   const value=String(path||'');
   if(!/^\/(?:images|voice|script|ideas|transcribe|analyze|stock\/(?:search|import)|read-url)$/.test(value))
