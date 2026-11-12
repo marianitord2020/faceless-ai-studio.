@@ -23,7 +23,7 @@
    if(busy()){if(explicit)status.textContent='Espera a que termine la operación actual.';return false;}
    try{const parsed=new URL(value);if(parsed.protocol!=='https:')throw Error();}catch{if(explicit)status.textContent='Escribe un enlace HTTPS válido.';return false;}
    if(!explicit&&loadedURL===value)return true;
-   if(!window.FacelessGateway.enabled&&getAccess().length<16){needAccess('Para cargar el relato, introduce aquí el código privado de tu app.',explicit);return false;}
+   if(!window.FacelessGateway?.enabled&&getAccess().length<16){needAccess('Para cargar el relato, introduce aquí el código privado de tu app.',explicit);return false;}
    const ticket=++request,version=revision;button.disabled=true;status.textContent='Leyendo el enlace y extrayendo el relato…';
    try{
     const data=await read(value);
