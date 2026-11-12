@@ -142,6 +142,11 @@ jobs:
             const aligned=await page.evaluate(()=>({duration:current().duration,times:current().scenes.map(s=>s.time),text:current().narration,captions:FacelessTiming.cues(current()).map(c=>c.text).join(' '),caption:facelessCaptionAt(current(),3.1)}));
             assert.equal(aligned.duration,8);assert.deepEqual(aligned.times,[0,3,5]);assert.equal(aligned.captions,aligned.text.replaceAll('\n',' '));assert.equal(aligned.caption,'Ahora contamos una historia sobre Lola.');assert.equal(transcriptions,1);
             await page.reload();await page.waitForFunction(()=>window.facelessStudioReady);await page.evaluate(()=>{activeId='media-fixture';tab='video';route('editor')});
+            console.log('MEDIA RELOAD UI',await page.evaluate(()=>({
+              page:document.body.dataset.screen,editorVisible:!document.querySelector('#editor')?.classList.contains('hidden'),
+              nav:!!document.querySelector('#bocetoEditorNav'),activeId,
+              projects:projects?.length,exists:!!current(),tab,href:location.href.slice(0,120)
+            })));
             await page.locator('#bocetoEditorNav [data-boceto-tab="video"]').click();
             await page.waitForFunction(()=>audioFile?.facelessManual&&current().audioAlignment?.method==='speech');
             await reveal('#uploadedAudioPlayer');
