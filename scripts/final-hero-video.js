@@ -35,11 +35,11 @@ async function load(p,file){
  try{
   await new Promise((resolve,reject)=>{const fail=setTimeout(()=>reject(Error('No se pudo cargar el clip de introducción.')),10000);v.onloadedmetadata=()=>{clearTimeout(fail);resolve();};v.onerror=()=>{clearTimeout(fail);reject(Error('El navegador no admite este video. Prueba otro MP4 o WebM.'));};});
   if(!Number.isFinite(v.duration)||v.duration<5)throw Error('El clip debe durar 5 segundos o más.');
-  if((p.scenes?.[0]?.duration||0)<5)throw Error('La primera escena requiere al menos 5 segundos para el Hero Video.');
+  if((Number(p.duration)||0)<5)throw Error('El proyecto debe durar al menos 5 segundos para añadir una introducción.');
  }catch(error){URL.revokeObjectURL(url);throw error;}
  clean();
  state.id=p.id;state.file=file;state.url=url;state.video=v;
- p.heroDuration=Math.min(8,Math.max(5,Number(p.heroDuration)||6),p.scenes[0].duration,v.duration);
+ p.heroDuration=Math.min(8,Math.max(5,Number(p.heroDuration)||6),Number(p.duration)||6,v.duration);
  p.heroStart=Math.min(Number(p.heroStart)||0,Math.max(0,v.duration-p.heroDuration));
  v.currentTime=p.heroStart;
  if(typeof persist==='function')persist();
@@ -90,13 +90,13 @@ if(window.FacelessCinema?.render){
  const film=document.createElement('canvas'),filmCtx=film.getContext('2d',{alpha:false});
  window.FacelessCinema.render=function(ctx,p,index,seconds,getImage,cues){
   const v=p.id===state.id?state.video:null;
-  const length=Math.min(Number(p.heroDuration)||6,p.scenes?.[0]?.duration||6);
-  if(v&&index===0&&seconds<length&&v.readyState>=2){
+  const length=Math.min(Number(p.heroDuration)||6,Number(p.duration)||6);
+  if(v&&seconds<length&&v.readyState>=2){
    const scale=Math.min(1,720/Math.max(v.videoWidth,v.videoHeight));
    const w=Math.max(2,Math.round(v.videoWidth*scale)),h=Math.max(2,Math.round(v.videoHeight*scale));
    if(film.width!==w||film.height!==h){film.width=w;film.height=h;}
    filmCtx.drawImage(v,0,0,w,h);
-   original(ctx,p,index,seconds,i=>i===0?film:getImage(i),cues);
+   original(ctx,p,index,seconds,i=>seconds<length?film:getImage(i),cues);
   }else original(ctx,p,index,seconds,getImage,cues);
   if(index>0&&p.transitionType&&p.transitionType!=='fade'){
    const scene=p.scenes[index],elapsed=seconds-scene.time,range=.5;
@@ -120,7 +120,7 @@ function updatePanel(){
  if(clip){
   text.textContent='✓ Clip real cargado · '+clip.duration.toFixed(1)+' s. Se utilizará en la introducción del video exportado, con la narración y subtítulos del proyecto.';
   player.src=state.url;player.hidden=false;remove.hidden=false;
-  duration.max=String(Math.min(8,Math.floor(p.scenes?.[0]?.duration||8),Math.floor(clip.duration)));
+  duration.max=String(Math.min(8,Math.floor(Number(p.duration)||8),Math.floor(clip.duration)));
   duration.value=String(Math.min(Number(duration.max),Number(p.heroDuration)||6));
   trim.max=String(Math.max(0,clip.duration-Number(duration.value)));trim.value=String(p.heroStart||0);
   trim.disabled=Number(trim.max)===0;
@@ -166,7 +166,7 @@ function mount(){
  const dur=panel.querySelector('#finalHeroDuration'),start=panel.querySelector('#finalHeroStart');
  dur.oninput=()=>{
   p.heroDuration=Number(dur.value);
-  if(active())p.heroDuration=Math.min(p.heroDuration,active().duration,p.scenes[0].duration);
+  if(active())p.heroDuration=Math.min(p.heroDuration,active().duration,Number(p.duration)||8);
   panel.querySelector('#finalHeroDurLabel').textContent=p.heroDuration+' s';
   if(active()){start.max=String(Math.max(0,active().duration-p.heroDuration));start.value=String(Math.min(Number(start.value),Number(start.max)));p.heroStart=Number(start.value);}
   if(typeof persist==='function')persist();previewRefresh();
