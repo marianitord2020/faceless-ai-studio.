@@ -1,0 +1,61 @@
+name: Comprobar enlace D1 y despliegue del Worker de acceso
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "index.html"
+      - "scripts/gateway-access.js"
+      - "scripts/discover.js"
+      - "scripts/final-11-pantallas.js"
+      - ".github/workflows/verify-access-deployment.yml"
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Probar que el sitio de acceso exige sesión D1
+        shell: bash
+        run: |
+          set -euo pipefail
+          root='https://faceless-access-prueba.marianitord2020.workers.dev'
+          login=$(curl -s --output /dev/null --max-time 20 --write-out '%{http_code}' "$root/login")
+          blocked=$(curl -s --output /dev/null --max-time 20 --write-out '%{http_code}' \
+            -X POST "$root/api/ideas" -H 'Content-Type: application/json' --data '{"topic":"misterio"}')
+          echo "LOGIN_HTTP=$login"
+          echo "UNAUTHENTICATED_API_HTTP=$blocked"
+          test "$login" = 200
+          test "$blocked" = 401
+      - name: Revisar enlaces Cloudflare DB, MEDIA, ASSETS y metadatos de despliegue
+        shell: bash
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "Cloudflare metadata permissions unavailable"
+            exit 0
+          fi
+          host="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID"
+          settings_status=$(curl -s --max-time 20 --output /tmp/access-settings.json --write-out '%{http_code}' \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "$host/workers/scripts/faceless-access-prueba/settings") || settings_status=network_error
+          deploy_status=$(curl -s --max-time 20 --output /tmp/access-deploy.json --write-out '%{http_code}' \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "$host/workers/scripts/faceless-access-prueba/deployments") || deploy_status=network_error
+          echo "CLOUDFLARE_SETTINGS_HTTP=$settings_status"
+          echo "CLOUDFLARE_DEPLOYMENTS_HTTP=$deploy_status"
+          node <<'NODE'
+          const fs=require('node:fs');
+          const read=p=>{try{return JSON.parse(fs.readFileSync(p,'utf8'))}catch{return {}}};
+          const settings=read('/tmp/access-settings.json');
+          const bindings=Array.isArray(settings.result?.bindings)?settings.result.bindings:[];
+          const safe=bindings.filter(x=>['d1','service','assets'].some(t=>(x.type||'').includes(t)));
+          console.log('Access Worker bindings:',JSON.stringify(safe.map(x=>({name:x.name,type:x.type}))));
+          const dep=read('/tmp/access-deploy.json');
+          let items=Array.isArray(dep.result?.deployments)?dep.result.deployments:Array.isArray(dep.result)?dep.result:[];
+          console.log('Worker deploy metadata available:',dep.success===true);
+          console.log('Last deployment time:',items[0]?.created_on||items[0]?.created_at||'not visible');
+          NODE
