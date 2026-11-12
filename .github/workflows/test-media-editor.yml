@@ -90,6 +90,7 @@ jobs:
             assert.equal(await page.locator('#manualPhotoSlots').isVisible(),false);assert.equal(await page.locator('#audioAttachment').isVisible(),false);
             const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a6d8AAAAASUVORK5CYII=','base64');
             const photo=name=>({name,mimeType:'image/png',buffer:png});
+            await page.evaluate(()=>{const area=document.getElementById('manualInfrastructure');if(area)area.hidden=false;});
             await reveal('#pickOwnPhotos');
             const photoChooserPromise=page.waitForEvent('filechooser');await page.locator('#pickOwnPhotos').click();const photoChooser=await photoChooserPromise;assert.equal(photoChooser.isMultiple(),true);await photoChooser.setFiles([photo('primera.png'),photo('segunda.png')]);
             await page.waitForFunction(()=>!window.facelessMediaBusy&&facelessProjectPhotos('media-fixture').size===2);
