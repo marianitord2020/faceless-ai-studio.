@@ -29,6 +29,7 @@ fs.mkdirSync('editor-boceto-capturas',{recursive:true});
   assert.equal(await page.locator('#aiVoiceGenerate').count(),1);
   assert.equal(await page.locator('#previewCanvas').count(),1);
   assert.equal(await page.locator('#renderVideo').count(),1);
+  assert.equal(await page.locator('.boceto-export-card #downloadArea').count(),1,'El archivo final debe descargarse desde Exportar');
   assert.equal(await page.locator('.boceto-subtitle-card #bocetoCaption').count(),1);
   assert.equal(await page.locator('#finalTransitionPanel [data-final-transition]').count(),6);
   const hidden4=await page.locator('#finalTransitionPanel [data-final-transition="spin"]').isVisible();
