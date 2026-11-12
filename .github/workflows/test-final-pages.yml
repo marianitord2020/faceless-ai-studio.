@@ -107,6 +107,8 @@ jobs:
             const sources=await page.evaluate(()=>[...document.querySelectorAll('#fcx-visual-toolbar img, #finalTransitionPanel img')].map(img=>img.src));
             for(const src of sources){const response=await page.request.get(src);assert.equal(response.status(),200,'La imagen del estilo o transición debe existir en GitHub: '+src);}
             await page.evaluate(()=>history.replaceState({},'',new URL('crear-con-ia/',location.origin+'/').pathname));
+            await page.locator('#bocetoEditorNav [data-boceto-tab="video"]').click();
+            await page.locator('.boceto-ai-more > summary').click();
             await page.locator('#fcx-visual-toolbar button').first().click();
             assert.ok(await page.locator('#fcx-visual-toolbar .fcx-style').count()>=7);
             assert.equal(await page.locator('.fc-timeline-hero-jump').count(),0,'Hero no duplicado en línea de tiempo');
