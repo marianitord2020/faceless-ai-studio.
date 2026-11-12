@@ -152,6 +152,7 @@ function mountTimeline(){
   const track=document.createElement('div');track.className='fc-timeline-track';
   p.scenes.forEach((scene,i)=>{
     const btn=document.createElement('button');btn.type='button';btn.className='fc-timeline-scene';
+    const art=document.createElement('span');art.className='fc-timeline-art';art.setAttribute('aria-hidden','true');btn.append(art);
     const stamp=n=>Math.floor(n/60)+':'+String(Math.floor(n%60)).padStart(2,'0');
     btn.style.flex='0 0 90px';
     const number=document.createElement('span');number.className='fc-timeline-number';number.textContent=String(i+1);
@@ -161,6 +162,7 @@ function mountTimeline(){
     btn.title='Editar escena '+(i+1)+', '+Number(scene.duration.toFixed(1))+' segundos';
     btn.setAttribute('aria-label',btn.title);
     btn.onclick=()=>{
+      if(i===0&&window.facelessHeroStatus?.().loaded){heroJump.click();return;}
       editor.querySelector('.tabs [data-tab="scenes"]')?.click();
       queueMicrotask(()=>document.getElementById('s'+i)?.focus({preventScroll:false}));
     };
@@ -168,11 +170,29 @@ function mountTimeline(){
   });timeline.append(track);
   const note=document.createElement('p');note.textContent='Toca un segmento para editar su guion. Las fotografías pueden animarse con zoom y paneos sin usar IA.';timeline.append(note);
   tabBody.prepend(timeline);
+  const updateThumbs=()=>{
+    if(current()?.id!==p.id)return;
+    const images=window.facelessSceneImages?.get(p.id);
+    track.querySelectorAll('.fc-timeline-scene').forEach((tile,i)=>{
+      const heroFrame=i===0?window.facelessHeroPoster?.():'';
+      const sceneImage=images?.get(i);
+      const src=heroFrame||(sceneImage?.src||sceneImage?.currentSrc||'');
+      const art=tile.querySelector('.fc-timeline-art');
+      if(!art)return;
+      if(src){
+        let picture=art.querySelector('img');
+        if(!picture){picture=document.createElement('img');picture.alt='';picture.loading='lazy';art.replaceChildren(picture);}
+        if(picture.src!==src)picture.src=src;
+      }else if(art.childElementCount)art.replaceChildren();
+    });
+  };
+  document.addEventListener('faceless-media-updated',updateThumbs);
   window.facelessUpdateHeroTimeline=()=>{
+    updateThumbs();
     const scene=timeline.querySelector('.fc-timeline-scene');
     const label=scene?.querySelector('.fc-timeline-hero');
     const ready=window.facelessHeroStatus?.().loaded&&current()?.id===p.id;
-    if(scene)scene.classList.toggle('has-hero',!!ready);
+    if(scene){scene.classList.toggle('has-hero',!!ready);scene.setAttribute('aria-label',ready?'Editar Hero Video, primera escena':'Editar escena 1');}
     if(label)label.textContent=ready?'🎬 Hero '+(p.heroDuration||6)+'s':'';
     heroJump.textContent=ready?'🎬 Editar Hero':'🎬 Añadir Hero';
   };
