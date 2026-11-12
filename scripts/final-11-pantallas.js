@@ -99,7 +99,7 @@ $("finalGenerate").onclick=async()=>{
  const start=$("finalGenerate");start.disabled=true;
  let token;
  try{
-  token=await window.facelessAccess.authorize(entered);
+  token=activeSession?await window.facelessAccess.ready():await window.facelessAccess.authorize(entered);
  }catch(error){
   auth.hidden=false;auth.open=true;
   note.textContent=String(error?.message||error);
