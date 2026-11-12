@@ -10,7 +10,7 @@
   <div class="fc-kicker">✦ Tu estudio creativo con IA</div>
   <h1>Convierte ideas en <span>videos que atrapan</span></h1>
   <p>Noticias reales, farándula, relatos, documentales y aprendizaje. Elige una historia y hazla tuya.</p>
-  <button type="button" class="fc-primary" data-fc-category="noticias"><span>⚡ Noticias de hoy</span><span aria-hidden="true">›</span></button>
+  <button type="button" class="fc-primary" data-flow="ai" data-fc-category="noticias"><span>⚡ Noticias de hoy</span><span aria-hidden="true">›</span></button>
  </section>
  <h2 class="fc-card-heading">¿Qué te gustaría contar?</h2>
  <div class="fc-categories">
