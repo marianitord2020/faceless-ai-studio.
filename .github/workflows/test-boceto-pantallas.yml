@@ -60,9 +60,16 @@ jobs:
                 p.hook=p.scenes[0].text;p.narration=p.scenes.map(s=>s.text).join('\n');
                 projects.unshift(p);activeId=p.id;tab='video';route('editor');
               });
-              await page.waitForSelector('#finalHeroPanel');
-              assert.equal(await page.locator('#finalTransitionPanel [data-final-transition]').count(),6);
+              await page.waitForSelector('#finalHeroPanel',{state:'attached'});
+              assert.equal(await page.locator('.boceto-hero-card').isVisible(),true,'El Hero compacto es visible en Escenas');
+              assert.equal(await page.locator('#finalHeroPanel').isVisible(),false,'Los ajustes Hero empiezan cerrados');
+              await page.locator('.boceto-hero-detail > summary').click();
+              assert.equal(await page.locator('#finalHeroPanel').isVisible(),true,'El Hero se puede ajustar cuando se solicita');
               assert.equal(await page.locator('#finalHeroFile').count(),1);
+              await page.locator('#bocetoEditorNav [data-boceto-tab="video"]').click();
+              assert.equal(await page.locator('.boceto-ai-card #productionStart').isVisible(),true);
+              await page.locator('.boceto-ai-more > summary').click();
+              assert.equal(await page.locator('#finalTransitionPanel [data-final-transition]').count(),6);
               await page.screenshot({path:'boceto-android/'+width+'-editor.png',fullPage:true});
               await page.evaluate(()=>route('projects'));
               assert.equal(await page.locator('#projectsList .project').count(),1);
