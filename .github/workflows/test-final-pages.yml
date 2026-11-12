@@ -124,3 +124,7 @@ jobs:
             await browser.close();
           })().catch(error=>{console.error(error);process.exit(1)});
           JS
+
+      - name: Probar la sesión D1 y los servicios sin pasar APP_PASSCODE al navegador
+        run: node tests/d1-gateway-ui.cjs
+
