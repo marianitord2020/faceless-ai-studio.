@@ -29,7 +29,7 @@ export async function generateCoverIdeas(input,env){
  const style=String(input?.style||'Misterio').slice(0,40);
  const mode=['Noticias','Farándula','Entretenimiento'].includes(style)?'news':(['fiction','news','factual'].includes(input?.mode)?input.mode:'fiction');
  const date=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Santo_Domingo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
- if(mode==='news'){const sourceQuery=[topic,subcategory].filter(Boolean).join(' ');return {...await searchRealNews(sourceQuery,style,env),query:topic,subcategory,sourceQuery}}
+ if(mode==='news'){const sourceQuery=[topic,subcategory].filter(Boolean).join(' ');return {...await searchRealNews(sourceQuery,style,env,{page:input?.page}),query:topic,subcategory,sourceQuery}}
  if(mode==='factual'){const sourceQuery=[topic,subcategory].filter(Boolean).join(' ');return {...await generateWikipediaIdeas(sourceQuery,style,env),query:topic,subcategory,sourceQuery}}
  if(mode==='fiction'){
   const reference=input?.reference&&typeof input.reference==='object'?{
