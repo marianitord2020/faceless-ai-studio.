@@ -257,3 +257,45 @@ body:is([data-screen="create"],[data-screen="discover"],[data-screen="editor"],[
 #editor .boceto-video-controls{z-index:3;}
 #editor .ref-media-display .ref-media-empty[hidden],
 #editor .ref-media-display img[hidden]{display:none!important;}
+
+
+/* Ajustes comprobados en capturas Android: botón fuera de la pantalla y estado duplicado. */
+#discover.ref-news .studio-menu-view .studio-fixed-action{
+ position:static!important;
+ left:auto!important;right:auto!important;bottom:auto!important;
+ width:100%!important;transform:none!important;
+ padding:0!important;margin:10px 0!important;z-index:auto!important;
+ background:transparent!important;pointer-events:auto!important;
+}
+#discover.ref-news .studio-menu-view #studioGenerate{
+ display:block!important;width:100%!important;
+ transform:none!important;min-height:51px!important;
+ text-align:center!important;margin:0!important;
+}
+#discover.ref-news .compact-story{order:0}
+#discover.ref-news .ref-news-categories{order:1}
+#discover.ref-news .boceto-news-filter{order:2}
+#projects .project:has(.fc-project-state) .boceto-project-status{display:none!important}
+#projects .project .fc-project-thumb{
+ grid-column:1!important;grid-row:1/span 4!important;
+ min-height:95px!important;max-height:125px!important;
+ width:100%!important;height:100%!important;
+ overflow:hidden!important;
+}
+#projects .project .studio-project-cover{
+ grid-column:1!important;grid-row:1/span 4!important;
+ width:100%!important;height:100%!important;
+ max-height:125px!important;min-height:95px!important;
+}
+#projects .project .project-bottom{
+ grid-column:1/-1!important;grid-row:6!important;
+ display:flex!important;flex-wrap:wrap!important;
+ position:relative!important;z-index:2!important;
+ padding-top:9px!important;margin:4px 0 0!important;
+ border-top:1px solid #49345e!important;
+}
+#projects .project .project-bottom>.btn.primary{flex:1 1 140px!important}
+#projects .project .project-bottom .selection-panel{flex:0 1 auto!important}
+#projects .project .fc-project-state{max-width:100%;white-space:normal!important}
+#projects .project .boceto-project-status:not(.ready){grid-row:4!important}
+#projects .project .boceto-project-status.ready{grid-row:4!important}
