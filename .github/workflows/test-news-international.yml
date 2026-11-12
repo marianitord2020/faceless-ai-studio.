@@ -1,0 +1,43 @@
+name: Probar noticias en todos los países hispanohablantes
+on:
+  pull_request:
+    paths:
+      - "workers/news-*.js"
+      - "workers/web-trends.js"
+      - "workers/ideas-generator.js"
+      - "workers/script-generator.js"
+      - "tests/news-topic.mjs"
+      - "tests/news-international.mjs"
+      - ".github/workflows/test-news-international.yml"
+  push:
+    branches: [main]
+    paths:
+      - "workers/news-*.js"
+      - "workers/web-trends.js"
+      - "workers/ideas-generator.js"
+      - "workers/script-generator.js"
+      - "tests/news-international.mjs"
+      - ".github/workflows/test-news-international.yml"
+permissions:
+  contents: read
+jobs:
+  news:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Comprobar JavaScript de búsqueda
+        run: |
+          node --check workers/news-geography.js
+          node --check workers/news-sources.js
+          node --check workers/news-search.js
+          node --check workers/web-trends.js
+          node --check workers/script-generator.js
+          node --check workers/ideas-generator.js
+      - name: Probar búsqueda existente y cobertura panhispánica
+        run: |
+          node tests/news-topic.mjs
+          node tests/news-international.mjs
