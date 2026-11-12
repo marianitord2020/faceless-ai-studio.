@@ -115,7 +115,8 @@ function eligible(item,tokens,today,days){
  if(item.date.getTime()>Date.now()+300000)return false;
  return today?localDate(item.date)===localDate(new Date()):item.date.getTime()>=Date.now()-days*86400000;
 }
-export async function searchRealNews(topic,style,env){
+export async function searchRealNews(topic,style,env,options={}){
+ const page=Math.max(0,Math.min(4,Math.floor(Number(options?.page)||0))); // Máximo 50 noticias por consulta.
  const query=String(topic||'').trim(),tokens=requestedTokens(query);
  const today=/(?:\bhoy\b|última hora|del momento|en vivo|ahora)/i.test(query),days=/(?:esta semana|semana|últimos días)/i.test(query)?7:3;
  const params=new URLSearchParams({query:searchTerm(query)+' sourcelang:spanish',mode:'artlist',format:'json',maxrecords:'50',sort:'datedesc',timespan:today?'24h':Math.max(days,7)+'d'});
@@ -153,11 +154,12 @@ export async function searchRealNews(topic,style,env){
    seenUrls.add(key);seenTitles.add(title);return true;
   });
  }
- const exact=unique(entries.sort((a,b)=>b.date-a.date)).slice(0,10);
+ const exactPool=unique(entries.sort((a,b)=>b.date-a.date)).slice(0,50);
+ const exact=exactPool.slice(page*10,page*10+10);
  const exactMatchCount=exact.length;
- const related=exactMatchCount<5?unique(relatedMatches(pool,query,today,days)).slice(0,10-exactMatchCount):[];
+ const related=page===0&&exactMatchCount<5?unique(relatedMatches(pool,query,today,days)).slice(0,10-exactMatchCount):[];
  entries=[...exact,...related];
- if(!entries.length){
+ if(!entries.length && page===0){
   if(!available)newsError('Los buscadores de noticias no están disponibles temporalmente para «'+query+'». Conservé tu tema; vuelve a intentar en unos minutos.',503);
   newsError('No encontré publicaciones públicas verificables ni temas relacionados recientes para «'+query+'» en las fuentes disponibles.'+(primaryIssue?' El buscador principal está temporalmente limitado; también consulté medios de respaldo.':'')+' No hay noticias respaldadas para sugerir en esta consulta.',422);
  }
@@ -165,6 +167,6 @@ export async function searchRealNews(topic,style,env){
   synopsis:(a.description?a.description+' ':'Titular publicado por '+(a.publisher||new URL(a.url).hostname)+': «'+a.title+'». ')+(a.dateKind==='publication'?'Fecha de publicación: ':'Fecha de detección: ')+localDate(a.date)+'. Consulta el artículo original para conocer los detalles.',
   outline:'Titular de la fuente: '+a.title+'. Medio: '+a.publisher+'. Enlace original: '+a.url+'. '+(a.dateKind==='publication'?'Publicado':'Detectado')+' el '+localDate(a.date)+'. No afirmar detalles que no aparezcan en el artículo.',
   coverPrompt:'Portada informativa con elementos gráficos; no representar una ilustración como fotografía del suceso.',sourceUrl:a.url,sourceTitle:a.publisher,sourceSeenAt:localDate(a.date),sourceDateKind:a.dateKind,sourceImageUrl:a.image||''}));
- return {mode:'news',style,query,ideas,sources:entries.map(a=>({title:a.title+' — '+a.publisher,url:a.url,date:localDate(a.date)})),checkedAt:new Date().toISOString(),sourceProvider:[...new Set(entries.map(a=>a.provider))].join(', '),usedFallback:entries.some(a=>a.provider!=='GDELT Project'),matchType:exactMatchCount?'exact':'related',exactMatchCount,sourceCoverage:{...sourceSummary(),queriedPublishers:[...new Set(checkedSources)]},note:'La búsqueda incluye web pública en español cuando Gemini está disponible; no implica acceso a publicaciones privadas ni confirma por sí sola que un tema sea tendencia. Las fechas son de publicación en el medio o de detección en GDELT, no necesariamente de los hechos. Se conserva el tema literal de la búsqueda.'};
+ return {mode:'news',style,query,ideas,page,hasMore:exactPool.length>(page+1)*10,nextPage:exactPool.length>(page+1)*10?page+1:null,sources:entries.map(a=>({title:a.title+' — '+a.publisher,url:a.url,date:localDate(a.date)})),checkedAt:new Date().toISOString(),sourceProvider:[...new Set(entries.map(a=>a.provider))].join(', '),usedFallback:entries.some(a=>a.provider!=='GDELT Project'),matchType:exactMatchCount?'exact':'related',exactMatchCount,sourceCoverage:{...sourceSummary(),queriedPublishers:[...new Set(checkedSources)]},note:'La búsqueda incluye web pública en español cuando Gemini está disponible; no implica acceso a publicaciones privadas ni confirma por sí sola que un tema sea tendencia. Las fechas son de publicación en el medio o de detección en GDELT, no necesariamente de los hechos. Se conserva el tema literal de la búsqueda.'};
 }
 export {searchSubject,searchTerm,requestedTokens,relevant,parseFeed,eligible,relatedMatches,selectSources};
