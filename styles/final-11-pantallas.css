@@ -189,3 +189,10 @@ body .topbar .bar .final-account{flex:0 0 39px;width:39px;height:39px;border-rad
 #editor .editor-video-cards{gap:9px!important}
 #editor .editor-video-card .editor-personalize{margin-top:8px!important}
 #editor #finalHeroPanel{scroll-margin-top:70px}
+
+
+#editor .fc-timeline-head{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important;gap:4px 8px!important;}
+#editor .fc-timeline-head h3{grid-column:1;grid-row:1}
+#editor .fc-timeline-head .fc-timeline-meta{grid-column:1;grid-row:2}
+#editor .fc-timeline-hero-jump{grid-column:2;grid-row:1/span 2;border:1px solid #b760ea;border-radius:11px;background:linear-gradient(120deg,#7934bb,#361956);color:#fff;min-height:39px;min-width:104px;padding:8px 9px;font-size:12px;font-weight:800}
+#editor .fc-timeline-hero-jump:focus-visible{outline:2px solid #fff;outline-offset:2px}
