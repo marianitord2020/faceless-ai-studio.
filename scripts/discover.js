@@ -43,7 +43,7 @@
     Educativo:{emoji:'🎓',colors:['#134e58','#248487','#15254b']}
   };
   const state={ideas:[],selected:0,mode:'fiction',topic:'',style:'Romance',source:'ai',imageStyle:'cinematic',
-    subcategory:'',pass:'',busy:false,building:false,epoch:0,covers:new Map(),sources:[],checkedAt:null,sourceProvider:'',matchType:'exact',sourceCoverage:null};
+    subcategory:'',pass:'',busy:false,building:false,epoch:0,covers:new Map(),sources:[],checkedAt:null,sourceProvider:'',matchType:'exact',sourceCoverage:null,newsPage:0,hasMore:false,loadingMore:false,moreObserver:null,moreError:''};
   window.facelessCoverCache=window.facelessCoverCache||new Map();
   let dbPromise=null;
   const $id=id=>document.getElementById(id);
@@ -308,6 +308,7 @@
     container.appendChild(badge);
   }
   function renderCards(){
+    state.moreObserver?.disconnect();
     const cards=$id('studioCards');cards.replaceChildren();
     state.ideas.forEach((idea,index)=>{
       const card=e('button','studio-card'+(index===state.selected?' on':''));card.type='button';
@@ -327,6 +328,43 @@
     $id('studioGallerySubtitle').textContent=state.matchType==='related'?'No hubo coincidencias exactas. Estos resultados son cercanos a tu búsqueda; revisa el motivo y su fecha.':state.mode==='news'
       ?'Publicaciones verificables de medios, creadores y páginas públicas en español. Selecciona una y revisa su fecha y fuente.'
       :'Selecciona una portada, lee la sinopsis y luego llévala a creación.';
+    if(state.mode==='news'&&state.source==='ai'&&(state.hasMore||state.moreError)){
+      const more=e('button','fc-news-more',state.loadingMore?'Buscando más noticias…':state.moreError?'Reintentar carga de noticias':'Cargar siguientes 10 noticias');
+      more.type='button';more.disabled=state.loadingMore;more.onclick=loadMoreNews;cards.appendChild(more);
+      if(state.hasMore&&!state.moreError&&!state.loadingMore&&'IntersectionObserver' in window){
+        state.moreObserver=new IntersectionObserver(items=>{
+          if(items.some(item=>item.isIntersecting)){state.moreObserver?.disconnect();loadMoreNews();}
+        },{root:null,rootMargin:'450px'});
+        state.moreObserver.observe(more);
+      }
+    }
+  }
+  async function loadMoreNews(){
+    if(state.busy||state.building||state.loadingMore||!state.hasMore&&!state.moreError)return;
+    state.loadingMore=true;state.moreError='';state.moreObserver?.disconnect();
+    const epoch=state.epoch,next=state.newsPage+1;
+    try{
+      const result=await callEndpoint('/ideas',{topic:state.topic,style:state.style,subcategory:state.subcategory,mode:'news',page:next});
+      if(epoch!==state.epoch)return;
+      const key=idea=>{
+        try{const u=new URL(idea.sourceUrl);['fbclid','gclid'].forEach(x=>u.searchParams.delete(x));for(const n of [...u.searchParams.keys()])if(n.startsWith('utm_'))u.searchParams.delete(n);return u.origin+u.pathname+u.search;}
+        catch{return String(idea.title||'').toLowerCase().trim();}
+      };
+      const keys=new Set(state.ideas.map(key));
+      const added=(Array.isArray(result.ideas)?result.ideas:[]).filter(x=>{
+        if(!x?.sourceUrl||!x?.title)return false;
+        const id=key(x);if(keys.has(id))return false;keys.add(id);return true;
+      });
+      state.ideas.push(...added);state.newsPage=next;
+      state.hasMore=Boolean(result.hasMore)&&added.length>0;
+      setStatus('✓ '+state.ideas.length+' noticias sin duplicados'+(state.hasMore?'. Desliza para cargar más.':'. Fin de resultados disponibles.'));
+    }catch(error){
+      if(epoch!==state.epoch)return;
+      state.moreError='No se pudo cargar más: '+String(error?.message||error).slice(0,130);
+      setStatus(state.moreError);
+    }finally{
+      if(epoch===state.epoch){state.loadingMore=false;renderCards();}
+    }
   }
   // Introducciones editoriales locales basadas en el título existente, nunca en sucesos inventados.
   function hookChoices(idea){
@@ -473,7 +511,7 @@
     state.pass=studioAccess();
     state.topic=topic;state.style=style;state.subcategory=subcategory;state.mode=mode;state.source=local?'local':'ai';
     state.imageStyle=$id('studioImageStyle').value;
-    state.selected=0;chosenHookIndex=0;state.covers.clear();state.sources=[];state.ideas=[];state.sourceProvider='';state.matchType='exact';state.sourceCoverage=null;initialState();
+    state.selected=0;chosenHookIndex=0;state.covers.clear();state.newsPage=0;state.hasMore=false;state.loadingMore=false;state.moreError='';state.moreObserver?.disconnect();state.sources=[];state.ideas=[];state.sourceProvider='';state.matchType='exact';state.sourceCoverage=null;initialState();
     $id('studioGenerate').disabled=true;
     try{
       if(local){
@@ -489,6 +527,7 @@
         if(epoch!==state.epoch)return;
         if(!Array.isArray(result.ideas)||!result.ideas.length)throw Error('La búsqueda no devolvió propuestas verificables.');
         state.ideas=result.ideas.slice(0,10);
+        state.newsPage=0;state.hasMore=mode==='news'&&Boolean(result.hasMore);
         state.sources=Array.isArray(result.sources)?result.sources:[];
         state.checkedAt=result.checkedAt||null;state.sourceProvider=String(result.sourceProvider||'');state.matchType=result.matchType||'exact';state.sourceCoverage=result.sourceCoverage||null;
         if(state.sourceCoverage){const c=state.sourceCoverage;$id('studioCoverage').textContent='Catálogo: '+c.publishers+' medios, '+c.dominicanPublishers+' dominicanos. En esta búsqueda: '+c.queriedPublishers.length+' medios consultados, además del índice GDELT. Cada resultado mantiene su fuente.';}
