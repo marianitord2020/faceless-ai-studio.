@@ -9,7 +9,7 @@
  const key=(id,index)=>id+':scene-video:'+index;
  const currentProject=()=>typeof current==='function'?current():null;
  const mapFor=id=>{if(!clips.has(id))clips.set(id,new Map());return clips.get(id);};
- const record=(p,index)=>clips.get(p.id)?.get(index)||null;
+ const record=(p,index)=>{const item=clips.get(p.id)?.get(index);return item&&p.scenes[index]?.clipName===item.file.name?item:null;};
  const locked=()=>Boolean(typeof facelessIsWorking==='function'&&facelessIsWorking());
  function refresh(p){
   document.dispatchEvent(new CustomEvent('faceless-media-updated',{detail:p.id}));
@@ -68,7 +68,7 @@
    });
    if(!Number.isFinite(video.duration)||video.duration<=0||video.duration>600)throw Error('El clip debe durar entre 1 segundo y 10 minutos.');
   }catch(error){video.removeAttribute('src');video.load();URL.revokeObjectURL(url);throw error;}
-  const item={url,video,file:normalized,poster:'',lastPlay:0};
+  const item={url,video,file:normalized,poster:'',lastPlay:0,requested:null};
   const poster=()=>{
    if(!video.videoWidth||!video.videoHeight||video.readyState<2)return;
    try{
@@ -82,10 +82,14 @@
   video.addEventListener('seeked',()=>{
    if(!item.poster)poster();
    // Redibuja el fotograma buscado cuando la vista previa está pausada.
-   const p=currentProject();
-   if(p&&record(p,p.scenes.findIndex(s=>s.clipName===item.file.name))===item&&typeof rendering!=='undefined'&&!rendering&&typeof previewTimer!=='undefined'&&!previewTimer){
+   const request=item.requested,p=currentProject();
+   if(request&&p?.id===request.p.id&&record(p,request.index)===item&&typeof rendering!=='undefined'&&!rendering&&typeof previewTimer!=='undefined'&&!previewTimer){
     const manual=window.facelessManualStudio;
     if(manual?.projectId===p.id)manual.redraw();
+    else if(typeof drawFrame==='function'){
+     const view=document.getElementById('previewCanvas');
+     if(view&&!view.classList.contains('hidden')){drawFrame(request.index,request.seconds);view.getContext('2d').drawImage(canvas,0,0,view.width,view.height);}
+    }
    }
   });
   if(video.readyState>=2)poster();
@@ -146,16 +150,16 @@
   if(active&&active!==item)active.video.pause();
   active=item;
   if(!item)return null;
-  const video=item.video,scene=p.scenes[index];
+  const video=item.video,scene=p.scenes[index];item.requested={p,index,seconds};
   if(!scene||video.readyState<1)return null;
   const start=Math.min(Math.max(0,Number(scene.clipStart)||0),Math.max(0,video.duration-.05));
   const usable=Math.max(.05,video.duration-start);
   const elapsed=Math.max(0,seconds-scene.time);
   const desired=start+(elapsed%usable);
-  const threshold=playing?.4:.05;
+  const threshold=playing ? .4 : .05;
   if(!video.seeking&&Math.abs(video.currentTime-desired)>threshold)try{video.currentTime=Math.min(desired,video.duration-.02);}catch{}
   if(playing&&!document.hidden){
-   if(video.paused&&performance.now()-item.lastPlay>700){
+   if(video.paused&&(!item.lastPlay||performance.now()-item.lastPlay>700)){
     item.lastPlay=performance.now();
     video.play().catch(()=>{});
    }
