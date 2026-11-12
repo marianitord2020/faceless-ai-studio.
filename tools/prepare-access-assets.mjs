@@ -30,7 +30,23 @@ const unique=type=>{
 const db=unique('d1'),media=unique('service'),assets=unique('assets');
 if(db.name!=='DB'||media.name!=='MEDIA'||assets.name!=='ASSETS'||media.service!=='faceless-images'||!db.id)
  throw Error('Binding names differ from the tested Cloudflare D1 login configuration. Aborting.');
-const src=await load('/workers/scripts/faceless-access-prueba',false);
+const remote=await load('/workers/scripts/faceless-access-prueba',false);
+function unwrapWorkerBundle(raw){
+ if(!raw.startsWith('--'))return raw;
+ const boundary=raw.split(/\r?\n/,1)[0];
+ const parts=raw.split(boundary);
+ for(const section of parts){
+  const split=section.search(/\r?\n\r?\n/);
+  if(split<0)continue;
+  const body=section.slice(split).replace(/^\r?\n\r?\n/,'').replace(/\r?\n$/,'');
+  if(body.includes('env.DB')&&body.includes('env.MEDIA')&&body.includes('env.ASSETS')&&body.includes('export ')){
+   console.log('Recovered the existing Worker module from Cloudflare multipart source.');
+   return body;
+  }
+ }
+ throw Error('Could not identify the existing D1 Worker module safely; no deployment will occur.');
+}
+const src=unwrapWorkerBundle(remote);
 for(const required of ['env.DB','env.MEDIA','env.ASSETS','/login','/api/','PASSWORD_PEPPER','APP_PASSCODE']){
  if(!src.includes(required))throw Error('Missing expected access-worker feature: '+required);
 }
