@@ -46,11 +46,11 @@ window.facelessCompactVideoEditor = function (project) {
   recorder.querySelectorAll('b,p:not([id])').forEach(el=>el.remove());byId('micStatus').textContent='';infrastructure.append(recorder);
   byId('audioAttachment').querySelectorAll('p:not([id])').forEach(el=>el.remove());
   shell.querySelectorAll('.media-upload-copy small').forEach(el=>el.remove());
-  const frame=root.querySelector('.media-frame');frame.hidden=true;custom[0].append(frame);move('downloadArea',custom[0]);
+  const frame=root.querySelector('.media-frame');frame.hidden=false;frame.classList.add('fc-editor-stage');move('downloadArea',custom[0]);
   const toolbar=document.createElement('div');toolbar.className='editor-export-bar';
   move('previewVideo',toolbar);move('renderVideo',toolbar);
   const cards=document.createElement('div');cards.className='editor-video-cards';panels.forEach(panel=>cards.append(panel));
-  shell.className='compact-video-editor';shell.replaceChildren(cards,byId('renderStatus'),toolbar,infrastructure);window.facelessMountCaptionStyle?.(project,cards);window.facelessMountExportOptions?.(project,cards);
+  shell.className='compact-video-editor';shell.replaceChildren(frame,cards,byId('renderStatus'),toolbar,infrastructure);window.facelessMountCaptionStyle?.(project,cards);window.facelessMountExportOptions?.(project,cards);
   byId('productionStart').textContent='Crear video completo';
   byId('aiPhotosStart').textContent='Generar fotos automáticamente';
   byId('aiPhotosStart').className='btn outline full';
