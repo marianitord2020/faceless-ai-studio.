@@ -4,7 +4,8 @@
 const $=id=>document.getElementById(id);
 const home=$("home"),create=$("create"),discover=$("discover"),editor=$("editor"),projects=$("projects");
 if(!home||!create||!discover||!editor||!projects)return;
-const assets="assets/mockup/";
+const appRoot=new URL("../",document.currentScript.src).pathname;
+const assets=appRoot+"assets/mockup/";
 const pictures=[
  ["Relatos","mystery.webp","fiction","Misterio"],
  ["Aprender","history-sample.webp","factual","Educativo"],
@@ -22,7 +23,7 @@ const routing=s=>{if(typeof route==="function")route(s)};
 const select=(id,value)=>{const e=$(id);if(!e||![...(e.options||[])].some(x=>x.value===String(value)))return;e.value=String(value);e.dispatchEvent(new Event("change",{bubbles:true}));};
 const config={mode:"fiction",genre:"Misterio",topic:"",duration:60,style:"cinematic",voice:"automatic",format:"9:16"};
 function card(title,file,attr,value){return '<button type="button" class="final-photo-card" '+attr+'="'+safe(value)+'"><img loading="lazy" src="'+assets+file+'" alt=""><span>'+safe(title)+'</span></button>';}
-home.innerHTML='<section class="final-home-hero"><div><h1>Crea videos increíbles con <em>inteligencia artificial</em></h1><p>Convierte tus ideas en videos profesionales, sin mostrar tu rostro.</p></div><img src="assets/mockup-robot.svg" alt="Asistente de Faceless AI Studio"></section>'+
+home.innerHTML='<section class="final-home-hero"><div><h1>Crea videos increíbles con <em>inteligencia artificial</em></h1><p>Convierte tus ideas en videos profesionales, sin mostrar tu rostro.</p></div><img src="'+appRoot+'assets/mockup-robot.svg" alt="Asistente de Faceless AI Studio"></section>'+
 '<button type="button" class="final-primary final-home-button" data-final-new>✦ Crear video nuevo <span aria-hidden="true">→</span></button>'+
 '<div class="final-section-title"><h2>Explora categorías</h2><button type="button" data-final-new>Ver todas ›</button></div>'+
 '<div class="final-home-categories">'+pictures.map(p=>card(p[0],p[1],"data-final-category",p[0])).join("")+'</div>';
