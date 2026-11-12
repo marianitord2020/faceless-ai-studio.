@@ -144,11 +144,20 @@ function mountTimeline(){
   const top=document.createElement('div');top.className='fc-timeline-head';
   const h=document.createElement('h3');h.textContent='Tu video, escena por escena';
   const meta=document.createElement('span');meta.textContent=p.scenes.length+' escenas · '+Number(p.duration.toFixed(1))+' segundos';
-  top.append(h,meta);timeline.append(top);
+  meta.className='fc-timeline-meta';
+  const heroJump=document.createElement('button');heroJump.type='button';heroJump.className='fc-timeline-hero-jump';
+  heroJump.textContent='🎬 Hero Video';heroJump.title='Ir a la introducción cinematográfica';
+  heroJump.onclick=()=>{const p=document.getElementById('finalHeroPanel');p?.scrollIntoView({block:'center',behavior:'smooth'});p?.querySelector('#finalHeroAdd')?.focus({preventScroll:true});};
+  top.append(h,meta,heroJump);timeline.append(top);
   const track=document.createElement('div');track.className='fc-timeline-track';
   p.scenes.forEach((scene,i)=>{
     const btn=document.createElement('button');btn.type='button';btn.className='fc-timeline-scene';
-    btn.style.flexGrow=String(Math.max(.1,scene.duration));btn.textContent=String(i+1);
+    const stamp=n=>Math.floor(n/60)+':'+String(Math.floor(n%60)).padStart(2,'0');
+    btn.style.flex='0 0 90px';
+    const number=document.createElement('span');number.className='fc-timeline-number';number.textContent=String(i+1);
+    const range=document.createElement('span');range.className='fc-timeline-range';range.textContent=stamp(scene.time)+'–'+stamp(scene.time+scene.duration);
+    btn.append(number,range);
+    if(i===0){const mark=document.createElement('span');mark.className='fc-timeline-hero';btn.append(mark);}
     btn.title='Editar escena '+(i+1)+', '+Number(scene.duration.toFixed(1))+' segundos';
     btn.setAttribute('aria-label',btn.title);
     btn.onclick=()=>{
@@ -159,6 +168,15 @@ function mountTimeline(){
   });timeline.append(track);
   const note=document.createElement('p');note.textContent='Toca un segmento para editar su guion. Las fotografías pueden animarse con zoom y paneos sin usar IA.';timeline.append(note);
   tabBody.prepend(timeline);
+  window.facelessUpdateHeroTimeline=()=>{
+    const scene=timeline.querySelector('.fc-timeline-scene');
+    const label=scene?.querySelector('.fc-timeline-hero');
+    const ready=window.facelessHeroStatus?.().loaded&&current()?.id===p.id;
+    if(scene)scene.classList.toggle('has-hero',!!ready);
+    if(label)label.textContent=ready?'🎬 Hero '+(p.heroDuration||6)+'s':'';
+    heroJump.textContent=ready?'🎬 Editar Hero':'🎬 Añadir Hero';
+  };
+  window.facelessUpdateHeroTimeline();
 }
 new MutationObserver(mountTimeline).observe(tabBody,{childList:true});
 mountTimeline();
