@@ -1,4 +1,5 @@
 import {hfEnabled,hfText} from './media-providers.js';
+import {regionForQuery,regionDate} from './news-geography.js';
 // Hechos verificados con narrativa original; libertad creativa en ficción.
 const SCRIPT_MODEL='gemini-3.5-flash-lite';
 function scriptError(msg,status=502){const e=new Error(msg);e.httpStatus=status;throw e}
@@ -87,7 +88,7 @@ export async function generateVerifiedScript(input,env){
     sourceUrl:String(input.idea.sourceUrl||'').trim().slice(0,1500)
   }:null;
   if(idea&&(!idea.title||!idea.synopsis))scriptError('La portada elegida necesita título y sinopsis.',400);
-  const date=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Santo_Domingo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  const date=regionDate(new Date(),regionForQuery(topic));
   let proof='',sources=[];
   if(mode!=='ficcion'&&idea?.sourceUrl){
     let origin;
@@ -120,7 +121,7 @@ export async function generateVerifiedScript(input,env){
       'FECHA DE HOY: '+date,
       instruction,
       'Entrega únicamente hechos comprobados y sus fechas, sin cuentos o dramatizaciones.',
-      'Evita sucesos y lugares que no estén vinculados a esa consulta.'
+      'No restrinjas los resultados a República Dominicana: respeta el país o ciudad de la búsqueda, incluso cuando el tema sea de México, Colombia, España, Argentina, Perú u otro país hispanohablante. Evita sucesos y lugares que no estén vinculados a esa consulta.'
     ].join('\n'),{search:true});
     sources=trustedSources(research.meta);
     const didSearch=Array.isArray(research.meta?.webSearchQueries)&&

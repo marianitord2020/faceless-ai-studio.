@@ -1,9 +1,9 @@
 import {searchSpanishWeb} from './web-trends.js';
 import {NEWS_SOURCES,sourceSummary} from './news-sources.js';
+import {regionForQuery,regionDate,SPANISH_NEWS_REGIONS} from './news-geography.js';
 // GDELT plus public publisher feeds. No paid API or invented headlines.
 function newsError(message,status=422){const e=new Error(message);e.httpStatus=status;throw e}
-const RD_DATE=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Santo_Domingo',year:'numeric',month:'2-digit',day:'2-digit'});
-const localDate=value=>RD_DATE.format(value);
+const localDate=(value,region)=>regionDate(value,region);
 const fold=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 
 function searchSubject(topic){
@@ -18,12 +18,12 @@ function searchSubject(topic){
   .replace(/\s+/g,' ').replace(/^[\s,.:]+|[\s,.:]+$/g,'').trim();
 }
 function searchTerm(topic){
- const subject=searchSubject(topic)||'República Dominicana';
+ const subject=searchSubject(topic)||'(noticias OR actualidad OR economia OR cultura OR deportes)';
  if(/^(?:bulin|bullin)(?:\s*47)?$/.test(fold(subject)))return '("Bulín 47" OR "Bulin 47" OR "Bullin 47")';
  return subject.replace(/hig[uü]e[yí]/gi,'(Higuey OR Higüey)').slice(0,220);
 }
 function requestedTokens(topic){
- const ignored=new Set(['viral','virales','tendencia','tendencias','tema','temas','de','del','el','la','los','las','en','sobre','y','o','al','un','una','para','por','con','que','ultimas','actuales','recientes']);
+ const ignored=new Set(['viral','virales','tendencia','tendencias','tema','temas','de','del','el','la','los','las','en','sobre','y','o','al','un','una','para','por','con','que','ultimas','actuales','recientes','mundo','mundial','internacional','internacionales','latinoamerica','hispanoamerica','paises','pais']);
  return [...new Set((matchText(searchSubject(topic)).match(/[a-z0-9]+/g)||[]).filter(w=>!ignored.has(w)))];
 }
 function matchText(value){
@@ -42,34 +42,63 @@ function hasWord(item,word){return itemWords(item).some(x=>x===word||(word.lengt
 function relevant(item,tokens){return tokens.every(word=>hasWord(item,word))}
 const LOCATIONS=['santo domingo','santiago','puerto plata','la romana','higuey','san pedro de macoris','san francisco de macoris','la vega','samana','barahona','san cristobal','san juan','monte cristi','monte plata','azua','espaillat','moca','bonao','cotui','nagua','dajabon','pedernales','san jose de ocoa','bavaro','punta cana','el seibo','hato mayor','valverde','mao','neiba','bahoruco','sanchez ramirez','duarte','salcedo','hermanas mirabal','elias pina','santiago rodriguez','dominicana','mexico','espana','argentina','colombia','peru','venezuela','chile','uruguay','puerto rico','cuba','ecuador','bolivia','panama','costa rica','guatemala'];
 const RELATED={concierto:['show','musica','gala','presentacion','escenario','recital'],cine:['pelicula','serie','actor','estreno'],beisbol:['pelota','deporte','estadio'],turismo:['viaje','cultura','hotel','playa','destino','visitante'],musica:['cancion','concierto','cantante','artista','album'],farandula:['entretenimiento','cantante','actor','artista','television','cine','musica'],entretenimiento:['farandula','cine','musica','serie','television','videojuego','teatro'],economia:['negocio','finanza','comercio','inversion'],tecnologia:['innovacion','digital','inteligencia','robot'],deporte:['beisbol','baloncesto','futbol','pelota'],salud:['medicina','hospital','bienestar'],educacion:['escuela','universidad','estudiante']};
-function relatedMatches(pool,query,today,days){
+function relatedMatches(pool,query,today,days,region=regionForQuery(query)){
  const tokens=requestedTokens(query),normalized=matchText(searchSubject(query));
  if(!tokens.length)return [];
- const locations=LOCATIONS.filter(place=>(' '+normalized+' ').includes(' '+place+' '));
+ const locations=[...new Set([...LOCATIONS,...SPANISH_NEWS_REGIONS.flatMap(r=>r.aliases)])].filter(place=>(' '+normalized+' ').includes(' '+matchText(place)+' '));
  const locationTokens=new Set(locations.flatMap(requestedTokens));
  const content=tokens.filter(t=>!locationTokens.has(t));
  const generic=new Set([...Object.keys(RELATED),'cultura','politica','actualidad','historia','crecimiento','demanda','noticia']);
  const anchor=locations.length?null:content.find(t=>t.length>=3&&!generic.has(t));
- return pool.filter(item=>eligible(item,[],false,Math.max(days,7))).map(item=>{
+ return pool.filter(item=>eligible(item,[],false,Math.max(days,7),region)).map(item=>{
   if(!locations.every(place=>relevant(item,requestedTokens(place)))||(anchor&&!hasWord(item,anchor)))return null;
   const scores=content.map(word=>hasWord(item,word)?1:(RELATED[word]||[]).some(alias=>hasWord(item,alias))?0.6:0);
   const score=content.length?scores.reduce((a,b)=>a+b,0)/content.length:1;
   if(score<0.5)return null;
-  const sameTopic=relevant(item,tokens),sameDay=localDate(item.date)===localDate(new Date());
+  const sameTopic=relevant(item,tokens),sameDay=localDate(item.date,region)===localDate(new Date(),region);
   return {...item,relatedScore:score+(sameTopic?0.4:0)+(sameDay?0.1:0),matchType:'related',
-   matchReason:sameTopic&&!eligible(item,tokens,today,days)?'Coincide con el tema; fecha ampliada al '+localDate(item.date)+'.':
+   matchReason:sameTopic&&!eligible(item,tokens,today,days,region)?'Coincide con el tema; fecha ampliada al '+localDate(item.date,region)+'.':
     'Tema relacionado'+(locations.length?' que mantiene '+locations.join(', '):'')+'. Coincide por '+content.filter((_,i)=>scores[i]>0).join(', ')+'.'};
  }).filter(Boolean).sort((a,b)=>b.relatedScore-a.relatedScore||b.date-a.date);
 }
 function selectSources(query,style){
- const text=matchText(query),ent=/farandula|entretenimiento|musica|cine|actor|artista|concierto/.test(text)||['Farándula','Entretenimiento'].includes(style);
- const rd=/dominicana/.test(text),abroad=/mundo|internacional|hispan|mexico|espana|argentina|colombia|peru|chile|ecuador/.test(text)&&!rd;
- const scored=NEWS_SOURCES.map((f,i)=>({f,i,score:(f.region==='RD'?(abroad?0:3):(abroad?5:1))+(ent?(f.topics?.includes('entertainment')?8:0):(!f.entertainment?1:0))})).sort((a,b)=>b.score-a.score||a.i-b.i);
- const chosen=[],names=new Set();
- for(const {f} of scored){
-  if(names.has(f.name))continue;
-  if(!rd&&!abroad&&f.region==='RD'&&chosen.filter(x=>x.region==='RD').length>=10)continue;
-  chosen.push(f);names.add(f.name);if(chosen.length===14)break;
+ const region=regionForQuery(query);
+ const target=region?.code==='DO'?'RD':region?.code||null;
+ const ent=/farandula|entretenimiento|musica|cine|actor|artista|concierto/.test(matchText(query))||['Farándula','Entretenimiento'].includes(style);
+ const groups=new Map();
+ for(const source of NEWS_SOURCES){
+  const items=groups.get(source.region)||[];
+  if(!items.some(item=>item.name===source.name))items.push(source);
+  groups.set(source.region,items);
+ }
+ for(const items of groups.values()){
+  items.sort((a,b)=>(ent?Number(Boolean(b.topics?.includes('entertainment')))-Number(Boolean(a.topics?.includes('entertainment'))):Number(Boolean(a.entertainment))-Number(Boolean(b.entertainment))));
+ }
+ const chosen=[],used=new Set();
+ const take=source=>{
+  if(!source||chosen.length===14||used.has(source.name))return false;
+  chosen.push(source);used.add(source.name);return true;
+ };
+ // Cuando se escribe país, preferir sus medios; no imponer RD a otras búsquedas.
+ if(target&&groups.has(target)){
+  for(const source of groups.get(target).slice(0,target==='RD'?14:8))take(source);
+  if(target==='RD'&&chosen.length===14)return chosen;
+ }
+ // Reservar diversidad editorial para búsquedas de entretenimiento.
+ if(!target&&ent){
+  take(groups.get('RD')?.find(s=>s.name==='Más VIP'));
+  take(groups.get('ES')?.find(s=>s.name==='¡HOLA!'));
+ }
+ const order=target?['global',target,'MX','CO','CL','PE','AR','ES','EC','UY','PA','RD','GT','CR','VE','PR','BO','PY','SV','HN','NI','CU','GQ']
+  :['global','MX','CO','CL','PE','AR','ES','EC','UY','PA','GT','CR','VE','PR','BO','PY','SV','HN','NI','CU','GQ','RD'];
+ let progressed=true;
+ while(chosen.length<14&&progressed){
+  progressed=false;
+  for(const key of order){
+   const next=groups.get(key)?.find(s=>!used.has(s.name));
+   if(take(next))progressed=true;
+   if(chosen.length===14)break;
+  }
  }
  return chosen;
 }
@@ -110,14 +139,14 @@ async function cachedFetch(url,kind){
   try{await cache.put(key,new Response(copy.body,{status:copy.status,headers}))}catch{}
  }return response;
 }
-function eligible(item,tokens,today,days){
+function eligible(item,tokens,today,days,region){
  if(!item?.url||!item.date||item.title?.length<12||!relevant(item,tokens))return false;
  if(item.date.getTime()>Date.now()+300000)return false;
- return today?localDate(item.date)===localDate(new Date()):item.date.getTime()>=Date.now()-days*86400000;
+ return today?localDate(item.date,region)===localDate(new Date(),region):item.date.getTime()>=Date.now()-days*86400000;
 }
 export async function searchRealNews(topic,style,env,options={}){
  const page=Math.max(0,Math.min(4,Math.floor(Number(options?.page)||0))); // Máximo 50 noticias por consulta.
- const query=String(topic||'').trim(),tokens=requestedTokens(query);
+ const query=String(topic||'').trim(),tokens=requestedTokens(query),region=regionForQuery(query);
  const today=/(?:\bhoy\b|última hora|del momento|en vivo|ahora)/i.test(query),days=/(?:esta semana|semana|últimos días)/i.test(query)?7:3;
  const params=new URLSearchParams({query:searchTerm(query)+' sourcelang:spanish',mode:'artlist',format:'json',maxrecords:'50',sort:'datedesc',timespan:today?'24h':Math.max(days,7)+'d'});
  let entries=[],pool=[],primaryIssue='',available=0,checkedSources=[];
@@ -125,7 +154,7 @@ export async function searchRealNews(topic,style,env,options={}){
  try{
   const response=await cachedFetch('https://api.gdeltproject.org/api/v2/doc/doc?'+params,'gdelt');if(!response.ok)throw Error('HTTP '+response.status);
   const data=await response.json();if(!Array.isArray(data.articles))throw Error('Respuesta incompleta');available++;
-  pool=data.articles.map(a=>({title:String(a.title||'').trim(),url:safeHTTPS(a.url),date:dateOf(a.seendate),dateKind:'observation',publisher:String(a.domain||''),image:safeHTTPS(a.socialimage),provider:'GDELT Project'}));entries=pool.filter(a=>eligible(a,tokens,today,days));
+  pool=data.articles.map(a=>({title:String(a.title||'').trim(),url:safeHTTPS(a.url),date:dateOf(a.seendate),dateKind:'observation',publisher:String(a.domain||''),image:safeHTTPS(a.socialimage),provider:'GDELT Project'}));entries=pool.filter(a=>eligible(a,tokens,today,days,region));
  }catch(error){primaryIssue=String(error.message||error).slice(0,120)}
  if(entries.length<5){
   const selected=selectSources(query,style);let next=0;
@@ -138,10 +167,10 @@ export async function searchRealNews(topic,style,env,options={}){
     }catch{}
    }
   }));
-  entries=pool.filter(a=>eligible(a,tokens,today,days));
+  entries=pool.filter(a=>eligible(a,tokens,today,days,region));
  }
  const webEntries=await webTask;
- if(webEntries.length){available++;pool.push(...webEntries);entries=pool.filter(a=>eligible(a,tokens,today,days));}
+ if(webEntries.length){available++;pool.push(...webEntries);entries=pool.filter(a=>eligible(a,tokens,today,days,region));}
  const seenUrls=new Set(),seenTitles=new Set();
  function unique(items){
   return items.filter(item=>{
@@ -157,16 +186,16 @@ export async function searchRealNews(topic,style,env,options={}){
  const exactPool=unique(entries.sort((a,b)=>b.date-a.date)).slice(0,50);
  const exact=exactPool.slice(page*10,page*10+10);
  const exactMatchCount=exact.length;
- const related=page===0&&exactMatchCount<5?unique(relatedMatches(pool,query,today,days)).slice(0,10-exactMatchCount):[];
+ const related=page===0&&exactMatchCount<5?unique(relatedMatches(pool,query,today,days,region)).slice(0,10-exactMatchCount):[];
  entries=[...exact,...related];
  if(!entries.length && page===0){
   if(!available)newsError('Los buscadores de noticias no están disponibles temporalmente para «'+query+'». Conservé tu tema; vuelve a intentar en unos minutos.',503);
   newsError('No encontré publicaciones públicas verificables ni temas relacionados recientes para «'+query+'» en las fuentes disponibles.'+(primaryIssue?' El buscador principal está temporalmente limitado; también consulté medios de respaldo.':'')+' No hay noticias respaldadas para sugerir en esta consulta.',422);
  }
  const ideas=entries.map((a,i)=>({matchType:a.matchType||'exact',matchReason:a.matchReason||'Coincide con tu búsqueda y el periodo solicitado.',originalQuery:query,id:'news-'+(i+1),title:a.title.slice(0,200),
-  synopsis:(a.description?a.description+' ':'Titular publicado por '+(a.publisher||new URL(a.url).hostname)+': «'+a.title+'». ')+(a.dateKind==='publication'?'Fecha de publicación: ':'Fecha de detección: ')+localDate(a.date)+'. Consulta el artículo original para conocer los detalles.',
-  outline:'Titular de la fuente: '+a.title+'. Medio: '+a.publisher+'. Enlace original: '+a.url+'. '+(a.dateKind==='publication'?'Publicado':'Detectado')+' el '+localDate(a.date)+'. No afirmar detalles que no aparezcan en el artículo.',
-  coverPrompt:'Portada informativa con elementos gráficos; no representar una ilustración como fotografía del suceso.',sourceUrl:a.url,sourceTitle:a.publisher,sourceSeenAt:localDate(a.date),sourceDateKind:a.dateKind,sourceImageUrl:a.image||''}));
- return {mode:'news',style,query,ideas,page,hasMore:exactPool.length>(page+1)*10,nextPage:exactPool.length>(page+1)*10?page+1:null,sources:entries.map(a=>({title:a.title+' — '+a.publisher,url:a.url,date:localDate(a.date)})),checkedAt:new Date().toISOString(),sourceProvider:[...new Set(entries.map(a=>a.provider))].join(', '),usedFallback:entries.some(a=>a.provider!=='GDELT Project'),matchType:exactMatchCount?'exact':'related',exactMatchCount,sourceCoverage:{...sourceSummary(),queriedPublishers:[...new Set(checkedSources)]},note:'La búsqueda incluye web pública en español cuando Gemini está disponible; no implica acceso a publicaciones privadas ni confirma por sí sola que un tema sea tendencia. Las fechas son de publicación en el medio o de detección en GDELT, no necesariamente de los hechos. Se conserva el tema literal de la búsqueda.'};
+  synopsis:(a.description?a.description+' ':'Titular publicado por '+(a.publisher||new URL(a.url).hostname)+': «'+a.title+'». ')+(a.dateKind==='publication'?'Fecha de publicación: ':'Fecha de detección: ') +localDate(a.date,region)+'. Consulta el artículo original para conocer los detalles.',
+  outline:'Titular de la fuente: '+a.title+'. Medio: '+a.publisher+'. Enlace original: '+a.url+'. '+(a.dateKind==='publication'?'Publicado':'Detectado')+' el ' +localDate(a.date,region)+'. No afirmar detalles que no aparezcan en el artículo.',
+  coverPrompt:'Portada informativa con elementos gráficos; no representar una ilustración como fotografía del suceso.',sourceUrl:a.url,sourceTitle:a.publisher,sourceSeenAt:localDate(a.date,region),sourceDateKind:a.dateKind,sourceImageUrl:a.image||''}));
+ return {mode:'news',style,query,geography:region?.name||'Países de habla hispana',ideas,page,hasMore:exactPool.length>(page+1)*10,nextPage:exactPool.length>(page+1)*10?page+1:null,sources:entries.map(a=>({title:a.title+' — '+a.publisher,url:a.url,date:localDate(a.date,region)})),checkedAt:new Date().toISOString(),sourceProvider:[...new Set(entries.map(a=>a.provider))].join(', '),usedFallback:entries.some(a=>a.provider!=='GDELT Project'),matchType:exactMatchCount?'exact':'related',exactMatchCount,sourceCoverage:{...sourceSummary(),queriedPublishers:[...new Set(checkedSources)],targetCountry:region?.name||null,targetTimeZone:region?.timeZone||null},note:'La búsqueda cubre países de habla hispana sin restringirse a República Dominicana; incluye web pública en español cuando Gemini está disponible; no implica acceso a publicaciones privadas ni confirma por sí sola que un tema sea tendencia. Las fechas son de publicación en el medio o de detección en GDELT, no necesariamente de los hechos. Se conserva el tema literal de la búsqueda.'};
 }
 export {searchSubject,searchTerm,requestedTokens,relevant,parseFeed,eligible,relatedMatches,selectSources};

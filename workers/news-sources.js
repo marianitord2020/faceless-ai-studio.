@@ -24,6 +24,11 @@ export const NEWS_SOURCES=[
  {name:'elDiario.es',region:'ES',url:'https://www.eldiario.es/rss/'},
  {name:'¡HOLA!',region:'ES',url:'https://www.hola.com/feeds/rss/es/any/any/50.xml',topics:['entertainment'],entertainment:true},
  {name:'La Nación',region:'AR',url:'https://www.lanacion.com.ar/arc/outboundfeeds/rss/'},
- {name:'El Universo',region:'EC',url:'https://www.eluniverso.com/arc/outboundfeeds/rss/?outputType=xml'}
+ {name:'El Universo',region:'EC',url:'https://www.eluniverso.com/arc/outboundfeeds/rss/?outputType=xml'},
+ {name:'La Tercera',region:'CL',url:'https://www.latercera.com/arcio/rss/'},
+ {name:'CIPER Chile',region:'CL',url:'https://www.ciperchile.cl/feed/'},
+ {name:'Cooperativa',region:'CL',url:'https://www.cooperativa.cl/noticias/site/tax/port/all/rss____1.xml'},
+ {name:'El Observador',region:'UY',url:'https://www.elobservador.com.uy/rss/pages/home.xml'},
+ {name:'Panamá América',region:'PA',url:'https://www.panamaamerica.com.pa/rss/provincias'}
 ];
-export function sourceSummary(){return {publishers:new Set(NEWS_SOURCES.map(f=>f.name)).size,channels:NEWS_SOURCES.length,dominicanPublishers:new Set(NEWS_SOURCES.filter(f=>f.region==='RD').map(f=>f.name)).size}}
+export function sourceSummary(){return {publishers:new Set(NEWS_SOURCES.map(f=>f.name)).size,channels:NEWS_SOURCES.length,dominicanPublishers:new Set(NEWS_SOURCES.filter(f=>f.region==='RD').map(f=>f.name)).size,regions:[...new Set(NEWS_SOURCES.map(f=>f.region))].sort()}}
