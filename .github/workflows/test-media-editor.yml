@@ -72,16 +72,17 @@ jobs:
               assert.ok(bounds.actions.every(a=>a.left>=0&&a.right<=width));
               assert.ok(Math.abs(bounds.actions[3].width-36)<=2);assert.ok(Math.abs(bounds.actions[3].height-36)<=2);
               assert.ok(bounds.preview.bottom+7<=bounds.render.top,'Export rows overlap at '+width);
-              if(width<=760)assert.ok(bounds.bar<=bounds.height-62&&bounds.bar>=bounds.height-110,'Export bar must sit above the mobile navigation at '+width);else assert.ok(Math.abs(bounds.bar-bounds.height)<3,'Desktop bar must end at viewport bottom');assert.ok(bounds.scroll<=width);
+              assert.equal(await page.locator('.editor-export-bar').evaluate(el=>getComputedStyle(el).position),'static','Export actions should no longer cover the editor');assert.ok(bounds.scroll<=width);
             }
             await page.setViewportSize({width:390,height:844});
+            await page.locator('#previewVideo').scrollIntoViewIfNeeded();
             const previewBox=await page.locator('#previewVideo').boundingBox();
             await page.locator('#previewVideo').click();
             await page.waitForFunction(()=>document.getElementById('previewVideo').textContent==='Detener vista previa');
             const activeBox=await page.locator('#previewVideo').boundingBox();assert.equal(activeBox.y,previewBox.y);assert.equal(activeBox.height,previewBox.height);
             await page.locator('#previewVideo').click();assert.equal(await page.locator('#previewVideo').textContent(),'Vista previa');
             await page.evaluate(()=>window.scrollTo({top:document.documentElement.scrollHeight,behavior:'instant'}));
-            const lastCard=await page.locator('#videoVoiceCard').boundingBox(),barBox=await page.locator('.editor-export-bar').boundingBox();assert.ok(lastCard.y+lastCard.height<=barBox.y,'Toolbar covers the last card');
+            const lastCard=await page.locator('#videoVoiceCard').boundingBox(),barBox=await page.locator('.editor-export-bar').boundingBox();assert.ok(barBox.y+barBox.height<=lastCard.y,'Export actions must appear below player, before optional settings');
             await page.evaluate(()=>{renderTab();window.scrollTo({top:0,behavior:'instant'})});
             assert.equal(await page.locator('#videoAutoCard,#videoPhotosCard,#videoVoiceCard').count(),3);
             assert.deepEqual(await page.locator('#videoAutoCard h3,#videoPhotosCard h3,#videoVoiceCard h3').allTextContents(),['Video completo con IA','Fotografías automáticas con IA','Narración automática en español']);
