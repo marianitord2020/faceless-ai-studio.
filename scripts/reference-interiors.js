@@ -179,7 +179,7 @@ function getProject(){return typeof current==='function'?current():null}
 function photoFor(p,index){
  const collection=window.facelessSceneImages?.get(p.id);
  const item=collection?.get(index);
- if(!item)return '';
+ if(!item)return index===0?(window.facelessCoverCache?.get(p.id)||''):'';
  if(typeof item==='string')return item;
  return typeof item.src==='string'?item.src:'';
 }
