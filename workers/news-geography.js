@@ -40,6 +40,9 @@ export function regionForQuery(query){
  }
  return matches[0].region;
 }
-export const regionDate=(date,region)=>new Intl.DateTimeFormat('en-CA',{
- timeZone:region?.timeZone||'America/Santo_Domingo',year:'numeric',month:'2-digit',day:'2-digit'
-}).format(date);
+export function regionDate(date,region){
+ const values=Object.fromEntries(new Intl.DateTimeFormat('en-US',{
+  timeZone:region?.timeZone||'America/Santo_Domingo',year:'numeric',month:'2-digit',day:'2-digit'
+ }).formatToParts(date).filter(part=>['year','month','day'].includes(part.type)).map(part=>[part.type,part.value]));
+ return values.year+'-'+values.month+'-'+values.day;
+}
