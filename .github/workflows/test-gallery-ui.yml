@@ -60,8 +60,10 @@ jobs:
             }
             const images=await page.locator('#home .final-photo-card img, #finalGenres .final-photo-card img').evaluateAll(els=>[...new Set(els.map(i=>i.getAttribute('src')))]);
             for(const src of images){
-              assert.ok(src.startsWith('assets/'),'No usar URLs temporales para fotos de interfaz: '+src);
-              const response=await page.request.get('http://127.0.0.1:4173/'+src);
+              const url=new URL(src,'http://127.0.0.1:4173/');
+              assert.equal(url.origin,'http://127.0.0.1:4173','Las imágenes del diseño deben estar en el mismo GitHub Pages');
+              assert.ok(/\/assets\/mockup\/[^/]+$/.test(url.pathname),'Imagen debe estar en assets/mockup: '+src);
+              const response=await page.request.get(url.toString());
               assert.equal(response.status(),200,'Imagen alojada en repositorio: '+src);
             }
             assert.deepEqual(errors,[]);
