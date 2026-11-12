@@ -1,4 +1,5 @@
 import {geminiScriptCall,trustedSources} from './script-generator.js';
+import {regionForQuery,regionDate} from './news-geography.js';
 
 const socialPlatforms=[
  ['Facebook',/(^|\.)facebook\.com$|^fb\.watch$/i,/\/(?:posts|reels?|videos|watch|permalink\.php|story\.php|photo(?:\.php)?|share)(?:\/|$)/i],
@@ -33,10 +34,10 @@ async function publicSource(source){
 // Public, searchable Spanish sources; never claims access to private app content.
 export async function searchSpanishWeb(topic,style,env){
  if(!(env.GEMINI_SCRIPT_API_KEY||env.GEMINI_API_KEY||env.GEMINI_TTS_API_KEY))return [];
- const today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Santo_Domingo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+ const today=regionDate(new Date(),regionForQuery(topic));
  const general=geminiScriptCall(env,[
   'Busca con Google Search publicaciones públicas REALES, recientes y en español sobre esta consulta exacta: '+JSON.stringify(topic)+'. Categoría: '+style+'. Fecha de consulta: '+today+'.',
-  'No te limites a periódicos, a República Dominicana ni a un catálogo de dominios. Incluye páginas locales e internacionales, sitios oficiales de artistas y creadores, blogs, entrevistas y páginas públicas indexadas de YouTube, Instagram, TikTok, Facebook y X cuando sean relevantes.',
+  'Busca en CUALQUIER país hispanohablante, dando prioridad al país o ciudad escritos por el usuario (sin imponer República Dominicana). No te limites a periódicos ni a un catálogo de dominios. Incluye páginas locales e internacionales, sitios oficiales de artistas y creadores, blogs, entrevistas y páginas públicas indexadas de YouTube, Instagram, TikTok, Facebook y X cuando sean relevantes.',
   'Para farándula, entretenimiento y temas virales, haz búsquedas específicas del mismo tema en cada plataforma: site:facebook.com, site:tiktok.com, site:instagram.com y site:youtube.com. Busca publicaciones, reels, videos y shorts públicos, además de una búsqueda abierta en la web. Prioriza el enlace a la publicación concreta frente a un perfil o una nota que solo la menciona.',
   'Si una plataforma no ofrece resultados públicos indexados, continúa con las otras fuentes. Incluye únicamente publicaciones cuyo contenido y fecha puedas respaldar.',
   'Busca variantes ortográficas de nombres sin cambiar de persona: por ejemplo Bullin 47 / Bulin 47 y Alofoke / Alofoke Radio Show / Santiago Matías cuando corresponda. Conserva cualquier lugar solicitado.',
