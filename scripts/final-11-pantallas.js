@@ -79,7 +79,7 @@ $("finalGenerate").onclick=()=>{
  const note=$("finalNote");note.textContent="";
  if(topic.length<5){note.textContent="Escribe un tema de al menos 5 caracteres.";$("finalTopic").focus();return;}
  const auth=$("finalAccess"),privateInput=$("finalAccessCode"),serviceInput=$("studioPass");
- const token=(serviceInput?.value||window.facelessProductionPasscode||privateInput.value||"").trim();
+ const token=[serviceInput?.value,window.facelessProductionPasscode,privateInput.value].find(value=>typeof value==="string"&&value.trim().length>=16)?.trim()||"";
  if(token.length<16){
   auth.hidden=false;auth.open=true;
   note.textContent="Para crear propuestas con tus IA, primero autoriza el acceso al servidor.";
