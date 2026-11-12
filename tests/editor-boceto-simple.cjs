@@ -81,5 +81,28 @@ fs.mkdirSync('editor-boceto-capturas',{recursive:true});
   console.log('PASS editor layout '+width+' px, four tabs, 9 scene thumbnails, Hero, real buttons, static export, no JS errors');
   await page.close();
  }
+ // Cloudflare ASSETS puede servir el mismo index.html bajo /crear-con-ia/.
+ // Recargar esa ruta debe cargar scripts desde /scripts/, no /crear-con-ia/scripts/.
+ const deep=await browser.newPage({viewport:{width:390,height:844}});
+ const deepErrors=[];deep.on('pageerror',e=>deepErrors.push(e.message));
+ await deep.route('**/crear-con-ia/',async route=>route.fulfill({
+  status:200,contentType:'text/html',body:fs.readFileSync('index.html','utf8')
+ }));
+ await deep.goto('http://127.0.0.1:4173/crear-con-ia/',{waitUntil:'load'});
+ await deep.waitForFunction(()=>window.facelessStudioReady && typeof window.FacelessGateway==='object',{timeout:15000});
+ assert.equal(await deep.evaluate(()=>document.baseURI),'http://127.0.0.1:4173/');
+ await deep.evaluate(()=>{
+  const p={id:'deep-route-fixture',title:'Una historia',topic:'Historias de prueba',
+   format:'9:16',duration:30,style:'Misterio',platform:'TikTok',
+   scenes:Array.from({length:5},(_,i)=>({time:i*6,duration:6,text:'Escena '+(i+1)+' del misterio',prompt:'Misterio nocturno'}))};
+  p.hook=p.scenes[0].text;p.narration=p.scenes.map(s=>s.text).join('\\n');
+  projects.unshift(p);activeId=p.id;tab='video';route('editor');
+ });
+ await deep.waitForSelector('#bocetoEditorNav');
+ await deep.locator('#bocetoEditorNav [data-boceto-tab="exportar"]').click();
+ assert.equal(await deep.locator('#renderVideo').count(),1);
+ assert.deepEqual(deepErrors,[],'No fallar al recargar una ruta interna SPA');
+ await deep.close();
+ console.log('PASS: rutas internas de Cloudflare conservan scripts, estilos, editor y exportación después de recargar');
  await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});
