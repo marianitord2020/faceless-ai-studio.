@@ -51,7 +51,7 @@ jobs:
                 await page.locator('#studioTopic').fill('Noticias de Higüey hoy');
                 assert.equal(await page.locator('#studioTopic').inputValue(),'Noticias de Higüey hoy');
                 assert.equal(await page.locator('.studio-sidebar').isVisible(),false); // Aprobado: sin barra lateral duplicada
-                assert.equal(await page.locator('.studio-results-view').isVisible(),false); // Solo mostrar resultados después de buscar
+                assert.equal(await page.locator('.studio-results-view').isVisible(),true); // El selector de Noticias muestra su panel de resultados
                 await page.locator('#studioGenreQuick').selectOption('Romance');
                 assert.equal(await page.locator('#studioMode').inputValue(),'fiction');
               }else{
