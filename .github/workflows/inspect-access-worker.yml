@@ -94,6 +94,23 @@ jobs:
           console.log('Frontend redirect near Github Pages:',redirectLikely);
           console.log('API gateway with server-side APP_PASSCODE likely:',proxyApi);
           console.log('Access Worker uses Access-Control-Allow-Origin:',/Access-Control-Allow-Origin|access-control-allow-origin/i.test(source));
+          // Print ONLY structural route fragments with string/secret literals redacted.
+          const lines=source.split('\n');
+          for(let i=0;i<lines.length;i++){
+            if(/url.pathname|pathname.startsWith|url\.pathname|\/api\/|SESSION_COOKIE|sessionCookie|case\s+'\/|case\s+"\/|Response.redirect/.test(lines[i]) && i<450){
+              const fragment=lines.slice(Math.max(0,i-2),Math.min(lines.length,i+4))
+                .map((row,j)=>{
+                  const n=Math.max(0,i-2)+j+1;
+                  let clean=row.replace(/(['"\x60])(?:[^\\\1]|\\.){18,}?\1/g,"'[literal]'");
+                  clean=clean.replace(/(password|passcode|pepper|secret|token)\s*:\s*(['"\x60])[^'"\x60]+\2/ig,'$1:"[redacted]"');
+                  clean=clean.slice(0,180);
+                  return n+':'+clean;
+                }).join('\n');
+              console.log('ROUTE_FRAGMENT',fragment.replace(/\n/g,' | '));
+              if(i>220)break;
+            }
+          }
+
 
 
 
