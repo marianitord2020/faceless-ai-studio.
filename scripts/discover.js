@@ -452,7 +452,7 @@
       feature.appendChild(details);
     }
   }
-  const studioAccess=()=>[$id('studioPass')?.value.trim(),state.pass,window.facelessProductionPasscode,typeof facelessImagePasscode==='string'?facelessImagePasscode:'',typeof facelessVoicePassword==='string'?facelessVoicePassword:''].find(code=>typeof code==='string'&&code.length>=16)||'';
+  const studioAccess=()=>[window.facelessAccess?.current(),$id('studioPass')?.value.trim(),state.pass,window.facelessProductionPasscode,typeof facelessImagePasscode==='string'?facelessImagePasscode:'',typeof facelessVoicePassword==='string'?facelessVoicePassword:''].find(code=>typeof code==='string'&&code.length>=16)||'';
   async function callEndpoint(path,payload){
     const pass=state.pass;
     if(pass.length<16)throw Error('Introduce el mismo APP_PASSCODE de fotos y voces (mínimo 16 caracteres).');
