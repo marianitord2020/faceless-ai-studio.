@@ -26,7 +26,7 @@ jobs:
           root='https://faceless-access-prueba.marianitord2020.workers.dev'
           login=$(curl -s --output /dev/null --max-time 20 --write-out '%{http_code}' "$root/login")
           blocked=$(curl -s --output /dev/null --max-time 20 --write-out '%{http_code}' \
-            -X POST "$root/api/ideas" -H 'Content-Type: application/json' --data '{"topic":"misterio"}')
+            -X POST "$root/api/ideas" -H "Origin: $root" -H 'Content-Type: application/json' --data '{"topic":"misterio"}')
           echo "LOGIN_HTTP=$login"
           echo "UNAUTHENTICATED_API_HTTP=$blocked"
           test "$login" = 200
