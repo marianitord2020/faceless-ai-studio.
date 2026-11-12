@@ -69,7 +69,7 @@ window.facelessCompactVideoEditor = function (project) {
     const button=byId(id), original=button.onclick;
     button.onclick=async function(event,options){
       shareCode();
-      if(!options?.showProgress&&code.value.trim().length<16){custom[0].open=true;advanced.open=true;code.focus();byId('productionStatus').textContent='Introduce tu código privado.';return;}
+      if(!window.FacelessGateway.enabled&&!options?.showProgress&&code.value.trim().length<16){custom[0].open=true;advanced.open=true;code.focus();byId('productionStatus').textContent='Introduce tu código privado.';return;}
       return original.call(this,event,options);
     };
   });
