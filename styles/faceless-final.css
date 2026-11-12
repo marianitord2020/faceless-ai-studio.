@@ -82,3 +82,12 @@ body.editor-mode #editor .editor-hero,#editor .tabs,#editor .editor-video-card{b
 #editor #fcMotionPreview{display:block;max-height:300px;height:auto;width:auto;max-width:100%;aspect-ratio:9 / 16;border-radius:12px;border:1px solid #5a376f;margin:14px auto;background:#0a0717}
 #projects .project[hidden]{display:none!important}
 @media(max-width:560px){#editor .fc-motion-layout{grid-template-columns:1fr}}
+
+/* La navegación inferior pertenece a Inicio, Crear y Proyectos.
+   En el explorador y editor dejar libres los controles flotantes de producción. */
+@media(max-width:760px){
+  body[data-screen="discover"] .fc-bottom,
+  body[data-screen="editor"] .fc-bottom{display:none!important}
+  body[data-screen="discover"] .main,
+  body[data-screen="editor"] .main{padding-bottom:86px}
+}
