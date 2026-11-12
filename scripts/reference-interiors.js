@@ -41,6 +41,30 @@ menu?.querySelector('.fcx-explore-header')?.after(newsRow);
 const backbar=document.createElement('div');backbar.className='ref-news-backbar';
 backbar.innerHTML='<button type="button" aria-label="Volver a las noticias">‹</button><span>Detalle de noticia</span>';
 resultsGrid?.before(backbar);
+
+const resultsToolbar=document.createElement('div');resultsToolbar.className='ref-news-results-toolbar';
+resultsToolbar.innerHTML='<div class="ref-news-results-title"><button type="button" aria-label="Volver a buscar noticias">‹</button><strong>Noticias de hoy</strong><small>🎬 Faceless AI Studio</small></div>'+
+ '<form class="ref-news-results-search"><span aria-hidden="true">⌕</span><input aria-label="Buscar noticias" placeholder="Buscar noticias en RD, Santo Domingo, dólar..." maxlength="220"><button type="submit" aria-label="Buscar">Buscar</button></form>'+
+ '<div class="ref-news-results-tags"></div>';
+resultsGrid?.before(resultsToolbar);
+const refTags=resultsToolbar.querySelector('.ref-news-results-tags');
+newsPhrases.forEach(([label,topic,genre])=>{
+ const button=document.createElement('button');button.type='button';button.textContent=label;
+ button.onclick=()=>{selectChange($('studioGenre'),genre);$('studioTopic').value=topic;
+  $('studioTopic').dispatchEvent(new Event('input',{bubbles:true}));
+  window.facelessShowStudioMenu?.();discover.dataset.refDetail='false';$('studioGenerate')?.click();};
+ refTags.append(button);
+});
+resultsToolbar.querySelector('.ref-news-results-title button').onclick=()=>{discover.dataset.refDetail='false';window.facelessShowStudioMenu?.();};
+resultsToolbar.querySelector('.ref-news-results-search').onsubmit=e=>{
+ e.preventDefault();const query=resultsToolbar.querySelector('input').value.trim();
+ $('studioTopic').value=query;$('studioTopic').dispatchEvent(new Event('input',{bubbles:true}));
+ window.facelessShowStudioMenu?.();discover.dataset.refDetail='false';$('studioGenerate')?.click();
+};
+new MutationObserver(()=>{
+ if(!results.hidden){resultsToolbar.querySelector('input').value=$('studioTopic')?.value||'';
+ resultsToolbar.querySelector('strong').textContent=$('studioGenre')?.value==='Farándula'?'Farándula de hoy':'Noticias de hoy';}
+}).observe(results,{attributes:true,attributeFilter:['hidden']});
 backbar.querySelector('button').addEventListener('click',()=>{
  discover.dataset.refDetail='false';window.scrollTo({top:0,behavior:'instant'});
 });
@@ -58,6 +82,7 @@ function refreshDiscover(){
  if(title&&news)title.textContent=genre==='Farándula'?'Farándula de hoy':genre==='Deportes'?'Deportes de hoy':'Noticias de hoy';
  const search=$('studioTopic');
  if(search&&news)search.placeholder='Buscar noticias en RD, Santo Domingo, dólar...';
+ if(resultsToolbar){resultsToolbar.querySelector('strong').textContent=genre==='Farándula'?'Farándula de hoy':'Noticias de hoy';}
  const resultTitle=$('studioGalleryTitle');
  if(resultTitle&&news&&discover.classList.contains('studio-show-results'))resultTitle.textContent=genre==='Farándula'?'Farándula de hoy':'Noticias de hoy';
 }
