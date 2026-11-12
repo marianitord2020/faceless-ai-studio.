@@ -19,7 +19,7 @@ fs.mkdirSync('editor-boceto-capturas',{recursive:true});
     projects.unshift(project);activeId=project.id;tab='video';route('editor');
   });
   await page.waitForSelector('#editor .boceto-editor-workspace',{timeout:16000});
-  await page.waitForSelector('#finalHeroPanel');
+  await page.waitForSelector('#finalHeroPanel',{state:'attached'});
   await page.waitForSelector('.boceto-transitions-card');
   assert.deepEqual(await page.locator('#bocetoEditorNav button').allTextContents(),['▤ Guion','▣ Escenas','▷ Video','⇧ Exportar']);
   assert.equal(await page.locator('.boceto-editor-main .fc-timeline-scene').count(),8);
