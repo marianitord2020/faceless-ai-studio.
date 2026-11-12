@@ -256,6 +256,7 @@ jobs:
             await page.waitForFunction(()=>window.facelessStudioReady===true);
             await page.evaluate(()=>{activeId='ci-complete';tab='video';route('editor')});
             await page.waitForFunction(()=>facelessProjectPhotos('ci-complete').size===2 && audioFile?.size>1000);
+            await page.locator('#bocetoEditorNav [data-boceto-tab="video"]').click();
             await reveal('#aiVoiceAudioArea audio');
             await page.locator('#aiVoiceAudioArea audio').waitFor({state:'visible'});
             if(!await page.locator('#aiVoiceAudioArea a').isVisible())throw Error('La voz recuperada no tiene descarga');
