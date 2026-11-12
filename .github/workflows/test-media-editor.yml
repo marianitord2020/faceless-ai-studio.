@@ -47,7 +47,7 @@ jobs:
             const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
             const page=await browser.newPage({viewport:{width:390,height:844}});
             const errors=[];page.on('pageerror',e=>errors.push(e.message));
-            const reveal=async selector=>{await page.locator(selector).evaluate(el=>{for(let parent=el.parentElement;parent;parent=parent.parentElement)if(parent.tagName==='DETAILS')parent.open=true;});await page.waitForTimeout(30);};
+            const reveal=async selector=>{await page.locator(selector).evaluate(el=>{for(let parent=el.parentElement;parent;parent=parent.parentElement)if(parent.tagName==='DETAILS')parent.open=true;else if(parent.id==='manualInfrastructure')parent.hidden=false;});await page.waitForTimeout(30);};
             await page.goto('http://127.0.0.1:4173/');
             await page.waitForFunction(()=>window.facelessStudioReady);
             await page.evaluate(()=>{const p={id:'media-fixture',title:'Fotos y voz',topic:'Lola',style:'Misterio',duration:12,platform:'TikTok',format:'9:16',date:new Date().toISOString(),scenes:[{time:0,duration:4,text:'Hola esta es la primera escena.',prompt:'Scene one'},{time:4,duration:4,text:'Ahora contamos una historia sobre Lola.',prompt:'Scene two'},{time:8,duration:4,text:'Al final todos regresan a casa.',prompt:'Scene three'}]};p.narration=p.scenes.map(s=>s.text).join('\n');projects.unshift(p);persist();activeId=p.id;tab='video';route('editor')});
@@ -92,7 +92,6 @@ jobs:
             const photo=name=>({name,mimeType:'image/png',buffer:png});
             await page.evaluate(()=>{const area=document.getElementById('manualInfrastructure');if(area)area.hidden=false;});
             await reveal('#pickOwnPhotos');
-            const photoDebug=await page.evaluate(()=>({busy:facelessIsWorking(),production:window.facelessProductionBusy,media:window.facelessMediaBusy,rendering:typeof rendering==='boolean'?rendering:null,pickerDisabled:document.getElementById('pickOwnPhotos')?.disabled,pickerVisible:!!document.getElementById('pickOwnPhotos')?.getClientRects().length,inputExists:!!document.getElementById('images'),flow:window.facelessFlow}));console.log('UPLOAD_DIAGNOSTIC',JSON.stringify(photoDebug));
             const photoChooserPromise=page.waitForEvent('filechooser');await page.locator('#pickOwnPhotos').click();const photoChooser=await photoChooserPromise;assert.equal(photoChooser.isMultiple(),true);await photoChooser.setFiles([photo('primera.png'),photo('segunda.png')]);
             await page.waitForFunction(()=>!window.facelessMediaBusy&&facelessProjectPhotos('media-fixture').size===2);
             assert.equal(await page.locator('#manualPhotoSlots .media-photo-slot img').count(),2);
