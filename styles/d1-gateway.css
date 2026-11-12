@@ -1,0 +1,19 @@
+/* Faceless AI Studio — authenticated Cloudflare D1 entry point.
+   Hide legacy APP_PASSCODE inputs only when the app runs behind its access Worker. */
+html.faceless-d1 .studio-access,
+html.faceless-d1 #studioUrlAccess,
+html.faceless-d1 #finalAccess,
+html.faceless-d1 #aiPhotosPasscode,
+html.faceless-d1 #aiVoicePasscode,
+html.faceless-d1 #productionPass,
+html.faceless-d1 #geminiPass,
+html.faceless-d1 label[for="aiPhotosPasscode"],
+html.faceless-d1 label[for="aiVoicePasscode"],
+html.faceless-d1 label[for="productionPass"],
+html.faceless-d1 label[for="geminiPass"],
+html.faceless-d1 #stockPhotos input[type=password],
+html.faceless-d1 #stockPhotos label[for="stockPasscode"],
+html.faceless-d1 .editor-advanced-auth {
+  display:none!important;
+}
+html.faceless-d1 #stockPhotos .stock-search {gap:8px}
