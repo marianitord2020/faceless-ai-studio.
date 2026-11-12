@@ -187,10 +187,16 @@
     exportCard.append(settings,tools);
     if(status)exportCard.append(status);
     const download=root.querySelector('#downloadArea');if(download)exportCard.append(download);
-    const extras=wrap('boceto-workspace-hidden');
+    const extras=document.createElement('details');
+    extras.className='boceto-extra-media';
+    extras.innerHTML='<summary>＋ Añadir mis fotos, audio o recursos</summary>';
     if(infrastructure)extras.append(infrastructure);
+    extras.addEventListener('toggle',()=>{
+      if(infrastructure)infrastructure.hidden=!extras.open;
+    });
+    sidebar.append(extras);
     for(const child of [...cards.children])if(child!==auto&&child!==photos&&child!==voice&&child!==settings)extras.append(child);
-    root.replaceChildren(main,sidebar,exportCard,extras);
+    root.replaceChildren(main,sidebar,exportCard);
     // No hay menú técnico que oculte la descarga; se muestra en el paso Exportar.
     if(currentView==='exportar')exportCard.scrollIntoView({block:'nearest',behavior:'instant'});
   }
