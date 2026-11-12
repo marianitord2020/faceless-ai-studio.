@@ -1,0 +1,24 @@
+/* Editor Hero Video y transiciones reales — responsive, boceto final. */
+#editor .final-editor-panel{background:linear-gradient(120deg,#1a102a,#12091f)!important;border:1px solid #644183!important;border-radius:15px!important;margin:12px 0!important;padding:13px!important;color:white!important;min-width:0;}
+#editor .final-editor-panel-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
+#editor .final-editor-panel-head h3{margin:0;color:#fff;font-size:17px}
+#editor .final-editor-panel-head span{background:#3b1a58;border-radius:17px;color:#e9cafa;padding:5px 9px;font-size:11px;white-space:nowrap}
+#editor .final-hero-panel p{font-size:12px!important;color:#d2bddd!important;line-height:1.5;margin:8px 0!important}
+#editor .final-hero-panel small{display:block;font-size:11px!important;color:#ae94c0!important;line-height:1.45;margin-top:12px}
+#editor #finalHeroRaw{width:100%;max-height:250px;display:block;background:#0b0616;border-radius:11px;object-fit:contain}
+#editor #finalHeroRaw[hidden]{display:none}
+#editor .final-hero-actions{display:grid;grid-template-columns:1fr auto;gap:8px;margin:9px 0}
+#editor .final-hero-actions button{background:linear-gradient(120deg,#a734ed,#6e25bc)!important;border:1px solid #d582ff!important;border-radius:10px!important;color:#fff!important;font-size:12px!important;padding:11px 9px!important;min-height:43px!important}
+#editor #finalHeroRemove{background:#2a182e!important;border-color:#76526e!important}
+#editor #finalHeroRemove[hidden]{display:none}
+#editor .final-hero-settings{background:#1e1330;border-radius:11px;padding:12px;margin-top:10px;border:1px solid #4d3065}
+#editor .final-hero-settings label{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;font-size:12px;margin-bottom:13px;align-items:center}
+#editor .final-hero-settings label:last-child{margin-bottom:0}
+#editor .final-hero-settings input{grid-row:2;grid-column:1/-1;width:100%;accent-color:#b12afa}
+#editor .final-hero-settings output{font-size:12px;color:#ddafff;justify-self:end}
+#editor .final-transition-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+#editor .final-transition-grid button{background:linear-gradient(140deg,#2a1c43,#140d27)!important;border:1px solid #644786!important;border-radius:12px!important;min-height:78px!important;padding:11px 4px!important;color:#eee1ff!important;font-size:12px!important;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px}
+#editor .final-transition-grid button span{color:#d57bff!important;font-size:25px;line-height:1}
+#editor .final-transition-grid button.selected{border-color:#e382ff!important;background:linear-gradient(120deg,#8836cf,#48226f)!important;box-shadow:0 0 12px #9331c94d!important}
+#editor .final-hero-panel button:focus-visible,#editor .final-transition-grid button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+@media(min-width:760px){#editor .final-transition-grid{grid-template-columns:repeat(6,1fr)}}
