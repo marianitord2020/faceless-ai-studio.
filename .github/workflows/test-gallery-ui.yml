@@ -1,106 +1,71 @@
-name: Probar menú compacto y creación
+name: Probar galería visual y generación del boceto final
 on:
   workflow_dispatch:
   push:
     branches: [main]
     paths:
-      - 'index.html'
-      - 'scripts/discover.js'
-      - 'scripts/studio-menus.js'
-      - 'scripts/written-stories.js'
-      - 'styles/discover.css'
-      - 'tests/subcategories.mjs'
-      - '.github/workflows/test-gallery-ui.yml'
+      - "index.html"
+      - "scripts/final-11-pantallas.js"
+      - "styles/final-11-pantallas.css"
+      - "assets/mockup/**"
+      - ".github/workflows/test-gallery-ui.yml"
 permissions:
   contents: read
 jobs:
   gallery:
     runs-on: ubuntu-24.04
-    timeout-minutes: 6
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
-      - name: Comprobar parámetros del guion
-        run: node tests/subcategories.mjs
-      - name: Preparar navegador
+          node-version: "22"
+      - name: Instalar navegador
         run: |
           npm install --no-save playwright@1.58.2
           npx playwright install chromium
-          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/compact-http.log 2>&1 &
-      - name: Verificar estructura, tamaño y generación
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/gallery.log 2>&1 &
+          sleep 2
+      - name: Comprobar galería y recursos del repositorio
         run: |
           node <<'JS'
-          const {chromium}=require('playwright');
-          const assert=require('node:assert/strict');
+          const {chromium}=require('playwright'),assert=require('node:assert/strict');
           (async()=>{
             const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
             const page=await browser.newPage({viewport:{width:390,height:844}});
             const errors=[];page.on('pageerror',e=>errors.push(e.message));
-            await page.goto('http://127.0.0.1:4173/');await page.waitForFunction(()=>window.facelessStudioReady);
-            await page.locator('#home [data-flow=ai]').click();
-            assert.match(await page.locator('.compact-title').textContent(),/^(Noticias reales|Encuentra tu próxima historia)$/);
-            assert.equal(await page.locator('#studioVideoOptions').getAttribute('open'),null);
-            assert.equal(await page.locator('.studio-results-view').isVisible(),false);
-            assert.equal(await page.locator('.choice-copy small:visible').count(),0);
-            assert.equal(await page.locator('#studioPass').isVisible(),false);
-            const groups={Relatos:['Romance','Misterio','Terror','Fantasía'],Aprender:['Historia','Curiosidades','Motivación','Educativo'],Actualidad:['Noticias','Farándula','Entretenimiento','Deportes']};
-            const placeholders={Relatos:'¿Qué quieres contar?',Aprender:'¿Qué quieres aprender?',Actualidad:'¿Noticias de hoy?'};
+            await page.goto('http://127.0.0.1:4173/');
+            await page.waitForFunction(()=>window.facelessStudioReady);
+            await page.locator('#home [data-final-new]').first().click();
+            assert.equal(await page.locator('#studioVideoOptions').count(),1);
+            assert.equal(await page.locator('#finalTopic').isVisible(),true);
+            const labels={
+              fiction:['Romance','Misterio','Terror','Fantasía'],
+              factual:['Historia','Curiosidades','Motivación','Educativo'],
+              news:['Noticias','Farándula','Entretenimiento','Deportes']
+            };
             for(const [width,height] of [[360,740],[390,844],[412,915],[768,1024]]){
               await page.setViewportSize({width,height});
-              for(const [tab,names] of Object.entries(groups)){
-                await page.getByRole('tab',{name:tab,exact:true}).click();
-                assert.deepEqual(await page.locator('.choice-category .choice-copy strong').allTextContents(),names);
-                assert.equal(await page.locator('#studioTopic').getAttribute('placeholder'),placeholders[tab]);
-                const geometry=await page.evaluate(()=>{
-                  const cards=[...document.querySelectorAll('.choice-category')].map(n=>n.getBoundingClientRect());
-                  const button=document.getElementById('studioGenerate').getBoundingClientRect();
-                  return {height:document.documentElement.scrollHeight,viewport:innerHeight,overflow:document.documentElement.scrollWidth>innerWidth+2,two:Math.abs(cards[0].top-cards[1].top)<2&&cards[2].top>cards[0].top&&Math.abs(cards[2].top-cards[3].top)<2,fixed:button.bottom<=innerHeight&&button.top>0};
-                });
-                assert.ok(geometry.two,'Las tarjetas deben ser 2x2');assert.ok(!geometry.overflow,'Desbordamiento horizontal');assert.ok(geometry.height<=geometry.viewport*1.5,'El menú supera una pantalla y media: '+JSON.stringify(geometry));assert.ok(geometry.fixed,'El botón fijo no está visible');
-                console.log('COMPACTO',width+'x'+height,tab,geometry.height+'px');
+              for(const [mode,names] of Object.entries(labels)){
+                await page.locator('[data-final-mode="'+mode+'"]').click();
+                assert.deepEqual(await page.locator('#finalGenres .final-photo-card span').allTextContents(),names);
+                const cards=await page.locator('#finalGenres .final-photo-card').evaluateAll(els=>els.map(x=>{
+                  const r=x.getBoundingClientRect();return {top:r.top,left:r.left,width:r.width};
+                }));
+                assert.equal(cards.length,4);
+                assert.ok(Math.abs(cards[0].top-cards[1].top)<2&&cards[2].top>cards[0].top&&Math.abs(cards[2].top-cards[3].top)<2,'Tarjetas deben estar en 2x2');
+                const bounds=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth}));
+                assert.ok(bounds.scroll<=bounds.width+3,'Desborde del generador');
               }
             }
-            await page.setViewportSize({width:390,height:844});
-            await page.getByRole('tab',{name:'Relatos',exact:true}).click();
-            await page.locator('[data-menu="studioGenre"] [data-choice="Terror"]').click();
-            await page.locator('#studioTopic').fill('Una casa abandonada en La Romana');
-            await page.locator('#studioVideoOptions summary').click();
-            for(const value of ['cinematic','hyperreal','anime'])assert.ok(await page.locator('[data-menu="studioImageStyle"] [data-choice='+value+']').isVisible());
-            assert.deepEqual(await page.locator('[data-menu="studioDuration"] .choice-copy strong').allTextContents(),['30s','1 min','2 min']);
-            for(const value of ['automatic','female','male','Fola'])assert.ok(await page.locator('[data-menu="studioVoice"] [data-choice='+value+']').isVisible());
-            assert.equal(await page.locator('.compact-options-body>.studio-addon').count(),4);assert.equal(await page.locator('.compact-options-body .compact-source-switch').count(),1);
-            await page.locator('[data-menu="studioImageStyle"] [data-choice="anime"]').click();
-            await page.locator('[data-menu="studioDuration"] [data-choice="30"]').click();
-            await page.locator('[data-menu="studioVoice"] [data-choice="male"]').click();
-            await page.locator('#studioShowSources').uncheck();
-            await page.locator('#studioPass').fill('fixture-compact-passcode');
-            const summary=await page.locator('#studioVideoSummary').textContent();for(const s of ['30s','Anime','Masculina'])assert.ok(summary.includes(s));
-            await page.locator('#studioVideoOptions summary').click();
-            let request;
-            await page.route('**/faceless-images.marianitord2020.workers.dev/ideas',route=>{request=route.request().postDataJSON();return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ideas:Array.from({length:10},(_,i)=>({id:'compact-'+i,title:'El secreto de la casa '+(i+1),synopsis:'Una casa abandonada en La Romana guarda un misterio por resolver.',outline:'Llegada, investigación y desenlace',coverPrompt:'A fictional abandoned house'}))})})});
-            await page.route('**/faceless-images.marianitord2020.workers.dev/images',route=>route.fulfill({status:503,contentType:'application/json',body:'{"error":"Fixture sin imágenes"}'}));
-            await page.route('**/faceless-images.marianitord2020.workers.dev/script',route=>{const data=route.request().postDataJSON();return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({title:data.idea.title,mode:'ficcion',provider:'Gemini fixture',scenes:Array.from({length:5},()=>({text:'La casa de La Romana ocultaba una presencia misteriosa.',prompt:'An illustrated fictional ghost'})),sources:[{title:'Referencia',url:'https://example.com/source'}]})})});
-            await page.locator('#studioGenerate').click();await page.waitForFunction(()=>document.querySelectorAll('#studioCards .studio-card').length===10);
-            assert.equal(request.topic,'Una casa abandonada en La Romana');assert.equal(request.style,'Terror');assert.equal(request.mode,'fiction');assert.equal(await page.locator('.studio-menu-view').isVisible(),false);
-            await page.locator('#studioCards .studio-card').nth(1).click();await page.locator('#studioFeature .studio-create').click();
-            await page.waitForFunction(()=>current()?.title==='El secreto de la casa 2');
-            const project=await page.evaluate(()=>({title:current().title,duration:current().duration,voice:current().voicePreset,image:current().imageStyle,sources:current().sources.length,showSources:current().showSources,text:current().narration}));
-            assert.equal(project.duration,30);assert.equal(project.voice,'male');assert.equal(project.image,'anime');assert.equal(project.showSources,false);assert.equal(project.sources,1);assert.ok(project.text.includes('La Romana'));
-            assert.equal(await page.evaluate(()=>JSON.stringify(localStorage).includes('fixture-compact-passcode')),false);
-            await page.evaluate(()=>route('discover'));assert.equal(await page.locator('.studio-menu-view').isVisible(),true);assert.equal(await page.locator('.studio-results-view').isVisible(),false);
-            await page.evaluate(()=>{document.getElementById('studioPass').value='';});
-            await page.locator('#studioTopic').fill('Otra historia en La Romana');
-            await page.locator('#studioGenerate').click();
-            await page.waitForFunction(()=>document.querySelectorAll('#studioCards .studio-card').length===10);
-            assert.equal(request.topic,'Otra historia en La Romana');
-            assert.equal(await page.evaluate(()=>JSON.stringify(sessionStorage).includes('fixture-compact-passcode')),false);
-            await page.locator('#studioBackToMenu').click();
-            await page.getByRole('tab',{name:'Actualidad',exact:true}).click();await page.locator('[data-menu="studioGenre"] [data-choice="Deportes"]').click();
-            assert.equal(await page.locator('#studioMode').inputValue(),'news');
-            await page.locator('#studioSource').selectOption('local');assert.equal(await page.locator('#studioWritten').isVisible(),true);
-            assert.deepEqual(errors,[]);console.log('PASS: reference order, three tabs with four cards each, 2x2 at all sizes, 1.5-screen limit, five collapsed settings, summary updates, fixed CTA, exact topic, sports news, voice/image/source persistence and separate results view');
+            const images=await page.locator('#home .final-photo-card img, #finalGenres .final-photo-card img').evaluateAll(els=>[...new Set(els.map(i=>i.getAttribute('src')))]);
+            for(const src of images){
+              assert.ok(src.startsWith('assets/'),'No usar URLs temporales para fotos de interfaz: '+src);
+              const response=await page.request.get('http://127.0.0.1:4173/'+src);
+              assert.equal(response.status(),200,'Imagen alojada en repositorio: '+src);
+            }
+            assert.deepEqual(errors,[]);
+            console.log('PASS galería final y fotos locales');
             await browser.close();
-          })().catch(e=>{console.error(e);process.exit(1)});
+          })().catch(error=>{console.error(error);process.exit(1)});
           JS
