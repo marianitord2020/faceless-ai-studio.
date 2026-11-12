@@ -9,6 +9,7 @@
   if(!editor||!tabBody)return;
   const $=id=>document.getElementById(id);
   let currentView='escenas',editorVisible=false,queued=false;
+  let releaseHeroListener=()=>{};
   const tabMap={guion:'narration',escenas:'video',video:'video',exportar:'video'};
   const labels={guion:'▤ Guion',escenas:'▣ Escenas',video:'▷ Video',exportar:'⇧ Exportar'};
   let navigation=null;
@@ -45,7 +46,7 @@
       const button=event.target.closest('[data-boceto-tab]');
       if(button)showView(button.dataset.bocetoTab);
     });
-    const anchor=editor.querySelector('.ref-editor-nav')||editor.querySelector('.fc-steps')||editor.querySelector('.tabs');
+    const anchor=editor.querySelector('.fc-steps')||editor.querySelector('.tabs');
     anchor?.before(navigation);
     showView(currentView,false);
   }
@@ -82,7 +83,8 @@
     last.duration=first;
     p.scenes.push({time:start+first,duration:second,text:'Nueva escena: edita aquí la narración.',prompt:'Describe la imagen de esta escena.'});
     // Invalidar la firma antigua evita exportar subtítulos desincronizados.
-    delete p.subtitleTextSignature;delete p.audioAlignment;
+    delete p.subtitleTextSignature;delete p.audioAlignment;delete p.subtitleCues;
+    p.narration=p.scenes.map(scene=>String(scene.text||'')).join('\n');
     if(typeof persist==='function')persist();
     if(typeof renderEditor==='function')renderEditor();
     currentView='escenas';
@@ -114,7 +116,11 @@
     root.classList.add('boceto-editor-workspace');
     const main=wrap('boceto-editor-main'),sidebar=wrap('boceto-editor-sidebar');
     const display=wrap('boceto-player','<div class="boceto-player-header"><b>Vista previa</b><span>'+String(p.format||'9:16')+' · '+Math.round(Number(p.duration)||0)+' s</span></div>');
-    display.append(frame);main.append(display);
+    display.append(frame);
+    // El reproductor ya informa duración y formato en su encabezado.
+    const repeatedCaption=frame.querySelector('p.smalltext');
+    if(repeatedCaption&&/^Vista previa\s/i.test(repeatedCaption.textContent||''))repeatedCaption.remove();
+    main.append(display);
     const timelineBox=wrap('boceto-timeline-card');
     timelineBox.append(timeline);
     const add=document.createElement('button');
@@ -128,34 +134,38 @@
       '<div class="boceto-card-heading"><h3>✦ Hero Video <small>Introducción</small></h3><span class="boceto-hero-time">5–8 s</span></div>'+
       '<div class="boceto-hero-row"><img class="boceto-hero-cover" alt="Fotograma real del Hero Video" hidden>'+
       '<div><p class="boceto-hero-summary" role="status">Preparando el clip…</p>'+
-      '<div class="boceto-hero-buttons"><button type="button" class="boceto-hero-change">Cambiar clip</button>'+
-      '<button type="button" class="boceto-hero-adjust">Ajustar</button></div></div></div>');
+      '<div class="boceto-hero-buttons"><button type="button" class="boceto-hero-change">Cambiar clip</button></div></div></div>');
     const heroDetail=document.createElement('details');
     heroDetail.className='boceto-hero-detail';
-    heroDetail.innerHTML='<summary>Opciones del clip</summary>';
+    heroDetail.innerHTML='<summary>Ajustar clip</summary>';
     heroDetail.append(hero);
     heroCard.append(heroDetail);main.append(heroCard);
     heroCard.querySelector('.boceto-hero-change').onclick=()=>hero.querySelector('#finalHeroAdd')?.click();
-    heroCard.querySelector('.boceto-hero-adjust').onclick=()=>{
-      heroDetail.open=true;
-      heroDetail.scrollIntoView({block:'nearest',behavior:'smooth'});
-    };
     heroState(heroCard,p.id);
+    releaseHeroListener();
     const updateHero=()=>heroState(heroCard,p.id);
     document.addEventListener('faceless-media-updated',updateHero);
     const heroWatcher=new MutationObserver(updateHero);
     heroWatcher.observe(hero,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['hidden']});
+    releaseHeroListener=()=>{document.removeEventListener('faceless-media-updated',updateHero);heroWatcher.disconnect();};
     // Reusar botones reales: IA, fotos y voz comparten sus manejadores existentes.
     const aiCard=wrap('boceto-ai-card',
       '<header><div><h3>✦ Generación automática con IA</h3>'+
       '<p>Fotos, narración y subtítulos sincronizados.</p></div></header>');
     aiCard.append(auto);
     const options=document.createElement('details');options.className='boceto-ai-more';
-    options.innerHTML='<summary>⚙ Personalizar generación</summary>';
+    options.innerHTML='<summary>⚙ Personalizar</summary>';
+    // Conservar el código avanzado original, pero quitar el segundo "Personalizar".
+    const obsoleteAutoSettings=auto.querySelector(':scope > .editor-personalize');
+    if(obsoleteAutoSettings){
+      for(const child of [...obsoleteAutoSettings.children]){
+        if(child.tagName!=='SUMMARY')options.append(child);
+      }
+      obsoleteAutoSettings.remove();
+    }
     options.append(photos);
-    aiCard.append(options);sidebar.append(aiCard);
-    const styleCard=wrap('boceto-style-card');styleCard.append(style);sidebar.append(styleCard);
-    const voiceCard=wrap('boceto-voice-card');voiceCard.append(voice);sidebar.append(voiceCard);
+    const styleCard=wrap('boceto-style-card');styleCard.append(style);options.append(styleCard);
+    const voiceCard=wrap('boceto-voice-card');voiceCard.append(voice);options.append(voiceCard);
     const subtitleCard=wrap('boceto-subtitle-card',
       '<header><h3>Aa Subtítulos</h3></header>');
     const choices=document.createElement('select');
@@ -169,7 +179,7 @@
       if(typeof persist==='function')persist();
       if(typeof drawFrame==='function'){try{drawFrame(0,0);const source=$('previewCanvas');if(source&&typeof canvas!=='undefined')source.getContext('2d')?.drawImage(canvas,0,0,source.width,source.height);}catch{}}
     };
-    subtitleCard.append(choices);sidebar.append(subtitleCard);
+    subtitleCard.append(choices);options.append(subtitleCard);
     const transitionsCard=wrap('boceto-transitions-card');
     transitionsCard.append(transitions);
     const more=document.createElement('button');more.type='button';more.className='boceto-more-transitions';more.textContent='Ver más';
@@ -181,10 +191,11 @@
     if([...transitions.querySelectorAll('[data-final-transition]')].findIndex(b=>b.classList.contains('selected'))>=3){
       transitionsCard.classList.add('expanded');more.textContent='Ver menos';
     }
-    sidebar.append(transitionsCard);
+    options.append(transitionsCard);
+    aiCard.append(options);sidebar.append(aiCard);
     // Existing export settings, preview and render buttons are moved, not cloned.
-    const exportCard=wrap('boceto-export-card',
-      '<header><h3>Exportar video</h3><p>Elige el formato y descarga el montaje completo.</p></header>');
+    // El panel de calidad ya tiene un título; no repetir otro encabezado de exportación.
+    const exportCard=wrap('boceto-export-card');
     exportCard.append(settings,tools);
     if(status)exportCard.append(status);
     if(download)exportCard.append(download);
@@ -195,7 +206,7 @@
     extras.addEventListener('toggle',()=>{
       if(infrastructure)infrastructure.hidden=!extras.open;
     });
-    sidebar.append(extras);
+    options.append(extras);
     for(const child of [...cards.children])if(child!==auto&&child!==photos&&child!==voice&&child!==settings)extras.append(child);
     root.replaceChildren(main,sidebar,exportCard);
     // No hay menú técnico que oculte la descarga; se muestra en el paso Exportar.
@@ -212,7 +223,7 @@
   }
   function refresh(){
     const visible=document.body.dataset.screen==='editor';
-    if(!visible){editorVisible=false;return;}
+    if(!visible){editorVisible=false;releaseHeroListener();releaseHeroListener=()=>{};return;}
     mountNavigation();
     if(!editorVisible){
       editorVisible=true;currentView='escenas';showView('escenas',false);

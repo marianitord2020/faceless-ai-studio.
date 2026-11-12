@@ -155,12 +155,8 @@ const editorHead=document.createElement('div');editorHead.className='ref-editor-
 editorHead.innerHTML='<button type="button" class="ref-editor-back" aria-label="Volver a proyectos">‹</button><strong id="refEditorLabel">Guion y Escenas</strong><span>🎬 Faceless AI Studio</span>';
 editor.prepend(editorHead);
 editorHead.querySelector('button').addEventListener('click',()=>{if(typeof route==='function')route('projects')});
-const tabNav=document.createElement('div');tabNav.className='ref-editor-nav';
-tabNav.innerHTML='<button type="button" data-ref-tab="narration">▤ Guion</button><button type="button" data-ref-tab="scenes">▦ Escenas</button><button type="button" data-ref-tab="video">▣ Video</button><button type="button" data-ref-tab="subs">AA Subtítulos</button>';
-editor.querySelector('.fc-steps')?.before(tabNav);
-tabNav.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
- editor.querySelector('.tabs [data-tab="'+b.dataset.refTab+'"]')?.click();
-}));
+// Editor de Escenas usa la navegación única creada por editor-boceto-simple.js.
+// Los botones nativos .tabs siguen controlando el editor pero no se duplican visualmente.
 const actions=editor.querySelector('.editor-top .actions');
 if(actions){
  const opts=document.createElement('details');opts.className='ref-editor-actions';
@@ -170,10 +166,6 @@ if(actions){
 function updateEditorLabel(){
  const active=editor.querySelector('.tabs button.on')?.dataset.tab||'summary';
  $('refEditorLabel').textContent=active==='video'?'Editor de Escenas':active==='scenes'?'Editor de Escenas':'Guion y Escenas';
- tabNav.querySelectorAll('button').forEach(b=>{
-  const on=b.dataset.refTab===active||(active==='summary'&&b.dataset.refTab==='narration');
-  b.classList.toggle('active',on);b.setAttribute('aria-pressed',String(on));
- });
 }
 new MutationObserver(updateEditorLabel).observe(editor.querySelector('.tabs'),{subtree:true,attributes:true,attributeFilter:['class']});
 function getProject(){return typeof current==='function'?current():null}

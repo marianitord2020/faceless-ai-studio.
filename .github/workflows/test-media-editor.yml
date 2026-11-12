@@ -123,6 +123,7 @@ jobs:
             await page.waitForFunction(()=>!window.facelessMediaBusy&&facelessProjectPhotos('media-fixture').get(1)?.facelessFilename==='reemplazo.png');
             await page.reload();await page.waitForFunction(()=>window.facelessStudioReady);
             await page.evaluate(()=>{activeId='media-fixture';tab='video';route('editor')});
+            await page.locator('#bocetoEditorNav [data-boceto-tab="video"]').click();
             await page.waitForFunction(()=>facelessProjectPhotos('media-fixture').size===2);
             assert.equal(await page.evaluate(()=>facelessProjectPhotos('media-fixture').get(0).facelessFilename),'nueva.png');
             let mismatch=false,transcriptions=0;
@@ -141,6 +142,12 @@ jobs:
             const aligned=await page.evaluate(()=>({duration:current().duration,times:current().scenes.map(s=>s.time),text:current().narration,captions:FacelessTiming.cues(current()).map(c=>c.text).join(' '),caption:facelessCaptionAt(current(),3.1)}));
             assert.equal(aligned.duration,8);assert.deepEqual(aligned.times,[0,3,5]);assert.equal(aligned.captions,aligned.text.replaceAll('\n',' '));assert.equal(aligned.caption,'Ahora contamos una historia sobre Lola.');assert.equal(transcriptions,1);
             await page.reload();await page.waitForFunction(()=>window.facelessStudioReady);await page.evaluate(()=>{activeId='media-fixture';tab='video';route('editor')});
+            console.log('MEDIA RELOAD UI',await page.evaluate(()=>({
+              page:document.body.dataset.screen,editorVisible:!document.querySelector('#editor')?.classList.contains('hidden'),
+              nav:!!document.querySelector('#bocetoEditorNav'),activeId,
+              projects:projects?.length,exists:!!current(),tab,href:location.href.slice(0,120)
+            })));
+            await page.locator('#bocetoEditorNav [data-boceto-tab="video"]').click();
             await page.waitForFunction(()=>audioFile?.facelessManual&&current().audioAlignment?.method==='speech');
             await reveal('#uploadedAudioPlayer');
             assert.equal(await page.locator('#uploadedAudioPlayer').isVisible(),true);
@@ -168,6 +175,7 @@ jobs:
             await page.evaluate(bytes=>{audioFile=new File([new Uint8Array(bytes)],'voz-cinema.wav',{type:'audio/wav'});audioFileProjectId='cinema-fixture';const p=current();Object.assign(p,FacelessTiming.estimated(p,3));p.audioAlignment.method='tts-estimated';audioFile.facelessSignature=facelessVoiceSignature(p);updateAudioAttachmentUI();},Array.from(wav(3)));
             await page.evaluate(()=>renderVideo({format:'webm'}));
             await page.waitForFunction(()=>!rendering&&document.querySelector('#downloadArea a'),null,{timeout:25000}).catch(async error=>{console.log('CINEMA EXPORT DIAGNOSTIC',await page.evaluate(()=>({status:document.getElementById('renderStatus')?.textContent,rendering,alignment:current()?.audioAlignment,source:document.getElementById('videoResult')?.src,mediaBusy:window.facelessMediaBusy,download:document.getElementById('downloadArea')?.textContent})));throw error;});
+            await page.locator('#bocetoEditorNav [data-boceto-tab="exportar"]').click();
             const cinemaDownload=page.waitForEvent('download');await page.locator('#downloadArea a').click();await (await cinemaDownload).saveAs('/tmp/faceless-cinema.webm');
             assert.deepEqual(errors,[]);
             console.log('PASS: actual canvas photo motion and short video export with narration');
@@ -178,6 +186,7 @@ jobs:
               facelessRequestVoice=async text=>({dataURI:'data:audio/wav;base64,'+clips[text.startsWith('Hola')?0:1],provider:'Test fixture'});
               window.facelessRecognizeLocal=async()=>[{word:'Hola',start:.1,end:.4},{word:'Lola',start:.5,end:.9},{word:'Grace',start:1.1,end:1.8},{word:'vuelve',start:2,end:2.8}];
             },[wav(1).toString('base64'),wav(2).toString('base64')]);
+            await page.locator('#bocetoEditorNav [data-boceto-tab="video"]').click();
             await reveal('#aiVoiceGenerate');
             await page.evaluate(()=>{document.getElementById('productionPass').value='fixture-passcode-for-ui';document.getElementById('aiVoicePasscode').value='fixture-passcode-for-ui';});
             await page.locator('#aiVoiceGenerate').click();

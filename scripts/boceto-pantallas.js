@@ -77,99 +77,18 @@ const picture=name=>assetRoot+name;
   const top=document.createElement('div');top.className='boceto-news-top';
   top.innerHTML='<button type="button" aria-label="Regresar al Inicio">‹</button><div><small>🎬 Faceless AI Studio</small><h1>Noticias de hoy</h1></div><span></span>';
   newsMenu.prepend(top);top.querySelector('button').onclick=()=>screen('home');
-  const filters=document.createElement('div');filters.className='boceto-news-filter';
-  filters.innerHTML='<label><span>▦ &nbsp; Período</span><select id="bocetoNewsPeriod"><option value="24">Últimas 24 horas</option><option value="72">Últimos 3 días</option><option value="168">Últimos 7 días</option></select></label>'+
-  '<label><span>≡ &nbsp; Orden</span><select id="bocetoNewsOrder"><option value="recent">Más recientes</option><option value="relevant">Más relevantes</option></select></label>';
   const after=newsMenu.querySelector('.ref-news-categories');
   const topicField=newsMenu.querySelector('.compact-story');
-  if(after&&topicField)after.before(topicField); // Buscador antes de los temas, igual que el boceto.
-  if(after)after.after(filters);else newsMenu.append(filters);
-  const realTopic=el('studioTopic');
-  const submit=el('studioGenerate');
-  filters.querySelectorAll('select').forEach(s=>s.addEventListener('change',()=>{
-    // La búsqueda del servidor establece sus propios criterios: NO enviar filtros falsos.
-    if(el('studioMode')?.value==='news'&&realTopic)realTopic.title='El intervalo mostrado es una preferencia visual; la búsqueda del servidor puede aplicar su propia ventana de actualidad.';
-  }));
-  if(results){
-   const resultsTitle=document.createElement('div');resultsTitle.className='boceto-results-meta';
-   resultsTitle.innerHTML='<div><label>▦ <select id="bocetoNewsResultsPeriod"><option>Noticias encontradas y verificables</option></select></label><span>Sin métricas inventadas</span></div>';
-   results.querySelector('.ref-news-results-toolbar')?.after(resultsTitle);
-  }
+  if(after&&topicField)after.before(topicField); // El campo que usa el buscador real va primero.
+  // No mostrar filtros de período u orden falsos: el servidor decide la actualidad.
  }
  
- // Guion y Escenas — la acción de elegir cuatro ganchos sucede de verdad en el proyecto.
+ // El usuario ya eligió entre 4 ganchos ANTES de crear el proyecto.
+ // No duplicar aquí otros cuatro ganchos genéricos que sobrescribían la escena 1.
+ // El módulo reference-interiors muestra el gancho real elegido y permite editar el guion.
  function project(){return typeof current==='function'?current():null;}
  const tabBody=el('tabBody');
  const nativeTabs=editor.querySelector('.tabs');
- const editorTabs=editor.querySelector('.ref-editor-nav');
- if(editorTabs){
-   editorTabs.classList.add('boceto-tabs');
-   const buttons=[...editorTabs.querySelectorAll('[data-ref-tab]')];
-   buttons.forEach(b=>{
-    if(b.dataset.refTab==='narration')b.textContent='▤ Guion';
-    if(b.dataset.refTab==='scenes')b.textContent='▦ Escenas';
-    if(b.dataset.refTab==='video')b.textContent='▣ Video';
-    if(b.dataset.refTab==='subs')b.textContent='AA';
-   });
- }
- // El boceto muestra solo Guion y Escenas; las demás funciones siguen en Más herramientas.
- if(editorTabs&&!editor.querySelector('.boceto-extra-tools')){
-  const details=document.createElement('details');details.className='boceto-extra-tools';
-  details.innerHTML='<summary>⚙ Más herramientas: Video y Subtítulos</summary>';
-  editorTabs.after(details);
-  for(const id of ['video','subs']){
-   const btn=editorTabs.querySelector('[data-ref-tab="'+id+'"]');
-   if(btn)details.append(btn);
-  }
- }
- const hookVariants=(p)=>{
-  const title=String(p.title||'').trim().replace(/[.!?]+$/,'').slice(0,115);
-  return [
-   p.selectedHook||p.hook||p.scenes[0]?.text||title,
-   '¿Qué se sabe realmente sobre «'+title+'»?',
-   'Esto es lo confirmado hasta ahora: '+title+'.',
-   'Así comienza la historia de «'+title+'».'
-  ];
- };
- function hookPanel(){
-  const p=project();if(!p||!tabBody||!el('autoScript')||tabBody.querySelector('.boceto-hook-panel'))return;
-  const container=document.createElement('section');container.className='boceto-hook-panel';
-  container.innerHTML='<div class="boceto-hook-title"><h3>Guion del video ('+Math.round(p.duration)+' segundos)</h3></div>'+
-   '<div class="boceto-story-summary"><div class="boceto-story-photo"><span>🎬</span></div><div><b></b><small></small></div></div>'+
-   '<h3 class="boceto-hook-prompt">4 Ganchos (elige uno)</h3><fieldset class="boceto-hook-choices"><legend class="sr-only">Opciones de gancho</legend></fieldset>'+
-   '<button type="button" class="boceto-primary boceto-use-hook">✓ &nbsp; Usar este gancho</button>';
-  container.querySelector('.boceto-story-summary b').textContent=p.title;
-  container.querySelector('.boceto-story-summary small').textContent=p.duration+' segundos · '+p.scenes.length+' escenas';
-  const cover=window.facelessCoverCache?.get(p.id);
-  if(cover){const img=document.createElement('img');img.src=cover;img.alt='Portada del proyecto';container.querySelector('.boceto-story-photo').replaceChildren(img);}
-  const choices=hookVariants(p);
-  const options=container.querySelector('.boceto-hook-choices');
-  choices.forEach((value,i)=>{
-   const label=document.createElement('label');label.className='boceto-hook-option'+(i===0?' selected':'');
-   const input=document.createElement('input');input.type='radio';input.name='bocetoSelectedHook';input.value=String(i);input.checked=i===0;
-   input.onchange=()=>options.querySelectorAll('.boceto-hook-option').forEach(x=>x.classList.toggle('selected',x.contains(input)));
-   const text=document.createElement('span');text.textContent=value;label.append(input,text);options.append(label);
-  });
-  const old=tabBody.querySelector('.detail');
-  old?.before(container);
-  if(old&&!old.closest('.boceto-script-advanced')){
-   const details=document.createElement('details');details.className='boceto-script-advanced';
-   const summary=document.createElement('summary');summary.textContent='✎ Editar la narración completa';
-   details.append(summary);old.before(details);details.append(old);
-  }
-  const apply=()=>{
-   const i=Number(container.querySelector('input:checked')?.value||0);
-   const chosen=choices[i];p.selectedHook=chosen;p.hook=chosen;if(p.scenes[0])p.scenes[0].text=chosen;
-   p.narration=p.scenes.map(s=>s.text).join('\n');
-   delete p.subtitleCues;delete p.subtitleTextSignature;
-   if(typeof persist==='function')persist();
-   el('autoScript').value=p.narration;
-   container.querySelector('.boceto-use-hook').textContent='✓ Gancho integrado al guion';
-   if(typeof toast==='function')toast('Gancho guardado en la escena 1.');
-  };
-  container.querySelector('.boceto-use-hook').onclick=apply;
- }
- 
  // Editor de escenas: usar los recursos reales, no una imagen de ejemplo falsa.
  function strengthenSceneEditor(){
   const p=project(),scene=tabBody?.querySelector('.ref-scene-editor');if(!p||!scene||scene.dataset.bocetoReady)return;
@@ -234,7 +153,7 @@ const picture=name=>assetRoot+name;
   if(busy)return;busy=true;
   queueMicrotask(()=>{
    busy=false;
-   if(document.body.dataset.screen==='editor'){hookPanel();strengthenSceneEditor();}
+   if(document.body.dataset.screen==='editor'){strengthenSceneEditor();}
    if(document.body.dataset.screen==='projects')updateProjectCards();
   });
  }

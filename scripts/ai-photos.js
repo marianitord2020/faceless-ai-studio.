@@ -328,19 +328,21 @@ function mountFacelessProduction(project){
   };
   start.onclick=async(event,{showProgress=false,progress}={})=>{
     if(window.facelessMediaBusy||window.facelessProductionBusy||facelessImageRunning||facelessVoiceBusy||rendering)return;
-    const pass=panel.querySelector('#productionPass').value.trim()||window.facelessProductionPasscode||facelessImagePasscode||facelessVoicePassword;
+    // El editor puede mover el campo privado al desplegable Personalizar.
+    const passInput=document.getElementById('productionPass');
+    const pass=passInput?.value.trim()||window.facelessProductionPasscode||facelessImagePasscode||facelessVoicePassword;
     const retry=()=>{
       if(start.isConnected&&current()?.id===project.id)start.onclick(null,{showProgress:true});
     };
     if(showProgress&&!window.FacelessGateway.enabled&&(!pass||pass.length<16)){
       const popup=window.facelessOpenVideoProgress(retry);
       popup.requestAccess(code=>{
-        panel.querySelector('#productionPass').value=code;
+        if(passInput)passInput.value=code;
         start.onclick(null,{showProgress:true,progress:popup});
       });
       return;
     }
-    if(!window.FacelessGateway.enabled&&(!pass||pass.length<16)){status.textContent='Introduce tu código privado de mínimo 16 caracteres.';panel.querySelector('#productionPass').focus();return}
+    if(!window.FacelessGateway.enabled&&(!pass||pass.length<16)){status.textContent='Introduce tu código privado de mínimo 16 caracteres.';passInput?.focus();return}
     if(!showProgress&&!safeMime(true)){status.textContent='Este navegador no permite exportar video con voz. Abre la página en Chrome actualizado.';return}
     window.facelessProductionBusy=true;window.facelessProductionCancelled=false;
     const controls=[...document.querySelectorAll('button,input,select,textarea')].filter(el=>el!==stop&&!el.closest('.video-progress')).map(el=>[el,el.disabled]);

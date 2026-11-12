@@ -40,6 +40,12 @@ const assert=require('node:assert/strict');
  assert.equal(await page.locator('.fc-timeline-scene.has-hero').count(),1,'Hero en la línea de tiempo');
  assert.equal(await page.locator('.fc-timeline-scene:first-child .fc-timeline-art img').count(),1,'Fotograma real del Hero');
  assert.equal(await page.locator('#finalHeroRaw').isVisible(),true,'El Hero se reproduce en un video real');
+ // Incluso con Hero cargado, pulsar escena 1 debe abrir el editor de ESA escena.
+ await page.locator('.fc-timeline-scene').first().click();
+ await page.waitForFunction(()=>document.querySelector('#editor .tabs button.on')?.dataset.tab==='scenes');
+ assert.equal(await page.locator('.ref-scene-editor .ref-scene-thumb').count(),5);
+ await page.locator('#bocetoEditorNav [data-boceto-tab="escenas"]').click();
+ await page.locator('.boceto-hero-detail > summary').click();
  assert.match(await page.locator('#finalHeroStatus').textContent(),/Clip real cargado/);
  const duration=await page.evaluate(()=>window.facelessHeroStatus().duration);
  assert.ok(duration>=5&&duration<=8,'La introducción conserva entre cinco y ocho segundos');

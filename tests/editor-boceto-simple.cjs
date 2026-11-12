@@ -20,7 +20,7 @@ fs.mkdirSync('editor-boceto-capturas',{recursive:true});
   });
   await page.waitForSelector('#editor .boceto-editor-workspace',{timeout:16000});
   await page.waitForSelector('#finalHeroPanel',{state:'attached'});
-  await page.waitForSelector('.boceto-transitions-card');
+  await page.waitForSelector('.boceto-transitions-card',{state:'attached'});
   assert.deepEqual(await page.locator('#bocetoEditorNav button').allTextContents(),['▤ Guion','▣ Escenas','▷ Video','⇧ Exportar']);
   assert.equal(await page.locator('.boceto-editor-main .fc-timeline-scene').count(),8);
   assert.equal(await page.locator('#finalHeroFile').count(),1);
@@ -32,15 +32,32 @@ fs.mkdirSync('editor-boceto-capturas',{recursive:true});
   assert.equal(await page.locator('.boceto-export-card #downloadArea').count(),1,'El archivo final debe descargarse desde Exportar');
   assert.equal(await page.locator('.boceto-subtitle-card #bocetoCaption').count(),1);
   assert.equal(await page.locator('#finalTransitionPanel [data-final-transition]').count(),6);
+  assert.equal(await page.locator('.boceto-extra-tools,.boceto-hook-panel,.boceto-news-filter').count(),0,'No repetir menús ni mostrar filtros que no funcionan');
+  assert.equal(await page.locator('.ref-editor-nav').count(),0,'La navegación antigua no debe generarse');
+  assert.equal(await page.locator('.fc-timeline-hero-jump').count(),0,'Hero tiene su propio control, no uno duplicado en el timeline');
+  assert.equal(await page.locator('.boceto-hero-change').count(),1,'Un único botón visible para cambiar el clip Hero');
+  assert.equal(await page.locator('.boceto-hero-adjust').count(),0,'No duplicar Ajustar con un segundo botón');
+  assert.equal(await page.locator('#videoAutoCard > .editor-personalize').count(),0,'Una sola opción Personalizar');
+  assert.equal(await page.locator('.boceto-editor-sidebar').isVisible(),false,'Escenas solo muestra reproductor, línea de tiempo y Hero');
+  assert.equal(await page.locator('.boceto-timeline-card').isVisible(),true);
+  await page.screenshot({path:'editor-boceto-capturas/'+width+'-escenas.png',fullPage:true});
+  await page.locator('#bocetoEditorNav [data-boceto-tab="video"]').click();
+  assert.equal(await page.locator('.boceto-timeline-card').isVisible(),false,'Video no duplica línea de tiempo');
+  assert.equal(await page.locator('.boceto-hero-card').isVisible(),false,'Video no duplica controles Hero');
+  assert.equal(await page.locator('.boceto-ai-card #productionStart').isVisible(),true);
+  assert.equal(await page.locator('.boceto-ai-more').getAttribute('open'),null,'Personalización cerrada por defecto');
+  await page.locator('.boceto-ai-more > summary').click();
   const hidden4=await page.locator('#finalTransitionPanel [data-final-transition="spin"]').isVisible();
   assert.equal(hidden4,false);
   await page.locator('.boceto-more-transitions').click();
   assert.equal(await page.locator('#finalTransitionPanel [data-final-transition="spin"]').isVisible(),true);
   await page.locator('.boceto-subtitle-card select').selectOption('neon');
   assert.equal(await page.evaluate(()=>current().captionStyle),'neon');
-  await page.screenshot({path:'editor-boceto-capturas/'+width+'-escenas.png',fullPage:true});
+  await page.screenshot({path:'editor-boceto-capturas/'+width+'-video.png',fullPage:true});
   await page.locator('#bocetoEditorNav [data-boceto-tab="guion"]').click();
   await page.waitForFunction(()=>document.querySelector('#editor .tabs button.on')?.dataset.tab==='narration');
+  assert.equal(await page.locator('.ref-narration-intro').isVisible(),true,'El gancho elegido se muestra una sola vez');
+  assert.equal(await page.locator('.boceto-hook-panel').count(),0,'No volver a ofrecer cuatro ganchos genéricos tras elegir');
   await page.locator('#bocetoEditorNav [data-boceto-tab="video"]').click();
   await page.waitForSelector('#editor .boceto-editor-workspace');
   await page.locator('#bocetoEditorNav [data-boceto-tab="exportar"]').click();
@@ -59,10 +76,33 @@ fs.mkdirSync('editor-boceto-capturas',{recursive:true});
   assert.deepEqual(errors,[],'Browser JavaScript errors '+width);
   if(width>=900){
    const cols=await page.locator('.boceto-editor-workspace').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length);
-   assert.equal(cols,2,'Desktop should show two columns');
+   assert.equal(cols,1,'Escenas muestra el reproductor a ancho completo');
   }
   console.log('PASS editor layout '+width+' px, four tabs, 9 scene thumbnails, Hero, real buttons, static export, no JS errors');
   await page.close();
  }
+ // Cloudflare ASSETS puede servir el mismo index.html bajo /crear-con-ia/.
+ // Recargar esa ruta debe cargar scripts desde /scripts/, no /crear-con-ia/scripts/.
+ const deep=await browser.newPage({viewport:{width:390,height:844}});
+ const deepErrors=[];deep.on('pageerror',e=>deepErrors.push(e.message));
+ await deep.route('**/crear-con-ia/',async route=>route.fulfill({
+  status:200,contentType:'text/html',body:fs.readFileSync('index.html','utf8')
+ }));
+ await deep.goto('http://127.0.0.1:4173/crear-con-ia/',{waitUntil:'load'});
+ await deep.waitForFunction(()=>window.facelessStudioReady && typeof window.FacelessGateway==='object',{timeout:15000});
+ assert.equal(await deep.evaluate(()=>document.baseURI),'http://127.0.0.1:4173/');
+ await deep.evaluate(()=>{
+  const p={id:'deep-route-fixture',title:'Una historia',topic:'Historias de prueba',
+   format:'9:16',duration:30,style:'Misterio',platform:'TikTok',
+   scenes:Array.from({length:5},(_,i)=>({time:i*6,duration:6,text:'Escena '+(i+1)+' del misterio',prompt:'Misterio nocturno'}))};
+  p.hook=p.scenes[0].text;p.narration=p.scenes.map(s=>s.text).join('\\n');
+  projects.unshift(p);activeId=p.id;tab='video';route('editor');
+ });
+ await deep.waitForSelector('#bocetoEditorNav');
+ await deep.locator('#bocetoEditorNav [data-boceto-tab="exportar"]').click();
+ assert.equal(await deep.locator('#renderVideo').count(),1);
+ assert.deepEqual(deepErrors,[],'No fallar al recargar una ruta interna SPA');
+ await deep.close();
+ console.log('PASS: rutas internas de Cloudflare conservan scripts, estilos, editor y exportación después de recargar');
  await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});

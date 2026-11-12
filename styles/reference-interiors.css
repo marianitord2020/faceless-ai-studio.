@@ -148,9 +148,6 @@ body[data-screen="create"],body[data-screen="projects"]{
 #editor .ref-editor-actions .actions{display:flex!important;flex-wrap:wrap!important;gap:7px!important;padding:9px!important}
 #editor .ref-editor-actions .actions .btn{min-width:90px;flex:1;font-size:11px!important}
 #editor .fc-steps{display:none!important}
-#editor .ref-editor-nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;padding:5px;background:#171322;border:1px solid #4c3465;border-radius:15px;margin:8px 0 14px}
-#editor .ref-editor-nav button{border:0;background:transparent;border-radius:10px;color:#c5bad2;padding:11px 3px;font-size:clamp(10px,2.7vw,13px);font-weight:700}
-#editor .ref-editor-nav button.active{background:linear-gradient(125deg,#bc3af3,#6823cd);color:#fff;box-shadow:0 3px 11px #ba28f577}
 #editor .fc-more-tabs{display:none!important}
 #editor .tabs{display:none!important}
 #editor #tabBody>.detail{margin:10px 0!important;border-color:#493361;background:linear-gradient(145deg,#21162f,#100e1c)!important;padding:15px!important;border-radius:15px!important}
@@ -242,7 +239,6 @@ body[data-screen="projects"] .main{padding-bottom:98px!important}
  #discover.ref-news .studio-card-text small{-webkit-line-clamp:1!important}
  #editor .ref-editor-head span{max-width:90px;font-size:10px}
  #editor .editor-hero{padding:6px 0!important}
- #editor .ref-editor-nav{margin-top:4px}
  #editor .editor-export-bar{bottom:8px!important}
  body[data-screen="editor"] .main{padding-bottom:115px!important}
  #projects .project{grid-template-columns:100px minmax(0,1fr)!important}

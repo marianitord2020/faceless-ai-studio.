@@ -136,6 +136,7 @@ editor.classList.add('fc-editor-complete');
 const editHeading=editor.querySelector('#editorTitle');
 if(editHeading)editHeading.setAttribute('aria-live','polite');
 // Timeline is generated from real scene timing, without suggesting AI clips already exist.
+let removeOldTimelineListener=()=>{};
 function mountTimeline(){
   const target=tabBody.querySelector('.compact-video-editor');
   if(!target||tabBody.querySelector('.fc-video-timeline')||!current()?.scenes?.length)return;
@@ -145,10 +146,8 @@ function mountTimeline(){
   const h=document.createElement('h3');h.textContent='Tu video, escena por escena';
   const meta=document.createElement('span');meta.textContent=p.scenes.length+' escenas · '+Number(p.duration.toFixed(1))+' segundos';
   meta.className='fc-timeline-meta';
-  const heroJump=document.createElement('button');heroJump.type='button';heroJump.className='fc-timeline-hero-jump';
-  heroJump.textContent='🎬 Hero Video';heroJump.title='Ir a la introducción cinematográfica';
-  heroJump.onclick=()=>{const p=document.getElementById('finalHeroPanel');p?.scrollIntoView({block:'center',behavior:'smooth'});p?.querySelector('#finalHeroAdd')?.focus({preventScroll:true});};
-  top.append(h,meta,heroJump);timeline.append(top);
+  // El Hero tiene su tarjeta independiente; no duplicar su acceso en la línea de tiempo.
+  top.append(h,meta);timeline.append(top);
   const track=document.createElement('div');track.className='fc-timeline-track';
   p.scenes.forEach((scene,i)=>{
     const btn=document.createElement('button');btn.type='button';btn.className='fc-timeline-scene';
@@ -162,7 +161,7 @@ function mountTimeline(){
     btn.title='Editar escena '+(i+1)+', '+Number(scene.duration.toFixed(1))+' segundos';
     btn.setAttribute('aria-label',btn.title);
     btn.onclick=()=>{
-      if(i===0&&window.facelessHeroStatus?.().loaded){heroJump.click();return;}
+      // Cada miniatura abre SIEMPRE su escena, incluso si hay Hero Video.
       editor.querySelector('.tabs [data-tab="scenes"]')?.click();
       queueMicrotask(()=>document.getElementById('s'+i)?.focus({preventScroll:false}));
     };
@@ -186,7 +185,9 @@ function mountTimeline(){
       }else if(art.childElementCount)art.replaceChildren();
     });
   };
+  removeOldTimelineListener();
   document.addEventListener('faceless-media-updated',updateThumbs);
+  removeOldTimelineListener=()=>document.removeEventListener('faceless-media-updated',updateThumbs);
   window.facelessUpdateHeroTimeline=()=>{
     updateThumbs();
     const scene=timeline.querySelector('.fc-timeline-scene');
@@ -194,7 +195,6 @@ function mountTimeline(){
     const ready=window.facelessHeroStatus?.().loaded&&current()?.id===p.id;
     if(scene){scene.classList.toggle('has-hero',!!ready);scene.setAttribute('aria-label',ready?'Editar Hero Video, primera escena':'Editar escena 1');}
     if(label)label.textContent=ready?'🎬 Hero '+(p.heroDuration||6)+'s':'';
-    heroJump.textContent=ready?'🎬 Editar Hero':'🎬 Añadir Hero';
   };
   window.facelessUpdateHeroTimeline();
 }
