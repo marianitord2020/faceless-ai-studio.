@@ -46,7 +46,7 @@ newScreen.innerHTML='<h1>Tu próximo video</h1><div class="final-number"><b>1</b
 '<label>Duración<select id="finalDuration"><option value="30">30 segundos</option><option value="60">60 segundos</option><option value="120">120 segundos</option></select></label>'+
 '<label>Voz<select id="finalVoice"><option value="automatic">Automática</option><option value="female">Femenina</option><option value="male">Masculina</option></select></label>'+
 '<label>Formato<select id="finalFormat"><option value="9:16">Vertical 9:16</option><option value="16:9">Horizontal 16:9</option></select></label></details>'+
-'<button type="button" class="final-primary" id="finalGenerate">✦ Generar 10 propuestas</button><p class="final-note" id="finalNote" aria-live="polite"></p>';
+'<details id="finalAccess" class="final-access" hidden><summary>Acceso seguro para generar con IA</summary><p>Tu servidor solicita un código privado. Introdúcelo aquí una sola vez por sesión; nunca lo guardaremos en GitHub ni en el almacenamiento local.</p><label for="finalAccessCode">Código privado de Cloudflare</label><input type="password" id="finalAccessCode" autocomplete="off" minlength="16" placeholder="Código de acceso (16 caracteres o más)"></details>'+'<button type="button" class="final-primary" id="finalGenerate">✦ Generar 10 propuestas</button><p class="final-note" id="finalNote" aria-live="polite"></p>';
 create.prepend(newScreen);
 let source="ai";
 function refresh(){
@@ -74,15 +74,35 @@ $("finalDuration").onchange=e=>{config.duration=Number(e.target.value);refresh()
 $("finalVoice").onchange=e=>config.voice=e.target.value;
 $("finalFormat").onchange=e=>config.format=e.target.value;
 $("finalGenerate").onclick=()=>{
- if(source==="manual"){window.location.href="editar-sin-ia/";return;}
+ if(source==="manual"){window.location.href=appRoot+"editar-sin-ia/";return;}
  const topic=config.topic.trim();
- if(topic.length<5){$("finalNote").textContent="Escribe un tema de al menos 5 caracteres.";$("finalTopic").focus();return;}
- window.facelessFlow="ai";document.body.dataset.flow="ai";routing("discover");window.facelessShowStudioMenu?.();
+ const note=$("finalNote");note.textContent="";
+ if(topic.length<5){note.textContent="Escribe un tema de al menos 5 caracteres.";$("finalTopic").focus();return;}
+ const auth=$("finalAccess"),privateInput=$("finalAccessCode"),serviceInput=$("studioPass");
+ const token=(serviceInput?.value||window.facelessProductionPasscode||privateInput.value||"").trim();
+ if(token.length<16){
+  auth.hidden=false;auth.open=true;
+  note.textContent="Para crear propuestas con tus IA, primero autoriza el acceso al servidor.";
+  privateInput.focus();return;
+ }
+ if(serviceInput){
+  serviceInput.value=token;
+  serviceInput.setCustomValidity("");
+  serviceInput.dispatchEvent(new Event("input",{bubbles:true}));
+ }
+ window.facelessProductionPasscode=token;
+ auth.open=false;auth.hidden=true;
+ window.facelessFlow="ai";document.body.dataset.flow="ai";
  select("studioMode",config.mode);select("studioGenre",config.genre);
- select("studioSource","ai");select("studioDuration",config.duration);select("studioVoice",config.voice);select("studioImageStyle",config.style);
+ select("studioSource","ai");select("studioDuration",config.duration);
+ select("studioVoice",config.voice);select("studioImageStyle",config.style);
  if(typeof choice!=="undefined"){choice.format=config.format;typeof renderOpts==="function"&&renderOpts();}
  const input=$("studioTopic");if(input){input.value=topic;input.dispatchEvent(new Event("input",{bubbles:true}));}
- $("studioGenerate")?.click();
+ routing("discover");
+ window.facelessShowStudioResults?.();
+ const button=$("studioGenerate");
+ if(!button){routing("create");note.textContent="No se pudo abrir el generador. Vuelve a intentarlo.";return;}
+ button.click();
 };
 refresh();
 const results=discover.querySelector(".studio-results-view");
