@@ -5,7 +5,8 @@
  const el=id=>document.getElementById(id);
  const create=el('create'),discover=el('discover'),editor=el('editor'),projectsPage=el('projects');
  if(!create||!discover||!editor||!projectsPage)return;
- const picture=name=>'assets/mockup/'+name;
+ const assetRoot=new URL('../assets/mockup/',document.currentScript.src).pathname;
+const picture=name=>assetRoot+name;
  const change=(target,value)=>{if(!target)return;const option=Array.from(target.options||[]).find(o=>o.value===value);if(!option)return;target.value=value;target.dispatchEvent(new Event('change',{bubbles:true}));};
  const screen=(name)=>typeof route==='function'&&route(name);
  const reduceMotion=()=>window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -18,7 +19,7 @@
   const screenNode=document.createElement('section');screenNode.className='boceto-create';
   screenNode.innerHTML=
    '<header class="boceto-page-top"><button type="button" class="boceto-back" aria-label="Volver a Inicio">‹</button><div class="boceto-brand"><span>🎬</span> Faceless AI Studio</div><span></span><h1>Crear Video</h1></header>'+
-   '<div class="boceto-create-image"><img id="bocetoCreateCover" src="assets/mockup/cinematic.webp" alt="Ejemplo de estilo cinematográfico"><span class="boceto-poster-type">PORTADA DE EJEMPLO</span><div class="boceto-create-image-text"><strong>Tu próximo video</strong><span>Noticias, relatos y documentales</span></div></div>'+
+   '<div class="boceto-create-image"><img id="bocetoCreateCover" src="'+assetRoot+'cinematic.webp" alt="Ejemplo de estilo cinematográfico"><span class="boceto-poster-type">PORTADA DE EJEMPLO</span><div class="boceto-create-image-text"><strong>Tu próximo video</strong><span>Noticias, relatos y documentales</span></div></div>'+
    '<label class="boceto-topic-label" for="bocetoCreateTopic">¿Qué quieres contar?</label><textarea id="bocetoCreateTopic" rows="2" maxlength="220" placeholder="Escribe un tema, noticia o relato..."></textarea>'+
    '<div class="boceto-create-opts"><label class="boceto-create-row"><span>◷ &nbsp; Duración</span><select id="bocetoCreateDuration"><option value="30">30 segundos</option><option value="60" selected>60 segundos</option><option value="120">120 segundos</option></select></label>'+
    '<label class="boceto-create-row"><span>♬ &nbsp; Voz</span><select id="bocetoCreateVoice"><option value="automatic">Automática</option><option value="female">Femenina</option><option value="male">Masculina</option></select></label>'+
