@@ -92,6 +92,7 @@ jobs:
             const photo=name=>({name,mimeType:'image/png',buffer:png});
             await page.evaluate(()=>{const area=document.getElementById('manualInfrastructure');if(area)area.hidden=false;});
             await reveal('#pickOwnPhotos');
+            const photoDebug=await page.evaluate(()=>({busy:facelessIsWorking(),production:window.facelessProductionBusy,media:window.facelessMediaBusy,rendering:typeof rendering==='boolean'?rendering:null,pickerDisabled:document.getElementById('pickOwnPhotos')?.disabled,pickerVisible:!!document.getElementById('pickOwnPhotos')?.getClientRects().length,inputExists:!!document.getElementById('images'),flow:window.facelessFlow}));console.log('UPLOAD_DIAGNOSTIC',JSON.stringify(photoDebug));
             const photoChooserPromise=page.waitForEvent('filechooser');await page.locator('#pickOwnPhotos').click();const photoChooser=await photoChooserPromise;assert.equal(photoChooser.isMultiple(),true);await photoChooser.setFiles([photo('primera.png'),photo('segunda.png')]);
             await page.waitForFunction(()=>!window.facelessMediaBusy&&facelessProjectPhotos('media-fixture').size===2);
             assert.equal(await page.locator('#manualPhotoSlots .media-photo-slot img').count(),2);
