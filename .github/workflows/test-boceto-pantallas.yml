@@ -46,6 +46,7 @@ jobs:
             assert.equal(await page.locator('.boceto-create').isVisible(),true);
             assert.equal(await page.locator('.fc-creator-banner').isVisible(),false);
             assert.equal(await page.locator('#bocetoCreateCover').isVisible(),true);
+            await page.screenshot({path:'boceto-android/'+width+'-crear.png',fullPage:true});
             await page.locator('#bocetoCreateTopic').fill('Noticias de Higüey hoy');
             await page.locator('#bocetoCreateGo').click();
             assert.equal(await page.locator('#studioMode').inputValue(),'news');
