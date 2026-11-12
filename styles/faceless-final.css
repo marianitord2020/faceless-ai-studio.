@@ -1,0 +1,84 @@
+/* Faceless AI Studio — propuesta visual 2026. Capa aditiva: no altera motores de video. */
+:root{--fc-bg:#090713;--fc-panel:#171127;--fc-violet:#b452ff;--fc-border:#492565;--fc-text:#f8f5ff}
+body{background:radial-gradient(circle at 88% 5%,#33104b55,transparent 28%),radial-gradient(circle at 4% 65%,#26104d33,transparent 32%),var(--fc-bg)}
+.topbar{background:#0b0818f2;border-bottom:1px solid #3e2051}
+.brand{letter-spacing:-.35px}.mark{border-radius:12px;background:linear-gradient(135deg,#c638f4,#6946fc);color:white;border:0;box-shadow:0 0 22px #9b2dfb4e}
+#home.fc-home{max-width:980px;margin:0 auto}
+.fc-hero{border:1px solid #462166;border-radius:25px;padding:26px 24px 24px;background:radial-gradient(circle at 84% 4%,#6923a250,transparent 45%),linear-gradient(125deg,#151026,#0b091a 70%);box-shadow:0 13px 40px #0007;position:relative;overflow:hidden}
+.fc-hero::after{content:"▶";position:absolute;right:18px;top:33px;font-size:clamp(55px,15vw,144px);color:#b64aff30;text-shadow:0 0 33px #a43cfa55;transform:rotate(-8deg);pointer-events:none}
+.fc-hero>*{position:relative;z-index:1}.fc-kicker{color:#d2a4ff;text-transform:uppercase;font-size:11px;font-weight:900;letter-spacing:2px}
+.fc-hero h1{font-size:clamp(30px,6.2vw,51px);max-width:620px;margin:14px 0 12px;line-height:1.13;font-weight:900;letter-spacing:-1.1px}
+.fc-hero h1 span{color:#dc64fc}.fc-hero p{max-width:570px;font-size:14px;color:#d1c2dc;margin-bottom:20px}
+.fc-hero .fc-primary{width:100%;max-width:620px;background:linear-gradient(110deg,#d033ef,#7235f7);border:1px solid #ed7cff;border-radius:16px;min-height:62px;color:white;font-weight:870;font-size:18px;box-shadow:0 8px 26px #8a25e65a;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:13px 18px}
+.fc-card-heading{margin:24px 3px 13px;color:#f6f0ff;font-size:17px;font-weight:800}
+.fc-categories{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.fc-category{border:1px solid #6c398b;background:linear-gradient(125deg,#25103a,#121226);border-radius:19px;color:white;min-height:150px;position:relative;text-align:left;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;padding:16px;box-shadow:inset 0 1px #ffffff19,0 12px 24px #0004}
+.fc-category:focus-visible,.fc-quick:focus-visible,.fc-bottom button:focus-visible{outline:3px solid #e3a8ff;outline-offset:2px}
+.fc-category:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.94;background:radial-gradient(circle at 83% 25%,#c853e94d,transparent 46%)}
+.fc-category[data-category=farandula]{background:linear-gradient(145deg,#682346,#171026 76%)}.fc-category[data-category=relatos]{background:linear-gradient(145deg,#243764,#100d29 76%)}.fc-category[data-category=documentales]{background:linear-gradient(145deg,#76522a,#171126 76%)}.fc-category[data-category=aprender]{background:linear-gradient(145deg,#174b71,#150c30 76%)}
+.fc-category .fc-art{position:absolute;right:8px;top:0;font-size:64px;filter:drop-shadow(0 4px 12px #e054fd77);opacity:.9}.fc-category strong,.fc-category small{position:relative;z-index:1}.fc-category strong{font-size:19px;line-height:1.18;text-shadow:0 1px 8px #08030b}.fc-category small{font-size:12px;color:#e3d5eb;line-height:1.4;margin-top:5px}
+.fc-shortcuts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:22px 0}
+.fc-quick{border:1px solid #53346f;background:linear-gradient(150deg,#2c1a46,#171229);border-radius:16px;min-height:76px;padding:10px 5px;color:#f6efff;font-weight:750;font-size:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px}.fc-quick .fc-symbol{font-size:25px}
+.fc-bottom{display:none}
+.fc-create-intro{max-width:760px;margin:0 auto 15px}.fc-create-intro h1{font-size:31px;margin-bottom:7px}.fc-create-intro p{color:#bcb0cd}
+.fc-create-box{max-width:760px;margin:auto;border:1px solid #5b2a79;background:linear-gradient(160deg,#1b1330,#100c20);padding:20px;border-radius:23px}
+.fc-create-box label{display:block;color:#ede2fa;font-weight:780;margin-bottom:9px}.fc-create-box textarea{min-height:140px}
+.fc-create-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:16px}.fc-create-actions .btn{min-height:58px}
+.fc-legacy-options{max-width:760px;margin:18px auto}.fc-legacy-options>summary{cursor:pointer;padding:14px;color:#dcc4fa;border:1px solid #3c2758;border-radius:12px}.fc-legacy-options .form-card{margin-top:10px}
+#projects .project{border:1px solid #59346f;overflow:hidden;background:linear-gradient(140deg,#1f1730,#100e20);box-shadow:0 12px 24px #0004}
+#projects .project h3{font-size:17px}#projects .project .btn.primary{background:linear-gradient(110deg,#942ae9,#704afa)}
+.fc-project-tools{display:flex;gap:12px;justify-content:space-between;align-items:center;margin:10px 0 19px}.fc-project-tools label{font-size:13px;color:#e1d0f5}.fc-project-tools select{width:auto;min-width:150px}
+.fc-bookmark{border:1px solid #694689;background:#291b3f;color:#e7d4fa;padding:8px;border-radius:10px;min-width:40px;min-height:38px}
+.fc-bookmark[aria-pressed=true]{background:#6731a0;color:#fff}
+.fc-profile-dialog{border:1px solid #60328b;border-radius:20px;background:#181126;color:#f6eefe;max-width:min(90vw,420px);width:100%;padding:24px;box-shadow:0 30px 80px #0009}
+.fc-profile-dialog::backdrop{background:#000a;backdrop-filter:blur(5px)}
+.fc-profile-dialog h2{font-size:23px}.fc-profile-dialog p{color:#c4b5d4}.fc-profile-dialog button{margin-top:8px}
+#discover .studio-models{margin-top:0}#discover .studio-video-options .studio-models{margin-bottom:12px}#discover .studio-video-options .studio-models label{color:#cdb4ef}
+body.editor-mode #editor .editor-hero,#editor .tabs,#editor .editor-video-card{border-color:#59346f}
+#editor .btn.primary{background:linear-gradient(110deg,#ae35f4,#6949fa)}
+@media(max-width:760px){
+ .container{width:min(100% - 28px,600px)}
+ .topbar{height:62px}.topbar .nav{display:none}.brand{font-size:17px}.mark{height:37px;width:37px}
+ .main{padding-top:16px;padding-bottom:115px}
+ .fc-hero{padding:20px 17px}.fc-hero h1{max-width:300px;font-size:clamp(30px,8vw,40px)}.fc-hero p{max-width:310px}.fc-hero::after{top:54px;font-size:100px;right:-4px}.fc-hero .fc-primary{font-size:16px;padding:13px 14px}
+ .fc-categories{gap:10px}.fc-category{min-height:142px;padding:13px}.fc-category .fc-art{font-size:52px}.fc-category strong{font-size:17px}.fc-category small{font-size:11px}
+ .fc-shortcuts{gap:8px}.fc-quick{font-size:12px;min-height:72px}
+ .fc-bottom{position:fixed;bottom:0;left:0;right:0;z-index:45;display:grid;grid-template-columns:repeat(4,1fr);gap:3px;padding:8px 10px calc(8px + env(safe-area-inset-bottom));background:#110d21f7;backdrop-filter:blur(20px);border-top:1px solid #452461}
+ .fc-bottom button{border:0;background:transparent;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px;color:#c7b5d9;padding:8px 2px;border-radius:13px;font-size:11px}
+ .fc-bottom button span{font-size:22px}.fc-bottom button[aria-current=page]{color:white;background:linear-gradient(135deg,#742ad6,#aa32dd)}
+ .fc-create-actions{grid-template-columns:1fr}
+ .footer{padding-bottom:92px}
+}
+@media(min-width:761px){#home.fc-home{padding-bottom:30px}.fc-category{min-height:170px}}
+@media(prefers-reduced-motion:reduce){.fc-category,.fc-quick{transition:none!important}}
+
+/* Pasos del estudio: conserva las cinco pestañas tradicionales bajo un desplegable. */
+#editor .fc-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:16px 0}
+#editor .fc-steps button{border:1px solid #3d2c54;background:#171124;color:#c9b6df;border-radius:13px;min-height:66px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:12px;font-weight:760;padding:8px 4px}
+#editor .fc-steps b{background:#2a1e3e;border-radius:100%;height:25px;width:25px;display:grid;place-items:center}
+#editor .fc-steps button.on{border-color:#b16bfa;background:#482173;color:white;box-shadow:0 0 14px #9e3aff3d}
+#editor .fc-steps button.on b{background:#9c45f8}
+#editor .fc-more-tabs{margin:0 0 17px;border:1px solid #443055;border-radius:12px;background:#171124}
+#editor .fc-more-tabs>summary{cursor:pointer;color:#ceb7ee;padding:12px 14px;font-size:13px;font-weight:700}
+#editor .fc-more-tabs .tabs{margin:0;border:0;background:transparent;flex-wrap:wrap}
+#editor .fc-more-tabs .tabs button{min-width:110px;flex:1}
+@media(max-width:760px){#editor .fc-steps{gap:5px}#editor .fc-steps button{font-size:11px;min-height:63px}}
+
+/* Selección de cuatro ganchos verificables en cada propuesta. */
+#discover .fc-hooks{border:1px solid #583475;background:#18102b;border-radius:15px;padding:13px;margin:16px 0}
+#discover .fc-hooks legend{font-weight:850;color:#eee2ff;padding:0 7px;font-size:15px}
+#discover .fc-hook-option{display:flex;align-items:center;gap:10px;border:1px solid #483055;background:#20172d;color:#ece5f3;border-radius:12px;padding:11px 10px;margin:8px 0;cursor:pointer;font-size:13px;line-height:1.4}
+#discover .fc-hook-option.active{border-color:#bb67ee;background:#3e205d;box-shadow:0 0 15px #ab35df23}
+#discover .fc-hook-option input{width:auto;accent-color:#c06aff;flex:0 0 auto}
+#discover .fc-hooks .studio-limit{font-size:11px;color:#ae9fbc;margin:9px 0 0}
+/* Personalización de la animación fotográfica por escena (también afecta a la exportación). */
+#editor .fc-motion-panel{margin-top:18px;padding:18px;border:1px solid #6d428a;border-radius:18px;background:linear-gradient(145deg,#221334,#121125)}
+#editor .fc-motion-panel h3{margin:0 0 6px;color:#f8eeff}
+#editor .fc-motion-panel p{font-size:13px;color:#beb3d1;line-height:1.45}
+#editor .fc-motion-layout{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#editor .fc-motion-panel label{display:block;font-weight:700;color:#e4d5f4;margin:11px 0 5px;font-size:13px}
+#editor .fc-motion-panel select{width:100%;min-width:0;background:#110d20;border:1px solid #6c4281;border-radius:11px;color:#fff;min-height:44px}
+#editor .fc-motion-intensity input{width:100%;accent-color:#a94aff}
+#editor #fcMotionPreview{display:block;max-height:300px;height:auto;width:auto;max-width:100%;aspect-ratio:9 / 16;border-radius:12px;border:1px solid #5a376f;margin:14px auto;background:#0a0717}
+#projects .project[hidden]{display:none!important}
+@media(max-width:560px){#editor .fc-motion-layout{grid-template-columns:1fr}}

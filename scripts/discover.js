@@ -20,6 +20,7 @@
   };
   const categoryTopics={Romance:'Historias de amor',Misterio:'Misterios y secretos',Terror:'Historias de terror',Fantasía:'Aventuras de fantasía',Historia:'Historia de República Dominicana',Curiosidades:'Curiosidades del mundo',Motivación:'Historias de superación',Educativo:'Aprender algo nuevo',Noticias:'Noticias de República Dominicana hoy',Farándula:'Farándula hoy',Entretenimiento:'Entretenimiento hoy',Deportes:'Deportes de República Dominicana hoy'};
   let subcategoryGenre='';
+  let chosenHookIndex=0;
   const imageStyles=[
     ['cinematic','Fotografía cinematográfica'],
     ['hyperreal','Foto hiperrealista'],
@@ -317,7 +318,7 @@
         e('span','chip',idea.matchType==='related'?'≈ Relacionado':state.mode==='news'?'📰 Fuente real':state.mode==='factual'?'📚 Documental':'✦ '+state.style));
       if(idea.matchType==='related'&&idea.matchReason)body.appendChild(e('small',null,idea.matchReason));
       card.append(picture,body);
-      card.onclick=()=>{state.selected=index;renderCards();renderFeature();if(window.matchMedia('(max-width: 760px)').matches)$id('studioFeature').scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'})};
+      card.onclick=()=>{state.selected=index;chosenHookIndex=0;renderCards();renderFeature();if(window.matchMedia('(max-width: 760px)').matches)$id('studioFeature').scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'})};
       cards.appendChild(card);
     });
     $id('studioGalleryTag').textContent=state.ideas.length+' '+(state.matchType==='related'?'relacionados':state.mode==='news'?'noticias encontradas':'propuestas');
@@ -326,6 +327,24 @@
     $id('studioGallerySubtitle').textContent=state.matchType==='related'?'No hubo coincidencias exactas. Estos resultados son cercanos a tu búsqueda; revisa el motivo y su fecha.':state.mode==='news'
       ?'Publicaciones verificables de medios, creadores y páginas públicas en español. Selecciona una y revisa su fecha y fuente.'
       :'Selecciona una portada, lee la sinopsis y luego llévala a creación.';
+  }
+  // Introducciones editoriales locales basadas en el título existente, nunca en sucesos inventados.
+  function hookChoices(idea){
+    const title=String(idea.title||'').replace(/\s+/g,' ').replace(/[.!?¿¡]+$/g,'').trim().slice(0,92);
+    if(state.mode==='fiction'){
+      return [
+       '¿Te atreves a descubrir «'+title+'»?',
+       'Todo cambia en esta historia: «'+title+'».',
+       'Hay un secreto detrás de «'+title+'».',
+       'Una historia para recordar: «'+title+'».'
+      ];
+    }
+    return [
+      '¿Qué se sabe realmente sobre «'+title+'»?',
+      'Esto es lo confirmado hasta ahora: '+title+'.',
+      '¿Por qué importa esta historia? '+title+'.',
+      'Analicemos los hechos: '+title+'.'
+    ];
   }
   function renderFeature(){
     const feature=$id('studioFeature');feature.replaceChildren();feature.classList.toggle('studio-hide-sources',!$id('studioShowSources').checked);
@@ -340,7 +359,21 @@
       e('span',null,'▱ '+(Number($id('studioDuration').value)===30?5:Number($id('studioDuration').value)===60?8:12)+' escenas'));
     if(idea.sourceSeenAt)meta.append(e('span',null,(idea.sourceDateKind==='publication'?'Publicada: ':'Detectada: ')+idea.sourceSeenAt));
     text.appendChild(meta);
-    const button=e('button','studio-create',state.building?'Preparando guion…':'▣ Llevar a creación');
+    if(state.source!=='local'){
+      const choices=hookChoices(idea),group=e('fieldset','fc-hooks');
+      const legend=e('legend',null,'✦ Elige uno de los 4 ganchos');group.appendChild(legend);
+      choices.forEach((option,i)=>{
+        const label=e('label','fc-hook-option');
+        const radio=e('input');radio.type='radio';radio.name='fcChosenHook';radio.value=String(i);radio.checked=chosenHookIndex===i;
+        radio.disabled=state.building||state.busy;
+        radio.onchange=()=>{chosenHookIndex=i;group.querySelectorAll('.fc-hook-option').forEach((node,j)=>node.classList.toggle('active',j===i))};
+        if(i===chosenHookIndex)label.classList.add('active');
+        label.append(radio,e('span',null,option));group.appendChild(label);
+      });
+      group.appendChild(e('p','studio-limit',state.mode==='fiction'?'Propuestas creativas de apertura.':'Ganchos basados únicamente en el titular. Comprueba el artículo antes de publicar.'));
+      text.appendChild(group);
+    }
+    const button=e('button','studio-create',state.building?'Preparando guion…':'▣ Crear video con este gancho');
     button.type='button';button.disabled=state.building||state.busy;button.onclick=createProject;
     text.appendChild(button);
     if(state.source==='local'){
@@ -440,7 +473,7 @@
     state.pass=studioAccess();
     state.topic=topic;state.style=style;state.subcategory=subcategory;state.mode=mode;state.source=local?'local':'ai';
     state.imageStyle=$id('studioImageStyle').value;
-    state.selected=0;state.covers.clear();state.sources=[];state.ideas=[];state.sourceProvider='';state.matchType='exact';state.sourceCoverage=null;initialState();
+    state.selected=0;chosenHookIndex=0;state.covers.clear();state.sources=[];state.ideas=[];state.sourceProvider='';state.matchType='exact';state.sourceCoverage=null;initialState();
     $id('studioGenerate').disabled=true;
     try{
       if(local){
@@ -634,13 +667,15 @@
         time+=seconds;return scene;
       });
       if(scenes.some(s=>!s.text))throw Error('Una escena quedó vacía.');
+      const chosenHook=written?'':hookChoices(idea)[chosenHookIndex]||'';
+      if(chosenHook)scenes[0].text=chosenHook;
       const id=String(Date.now())+Math.random().toString(36).slice(2,7);
       const sources=validSources(data.sources);
       if(idea.sourceUrl&&!sources.some(s=>s.url===idea.sourceUrl))sources.unshift({title:idea.sourceTitle||idea.title,url:idea.sourceUrl});
       const project={
         creationFlow:'ai',id,title:idea.title,topic:creationTopic,originalQuery:state.topic,matchType:idea.matchType||'exact',matchReason:idea.matchReason||'',platform:choice.platform||'TikTok',
         duration,format:choice.format||'9:16',style:state.style,subcategory:state.subcategory,date:new Date().toISOString(),
-        scenes,narration:scenes.map(s=>s.text).join('\n'),hook:scenes[0].text,
+        scenes,narration:scenes.map(s=>s.text).join('\n'),hook:scenes[0].text,selectedHook:chosenHook||null,
         coverTitle:idea.title,coverSynopsis:idea.synopsis,coverPrompt:idea.coverPrompt,
         imageStyle:state.imageStyle,scriptMode:data.mode,
         writtenOriginal:written?(idea.importedOriginal||writtenData.originalText):'',writtenSpanish:writtenData?.originalText||'',writtenExcerpt:writtenData?.excerpt||false,
