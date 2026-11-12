@@ -247,6 +247,7 @@ jobs:
             await page.locator('#productionStart').click();
             await page.waitForFunction(()=>!window.facelessProductionBusy && document.getElementById('productionStatus').textContent.includes('Video completo listo'),null,{timeout:30000});
             if(imageCalls!==3||voiceCalls!==3)throw Error('Se repitieron medios terminados al retomar');
+            await page.locator('#bocetoEditorNav [data-boceto-tab="exportar"]').click();
             if(!await page.locator('#downloadArea a').isVisible())throw Error('Falta descarga del video completo');
             const completeDownloadPromise=page.waitForEvent('download');
             await page.locator('#downloadArea a').click();
