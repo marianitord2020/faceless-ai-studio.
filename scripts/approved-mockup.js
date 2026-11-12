@@ -4,7 +4,8 @@
 const $=id=>document.getElementById(id);
 const home=$('home'),explore=$('discover'),create=$('create'),projectsPage=$('projects'),editor=$('editor');
 if(!home||!explore||!create||!projectsPage||!editor)return;
-const asset=name=>'assets/mockup/'+name;
+const appRoot=new URL('../',document.currentScript.src).pathname;
+const asset=name=>appRoot+'assets/mockup/'+name;
 const allStyles=[
   {id:'2d',name:'2D',image:asset('2d.svg')},
   {id:'anime',name:'Anime',image:asset('anime.svg')},
@@ -29,7 +30,7 @@ function styleTiles(limit=5){
 home.classList.add('fcx-home');
 home.innerHTML='<section class="fcx-hero" aria-label="Crea videos con Faceless">'+
  '<div class="fcx-hero-content"><div class="fcx-hero-brand">✦ TU ESTUDIO CON IA</div><h1>Convierte ideas<br>en <em>videos virales</em></h1><p>Noticias, farándula, relatos, documentales y más, con el poder de la IA.</p></div>'+
- '<img class="fcx-robot" src="'+'assets/mockup-robot.svg'+'" alt="Robot violeta de Faceless AI Studio">'+
+ '<img class="fcx-robot" src="'+appRoot+'assets/mockup-robot.svg'+'" alt="Robot violeta de Faceless AI Studio">'+
  '</section>'+
  '<form id="fcxHomeSearch" class="fcx-home-search" role="search"><span class="fcx-search-icon" aria-hidden="true">⌕</span><input id="fcxHomeQuery" placeholder="Busca un tema, noticia o historia..." aria-label="Buscar historia o noticia" maxlength="220"><button type="submit" aria-label="Buscar">⌕</button></form>'+
  '<section aria-label="Categorías" class="fcx-category-grid">'+cats.map(c=>'<button type="button" class="fcx-category" data-fc-category="'+c.id+'"'+(c.id==='relatos'?' data-flow="ai"':'')+'><img src="'+asset(c.photo)+'" alt="" loading="lazy"><span class="fcx-category-name"><i aria-hidden="true">'+c.icon+'</i>'+c.name+'</span></button>').join('')+'</section>'+
@@ -152,7 +153,7 @@ function augmentEditor(){
  if(videoTab==='video'){
    if(!tools){
      const wrap=document.createElement('section');wrap.id='fcx-visual-toolbar';wrap.className='fcx-editor-style';
-     wrap.innerHTML='<h3>Estilo visual</h3><div class="fcx-style-row">'+styleTiles()+'</div>';
+     wrap.innerHTML='<h3>Estilo visual</h3><div class="fcx-style-row" aria-label="Estilos visuales disponibles">'+styleTiles(7)+'</div>';
      const stage=editor.querySelector('.fc-video-timeline')||videoSection.firstElementChild;
      stage?.before(wrap);
      wrap.addEventListener('click',e=>{const b=e.target.closest('[data-fcx-style]');if(b){setStyle(b.dataset.fcxStyle);p.imageStyle=style;if(typeof persist==='function')persist()}});

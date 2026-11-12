@@ -4,7 +4,8 @@
 const $=id=>document.getElementById(id);
 const home=$("home"),create=$("create"),discover=$("discover"),editor=$("editor"),projects=$("projects");
 if(!home||!create||!discover||!editor||!projects)return;
-const assets="assets/mockup/";
+const appRoot=new URL("../",document.currentScript.src).pathname;
+const assets=appRoot+"assets/mockup/";
 const pictures=[
  ["Relatos","mystery.webp","fiction","Misterio"],
  ["Aprender","history-sample.webp","factual","Educativo"],
@@ -22,7 +23,7 @@ const routing=s=>{if(typeof route==="function")route(s)};
 const select=(id,value)=>{const e=$(id);if(!e||![...(e.options||[])].some(x=>x.value===String(value)))return;e.value=String(value);e.dispatchEvent(new Event("change",{bubbles:true}));};
 const config={mode:"fiction",genre:"Misterio",topic:"",duration:60,style:"cinematic",voice:"automatic",format:"9:16"};
 function card(title,file,attr,value){return '<button type="button" class="final-photo-card" '+attr+'="'+safe(value)+'"><img loading="lazy" src="'+assets+file+'" alt=""><span>'+safe(title)+'</span></button>';}
-home.innerHTML='<section class="final-home-hero"><div><h1>Crea videos increíbles con <em>inteligencia artificial</em></h1><p>Convierte tus ideas en videos profesionales, sin mostrar tu rostro.</p></div><img src="assets/mockup-robot.svg" alt="Asistente de Faceless AI Studio"></section>'+
+home.innerHTML='<section class="final-home-hero"><div><h1>Crea videos increíbles con <em>inteligencia artificial</em></h1><p>Convierte tus ideas en videos profesionales, sin mostrar tu rostro.</p></div><img src="'+appRoot+'assets/mockup-robot.svg" alt="Asistente de Faceless AI Studio"></section>'+
 '<button type="button" class="final-primary final-home-button" data-final-new>✦ Crear video nuevo <span aria-hidden="true">→</span></button>'+
 '<div class="final-section-title"><h2>Explora categorías</h2><button type="button" data-final-new>Ver todas ›</button></div>'+
 '<div class="final-home-categories">'+pictures.map(p=>card(p[0],p[1],"data-final-category",p[0])).join("")+'</div>';
@@ -45,7 +46,7 @@ newScreen.innerHTML='<h1>Tu próximo video</h1><div class="final-number"><b>1</b
 '<label>Duración<select id="finalDuration"><option value="30">30 segundos</option><option value="60">60 segundos</option><option value="120">120 segundos</option></select></label>'+
 '<label>Voz<select id="finalVoice"><option value="automatic">Automática</option><option value="female">Femenina</option><option value="male">Masculina</option></select></label>'+
 '<label>Formato<select id="finalFormat"><option value="9:16">Vertical 9:16</option><option value="16:9">Horizontal 16:9</option></select></label></details>'+
-'<button type="button" class="final-primary" id="finalGenerate">✦ Generar 10 propuestas</button><p class="final-note" id="finalNote" aria-live="polite"></p>';
+'<details id="finalAccess" class="final-access" hidden><summary>Acceso seguro para generar con IA</summary><p>Tu servidor solicita un código privado. Introdúcelo aquí una sola vez por sesión; nunca lo guardaremos en GitHub ni en el almacenamiento local.</p><label for="finalAccessCode">Código privado de Cloudflare</label><input type="password" id="finalAccessCode" autocomplete="off" minlength="16" placeholder="Código de acceso (16 caracteres o más)"></details>'+'<button type="button" class="final-primary" id="finalGenerate">✦ Generar 10 propuestas</button><p class="final-note" id="finalNote" aria-live="polite"></p>';
 create.prepend(newScreen);
 let source="ai";
 function refresh(){
@@ -73,15 +74,45 @@ $("finalDuration").onchange=e=>{config.duration=Number(e.target.value);refresh()
 $("finalVoice").onchange=e=>config.voice=e.target.value;
 $("finalFormat").onchange=e=>config.format=e.target.value;
 $("finalGenerate").onclick=()=>{
- if(source==="manual"){window.location.href="editar-sin-ia/";return;}
- const topic=config.topic.trim();
- if(topic.length<5){$("finalNote").textContent="Escribe un tema de al menos 5 caracteres.";$("finalTopic").focus();return;}
- window.facelessFlow="ai";document.body.dataset.flow="ai";routing("discover");window.facelessShowStudioMenu?.();
+ if(source==="manual"){window.location.href=appRoot+"editar-sin-ia/";return;}
+ const categoryTopics={
+  Romance:"Historias de amor y reencuentros",Misterio:"Misterios y secretos de un pueblo",
+  Terror:"Historias de terror y casas embrujadas",Fantasía:"Aventuras en mundos fantásticos",
+  Historia:"Historias y acontecimientos históricos",Curiosidades:"Curiosidades sorprendentes del mundo",
+  Motivación:"Historias inspiradoras de superación",Educativo:"Temas educativos fáciles de aprender",
+  Noticias:"Noticias recientes de República Dominicana",Farándula:"Últimas noticias de farándula",
+  Entretenimiento:"Novedades de entretenimiento",Deportes:"Noticias deportivas recientes"
+ };
+ const selectedCategory=categoryTopics[config.genre]||(config.mode==="news"?"Noticias recientes de República Dominicana":config.mode==="factual"?"Documentales y curiosidades del mundo":"Historias creativas originales");
+ const typedTopic=config.topic.trim();
+ // Un tema vacío usa la categoría seleccionada; un término corto también es válido.
+ const topic=typedTopic.length>=5?typedTopic:typedTopic?typedTopic+" — "+selectedCategory:selectedCategory;
+ const note=$("finalNote");note.textContent="";
+ const auth=$("finalAccess"),privateInput=$("finalAccessCode"),serviceInput=$("studioPass");
+ const token=[serviceInput?.value,window.facelessProductionPasscode,privateInput.value].find(value=>typeof value==="string"&&value.trim().length>=16)?.trim()||"";
+ if(token.length<16){
+  auth.hidden=false;auth.open=true;
+  note.textContent="Para crear propuestas con tus IA, primero autoriza el acceso al servidor.";
+  privateInput.focus();return;
+ }
+ if(serviceInput){
+  serviceInput.value=token;
+  serviceInput.setCustomValidity("");
+  serviceInput.dispatchEvent(new Event("input",{bubbles:true}));
+ }
+ window.facelessProductionPasscode=token;
+ auth.open=false;auth.hidden=true;
+ window.facelessFlow="ai";document.body.dataset.flow="ai";
  select("studioMode",config.mode);select("studioGenre",config.genre);
- select("studioSource","ai");select("studioDuration",config.duration);select("studioVoice",config.voice);select("studioImageStyle",config.style);
+ select("studioSource","ai");select("studioDuration",config.duration);
+ select("studioVoice",config.voice);select("studioImageStyle",config.style);
  if(typeof choice!=="undefined"){choice.format=config.format;typeof renderOpts==="function"&&renderOpts();}
  const input=$("studioTopic");if(input){input.value=topic;input.dispatchEvent(new Event("input",{bubbles:true}));}
- $("studioGenerate")?.click();
+ routing("discover");
+ window.facelessShowStudioResults?.();
+ const button=$("studioGenerate");
+ if(!button){routing("create");note.textContent="No se pudo abrir el generador. Vuelve a intentarlo.";return;}
+ button.click();
 };
 refresh();
 const results=discover.querySelector(".studio-results-view");

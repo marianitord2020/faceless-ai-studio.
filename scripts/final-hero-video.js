@@ -2,6 +2,7 @@
    El archivo es del usuario, permanece en su navegador, nunca se envía al repo. */
 (()=>{'use strict';
 const $=id=>document.getElementById(id);
+const mockupRoot=new URL('../assets/mockup/',document.currentScript.src).pathname;
 const state={id:null,file:null,url:'',video:null,loading:false,playing:false};
 let memoryDB=null;
 function getDB(){
@@ -34,11 +35,11 @@ async function load(p,file){
  try{
   await new Promise((resolve,reject)=>{const fail=setTimeout(()=>reject(Error('No se pudo cargar el clip de introducción.')),10000);v.onloadedmetadata=()=>{clearTimeout(fail);resolve();};v.onerror=()=>{clearTimeout(fail);reject(Error('El navegador no admite este video. Prueba otro MP4 o WebM.'));};});
   if(!Number.isFinite(v.duration)||v.duration<5)throw Error('El clip debe durar 5 segundos o más.');
-  if((p.scenes?.[0]?.duration||0)<5)throw Error('La primera escena requiere al menos 5 segundos para el Hero Video.');
+  if((Number(p.duration)||0)<5)throw Error('El proyecto debe durar al menos 5 segundos para añadir una introducción.');
  }catch(error){URL.revokeObjectURL(url);throw error;}
  clean();
  state.id=p.id;state.file=file;state.url=url;state.video=v;
- p.heroDuration=Math.min(8,Math.max(5,Number(p.heroDuration)||6),p.scenes[0].duration,v.duration);
+ p.heroDuration=Math.min(8,Math.max(5,Number(p.heroDuration)||6),Number(p.duration)||6,v.duration);
  p.heroStart=Math.min(Number(p.heroStart)||0,Math.max(0,v.duration-p.heroDuration));
  v.currentTime=p.heroStart;
  if(typeof persist==='function')persist();
@@ -89,13 +90,13 @@ if(window.FacelessCinema?.render){
  const film=document.createElement('canvas'),filmCtx=film.getContext('2d',{alpha:false});
  window.FacelessCinema.render=function(ctx,p,index,seconds,getImage,cues){
   const v=p.id===state.id?state.video:null;
-  const length=Math.min(Number(p.heroDuration)||6,p.scenes?.[0]?.duration||6);
-  if(v&&index===0&&seconds<length&&v.readyState>=2){
+  const length=Math.min(Number(p.heroDuration)||6,Number(p.duration)||6);
+  if(v&&seconds<length&&v.readyState>=2){
    const scale=Math.min(1,720/Math.max(v.videoWidth,v.videoHeight));
    const w=Math.max(2,Math.round(v.videoWidth*scale)),h=Math.max(2,Math.round(v.videoHeight*scale));
    if(film.width!==w||film.height!==h){film.width=w;film.height=h;}
    filmCtx.drawImage(v,0,0,w,h);
-   original(ctx,p,index,seconds,i=>i===0?film:getImage(i),cues);
+   original(ctx,p,index,seconds,i=>seconds<length?film:getImage(i),cues);
   }else original(ctx,p,index,seconds,getImage,cues);
   if(index>0&&p.transitionType&&p.transitionType!=='fade'){
    const scene=p.scenes[index],elapsed=seconds-scene.time,range=.5;
@@ -119,14 +120,16 @@ function updatePanel(){
  if(clip){
   text.textContent='✓ Clip real cargado · '+clip.duration.toFixed(1)+' s. Se utilizará en la introducción del video exportado, con la narración y subtítulos del proyecto.';
   player.src=state.url;player.hidden=false;remove.hidden=false;
-  duration.max=String(Math.min(8,Math.floor(p.scenes?.[0]?.duration||8),Math.floor(clip.duration)));
+  duration.max=String(Math.min(8,Math.floor(Number(p.duration)||8),Math.floor(clip.duration)));
   duration.value=String(Math.min(Number(duration.max),Number(p.heroDuration)||6));
   trim.max=String(Math.max(0,clip.duration-Number(duration.value)));trim.value=String(p.heroStart||0);
   trim.disabled=Number(trim.max)===0;
+  window.facelessUpdateHeroTimeline?.();
  }else{
   text.textContent='Sube un clip MP4 o WebM de 5 segundos o más. El Hero Video reemplaza la imagen de la primera escena y conserva los subtítulos. Todavía no hay un clip añadido.';
   player.hidden=true;player.removeAttribute('src');player.load();remove.hidden=true;trim.disabled=true;
  }
+ window.facelessUpdateHeroTimeline?.();
 }
 function mount(){
  if(document.body.dataset.screen!=='editor')return;
@@ -142,7 +145,7 @@ function mount(){
   '<button type="button" id="finalHeroAdd">▣ Subir / reemplazar clip</button><button type="button" id="finalHeroRemove" hidden>Eliminar clip</button></div>'+
   '<div class="final-hero-settings"><label>Duración del Hero Video <input id="finalHeroDuration" type="range" min="5" max="8" step=".5" value="6"><output id="finalHeroDurLabel">6 s</output></label>'+
   '<label>Inicio dentro del clip (s) <input id="finalHeroStart" type="range" min="0" max="0" step=".1" value="0"><output id="finalHeroStartLabel">0 s</output></label></div>'+
-  '<small>El clip ocupa la primera escena en la línea de tiempo. La voz del proyecto continúa sincronizada; el audio original del clip está silenciado.</small>';
+  '<small>El Hero ocupa los primeros 5–8 segundos y puede abarcar dos escenas. La narración y los subtítulos mantienen sus tiempos; se silencia el audio original del clip.</small>';
  const anchor=stage.querySelector('.fc-editor-stage')||stage.querySelector('.cut-studio')||stage.firstElementChild;
  if(anchor)anchor.before(panel);else stage.prepend(panel);
  const input=panel.querySelector('#finalHeroFile');
@@ -163,7 +166,7 @@ function mount(){
  const dur=panel.querySelector('#finalHeroDuration'),start=panel.querySelector('#finalHeroStart');
  dur.oninput=()=>{
   p.heroDuration=Number(dur.value);
-  if(active())p.heroDuration=Math.min(p.heroDuration,active().duration,p.scenes[0].duration);
+  if(active())p.heroDuration=Math.min(p.heroDuration,active().duration,Number(p.duration)||8);
   panel.querySelector('#finalHeroDurLabel').textContent=p.heroDuration+' s';
   if(active()){start.max=String(Math.max(0,active().duration-p.heroDuration));start.value=String(Math.min(Number(start.value),Number(start.max)));p.heroStart=Number(start.value);}
   if(typeof persist==='function')persist();previewRefresh();
@@ -184,7 +187,7 @@ function mountTools(){
  const wrap=document.createElement('section');wrap.id='finalTransitionPanel';wrap.className='final-editor-panel';
  const names={fade:'Fundido',slide:'Deslizamiento',zoom:'Zoom',spin:'Giro',light:'Luz',flash:'Flash'};
  wrap.innerHTML='<div class="final-editor-panel-head"><h3>Transiciones</h3><span>Entre escenas</span></div><div class="final-transition-grid">'+
- Object.entries(names).map(([key,name])=>'<button type="button" data-final-transition="'+key+'"><img loading="lazy" src="assets/mockup/'+({fade:'cinematic.webp',slide:'travel.webp',zoom:'history-sample.webp',spin:'mystery.webp',light:'realista.webp',flash:'news.webp'}[key])+'" alt=""><span>'+name+'</span></button>').join('')+'</div>';
+ Object.entries(names).map(([key,name])=>'<button type="button" data-final-transition="'+key+'"><img loading="lazy" src="'+mockupRoot+({fade:'cinematic.webp',slide:'travel.webp',zoom:'history-sample.webp',spin:'mystery.webp',light:'realista.webp',flash:'news.webp'}[key])+'" alt=""><span>'+name+'</span></button>').join('')+'</div>';
  host.append(wrap);
  const refresh=()=>wrap.querySelectorAll('button').forEach(b=>b.classList.toggle('selected',b.dataset.finalTransition===(p.transitionType||'fade')));
  wrap.onclick=e=>{const b=e.target.closest('[data-final-transition]');if(!b)return;p.transitionType=b.dataset.finalTransition;if(typeof persist==='function')persist();refresh();previewRefresh();};

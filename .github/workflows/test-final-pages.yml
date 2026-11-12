@@ -72,14 +72,19 @@ jobs:
             assert.equal(await page.locator('.fc-bottom button').count(),3,'Navegacion inferior');
             await page.locator('#home [data-final-category="Relatos"]').click();
             assert.equal(await page.evaluate(()=>document.body.dataset.screen),'create');
-            await page.locator('#finalTopic').fill('La casa embrujada en el pueblo');
+            await page.locator('#finalTopic').fill('');
             assert.equal(await page.locator('#finalGenres .final-photo-card').count(),4,'Cuatro generos');
-            await page.evaluate(()=>{
-              const s=document.getElementById('studioPass');
-              if(s)s.value='fixture-private-test-code';
-            });
+            await page.locator('#finalGenerate').click();
+            assert.equal(await page.evaluate(()=>document.body.dataset.screen),'create','No navegar a formulario duplicado sin permiso');
+            assert.equal(await page.locator('#finalAccess').isVisible(),true,'Autorizacion segura y visible en Crear');
+            assert.doesNotMatch(await page.locator('#finalNote').textContent(),/5 caracteres|cinco caracteres/i,'No exigir texto cuando el tema esta vacio');
+            await page.locator('#finalAccessCode').fill('fixture-private-test-code');
             await page.locator('#finalGenerate').click();
             await page.waitForFunction(()=>document.querySelectorAll('#studioCards .studio-card').length===10,{timeout:12000});
+            assert.match(await page.locator('#studioTopic').inputValue(),/Misterios y secretos/i,'El tema vacío usa la categoría Misterio');
+            assert.equal(await page.locator('.studio-menu-view').isVisible(),false,'Solo propuestas, no otro formulario');
+            assert.equal(await page.locator('.studio-results-view').isVisible(),true);
+            assert.equal(await page.evaluate(()=>JSON.stringify(localStorage).includes('fixture-private-test-code')),false);
             assert.equal(await page.locator('#finalResultTitle').textContent(),'10 propuestas para tu video');
             await page.locator('#studioCards .studio-card').first().click();
             await page.waitForFunction(()=>document.querySelector('#discover')?.dataset.finalStage==='ganchos');
@@ -98,6 +103,12 @@ jobs:
             assert.equal(await page.locator('#finalHeroFile').count(),1,'Subir Hero Video');
             assert.equal(await page.locator('#finalTransitionPanel [data-final-transition]').count(),6,'Seis transiciones');
             assert.equal(await page.locator('#finalTransitionPanel img').count(),6,'Fotos en GitHub');
+            assert.equal(await page.locator('#fcx-visual-toolbar .fcx-style').count(),7,'Siete estilos visibles en editor');
+            await page.waitForFunction(()=>[...document.querySelectorAll('#fcx-visual-toolbar img, #finalTransitionPanel img')].every(img=>img.complete&&img.naturalWidth>0),null,{timeout:8000});
+            await page.evaluate(()=>history.replaceState({},'',new URL('crear-con-ia/',location.origin+'/').pathname));
+            await page.locator('#fcx-visual-toolbar button').first().click();
+            await page.waitForFunction(()=>[...document.querySelectorAll('#fcx-visual-toolbar img')].every(img=>img.naturalWidth>0));
+            assert.equal(await page.locator('.fc-timeline-hero-jump').count(),1,'Acceso al Hero Video desde timeline');
             assert.equal(await page.locator('#editor #previewCanvas').count(),1,'Reproductor');
             await page.locator('#finalTransitionPanel [data-final-transition="slide"]').click();
             assert.equal(await page.evaluate(()=>current().transitionType),'slide');
