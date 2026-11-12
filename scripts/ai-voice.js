@@ -17,7 +17,7 @@ function facelessDecodeURI(dataURI) {
 async function facelessRequestVoice(text, voice, passcode, style) {
   let response;
   try {
-    response = await fetch(FACELESS_VOICE_API, {
+    response = await window.FacelessGateway.request('/voice', {
       method: 'POST',
       signal: typeof AbortSignal.timeout==='function'?AbortSignal.timeout(90000):undefined,
       headers: { 'content-type': 'application/json', 'x-app-token': passcode },
@@ -202,9 +202,9 @@ function mountAIVoiceControls(project) {
   start.onclick = async () => {
     if (window.facelessMediaBusy||facelessVoiceBusy) return;
     cancel.onclick=()=>{facelessVoiceCancel=true;window.facelessCancelLocalSpeech?.();};
-    const pass = passwordInput.value.trim();
+    const pass = window.FacelessGateway.enabled?'':passwordInput.value.trim();
     if (pass) facelessVoicePassword = pass;
-    if (!facelessVoicePassword || facelessVoicePassword.length < 16) {
+    if (!window.FacelessGateway.enabled&&(!facelessVoicePassword || facelessVoicePassword.length < 16)) {
       status.textContent = 'Introduce el código APP_PASSCODE de mínimo 16 caracteres, el mismo que utilizaste para las fotos.';
       passwordInput.focus();
       return;
