@@ -2,6 +2,16 @@
 <html lang="es">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script>
+/* Mantener scripts, estilos y assets en la raíz correcta al actualizar rutas internas. */
+(function(){
+ const path=location.pathname;
+ const appRoot=path.startsWith('/faceless-ai-studio./')?'/faceless-ai-studio./':'/';
+ const base=document.createElement('base');
+ base.href=appRoot;
+ document.head.append(base);
+})();
+</script>
 <meta name="theme-color" content="#080b17"><meta name="description" content="Faceless AI Studio: planifica guiones y escenas y monta videos localmente en tu navegador.">
 <title>Faceless AI Studio — Tu estudio creativo</title>
 <link rel="stylesheet" href="styles/d1-gateway.css?v=1">
