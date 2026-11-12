@@ -318,6 +318,10 @@
       body.append(e('b',null,idea.title),e('small',null,idea.synopsis),
         e('span','chip',idea.matchType==='related'?'≈ Relacionado':state.mode==='news'?'📰 Fuente real':state.mode==='factual'?'📚 Documental':'✦ '+state.style));
       if(idea.matchType==='related'&&idea.matchReason)body.appendChild(e('small',null,idea.matchReason));
+      if(state.mode==='news'&&(idea.sourceTitle||idea.sourceSeenAt)){
+        const parts=[idea.sourceTitle,idea.sourceSeenAt].filter(Boolean).map(value=>String(value).slice(0,95));
+        body.appendChild(e('small','ref-card-meta',parts.join(' · ')));
+      }
       card.append(picture,body);
       card.onclick=()=>{state.selected=index;chosenHookIndex=0;renderCards();renderFeature();if(window.matchMedia('(max-width: 760px)').matches)$id('studioFeature').scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'})};
       cards.appendChild(card);
