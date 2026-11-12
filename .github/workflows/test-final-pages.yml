@@ -44,7 +44,7 @@ jobs:
             page.on('pageerror',e=>errors.push(e.message));
             await page.goto('http://127.0.0.1:4173/');
             await page.waitForFunction(()=>window.facelessStudioReady);
-            assert.equal(await page.locator('#home .fc-category').count(),6);
+            assert.equal(await page.locator('#home .fcx-category').count(),4);
             await page.locator('#home [data-fc-category=farandula]').click();
             assert.equal(await page.locator('#studioGenre').inputValue(),'Farándula');
             assert.equal(await page.locator('#studioMode').inputValue(),'news');
