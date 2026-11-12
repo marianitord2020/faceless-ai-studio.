@@ -237,3 +237,23 @@ body:is([data-screen="create"],[data-screen="discover"],[data-screen="editor"],[
  #editor .boceto-hook-option{font-size:12px}
  #projects .fcx-project-tabs button{font-size:10px!important}
 }
+
+
+/* Ajuste final del boceto: dos pestañas principales, herramientas sin ruido. */
+#editor .boceto-tabs{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+#editor .boceto-tabs button{min-height:48px!important;font-size:15px!important;}
+#editor .boceto-extra-tools{margin:-7px 2px 14px;border:1px solid #493262;border-radius:12px;background:#171121;padding:0 11px 10px;}
+#editor .boceto-extra-tools:not([open]){padding-bottom:0;}
+#editor .boceto-extra-tools summary{cursor:pointer;color:#c9a8e0;padding:11px 0;font-size:12px;list-style:none;}
+#editor .boceto-extra-tools summary::-webkit-details-marker{display:none;}
+#editor .boceto-extra-tools button{min-height:39px;padding:9px 14px;border-radius:10px;border:1px solid #73508c;background:#2c193c;color:#f9e8ff;font-size:12px;margin:0 7px 4px 0;}
+#editor .boceto-extra-tools button.active{background:linear-gradient(115deg,#a32ae3,#6321bc);border-color:#e492ff;}
+#editor .boceto-script-advanced{margin:11px 0 20px;border:1px solid #51386c;border-radius:14px;background:#161022;}
+#editor .boceto-script-advanced summary{padding:13px 15px;cursor:pointer;font-size:13px;font-weight:740;color:#e0c4f2;}
+#editor .boceto-script-advanced .detail{border:0!important;background:transparent!important;margin:0!important;padding:10px!important;}
+#editor .boceto-script-advanced .detail textarea{font-size:13px;line-height:1.6;}
+#editor .ref-media-display{position:relative;isolation:isolate;background:#090615;}
+#editor .boceto-scene-preview{position:absolute;inset:0;width:100%;height:100%;z-index:1;background:#090615;object-fit:contain;}
+#editor .boceto-video-controls{z-index:3;}
+#editor .ref-media-display .ref-media-empty[hidden],
+#editor .ref-media-display img[hidden]{display:none!important;}
