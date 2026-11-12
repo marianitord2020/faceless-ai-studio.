@@ -116,7 +116,11 @@
     root.classList.add('boceto-editor-workspace');
     const main=wrap('boceto-editor-main'),sidebar=wrap('boceto-editor-sidebar');
     const display=wrap('boceto-player','<div class="boceto-player-header"><b>Vista previa</b><span>'+String(p.format||'9:16')+' · '+Math.round(Number(p.duration)||0)+' s</span></div>');
-    display.append(frame);main.append(display);
+    display.append(frame);
+    // El reproductor ya informa duración y formato en su encabezado.
+    const repeatedCaption=frame.querySelector('p.smalltext');
+    if(repeatedCaption&&/^Vista previa\s/i.test(repeatedCaption.textContent||''))repeatedCaption.remove();
+    main.append(display);
     const timelineBox=wrap('boceto-timeline-card');
     timelineBox.append(timeline);
     const add=document.createElement('button');
@@ -190,8 +194,8 @@
     options.append(transitionsCard);
     aiCard.append(options);sidebar.append(aiCard);
     // Existing export settings, preview and render buttons are moved, not cloned.
-    const exportCard=wrap('boceto-export-card',
-      '<header><h3>Exportar video</h3><p>Elige el formato y descarga el montaje completo.</p></header>');
+    // El panel de calidad ya tiene un título; no repetir otro encabezado de exportación.
+    const exportCard=wrap('boceto-export-card');
     exportCard.append(settings,tools);
     if(status)exportCard.append(status);
     if(download)exportCard.append(download);
