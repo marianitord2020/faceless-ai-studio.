@@ -2,6 +2,7 @@
    El archivo es del usuario, permanece en su navegador, nunca se envía al repo. */
 (()=>{'use strict';
 const $=id=>document.getElementById(id);
+const mockupRoot=new URL('../assets/mockup/',document.currentScript.src).pathname;
 const state={id:null,file:null,url:'',video:null,loading:false,playing:false};
 let memoryDB=null;
 function getDB(){
@@ -184,7 +185,7 @@ function mountTools(){
  const wrap=document.createElement('section');wrap.id='finalTransitionPanel';wrap.className='final-editor-panel';
  const names={fade:'Fundido',slide:'Deslizamiento',zoom:'Zoom',spin:'Giro',light:'Luz',flash:'Flash'};
  wrap.innerHTML='<div class="final-editor-panel-head"><h3>Transiciones</h3><span>Entre escenas</span></div><div class="final-transition-grid">'+
- Object.entries(names).map(([key,name])=>'<button type="button" data-final-transition="'+key+'"><img loading="lazy" src="assets/mockup/'+({fade:'cinematic.webp',slide:'travel.webp',zoom:'history-sample.webp',spin:'mystery.webp',light:'realista.webp',flash:'news.webp'}[key])+'" alt=""><span>'+name+'</span></button>').join('')+'</div>';
+ Object.entries(names).map(([key,name])=>'<button type="button" data-final-transition="'+key+'"><img loading="lazy" src="'+mockupRoot+({fade:'cinematic.webp',slide:'travel.webp',zoom:'history-sample.webp',spin:'mystery.webp',light:'realista.webp',flash:'news.webp'}[key])+'" alt=""><span>'+name+'</span></button>').join('')+'</div>';
  host.append(wrap);
  const refresh=()=>wrap.querySelectorAll('button').forEach(b=>b.classList.toggle('selected',b.dataset.finalTransition===(p.transitionType||'fade')));
  wrap.onclick=e=>{const b=e.target.closest('[data-final-transition]');if(!b)return;p.transitionType=b.dataset.finalTransition;if(typeof persist==='function')persist();refresh();previewRefresh();};
