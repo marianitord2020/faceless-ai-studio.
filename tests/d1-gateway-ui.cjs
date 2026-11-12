@@ -19,7 +19,7 @@ const fixture=(ideas)=>({ideas:Array.from({length:ideas},(_,i)=>({
  page.on('pageerror',error=>errors.push(error.message));
  const types={'.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.webp':'image/webp','.png':'image/png','.html':'text/html'};
  await page.route('**/*',async route=>{
-  const req=route.request(),u=new URL(req.url);
+  const req=route.request(),u=new URL(req.url());
   if(u.hostname!==host)return route.abort();
   if(u.pathname.startsWith('/api/')){
    const body=req.postData()||'';
