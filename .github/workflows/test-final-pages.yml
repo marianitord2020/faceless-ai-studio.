@@ -1,105 +1,115 @@
-name: Probar todas las pantallas finales de Faceless
+name: Probar las 11 pantallas del boceto final
 on:
-  push:
-    branches: ["design/complete-studio-screens-20261112"]
-    paths:
-      - "index.html"
-      - "styles/faceless-pages.css"
-      - "scripts/faceless-pages.js"
-      - "scripts/editor-layout.js"
-      - ".github/workflows/test-final-pages.yml"
   pull_request:
     paths:
       - "index.html"
-      - "styles/faceless-pages.css"
-      - "scripts/faceless-pages.js"
-      - "scripts/editor-layout.js"
+      - "scripts/final-11-pantallas.js"
+      - "scripts/final-hero-video.js"
+      - "styles/final-11-pantallas.css"
+      - "styles/final-hero-video.css"
+      - "assets/final/**"
+      - ".github/workflows/test-final-pages.yml"
+  push:
+    branches: [main]
+    paths:
+      - "index.html"
+      - "scripts/final-11-pantallas.js"
+      - "scripts/final-hero-video.js"
+      - "styles/final-11-pantallas.css"
+      - "styles/final-hero-video.css"
+      - "assets/final/**"
+      - ".github/workflows/test-final-pages.yml"
 permissions:
   contents: read
 jobs:
-  mobile:
+  android:
     runs-on: ubuntu-24.04
-    timeout-minutes: 12
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Instalar Playwright
+      - name: Instalar navegador
         run: |
           npm install --no-save playwright@1.58.2
           npx playwright install chromium
-      - name: Servir la web
+      - name: Iniciar sitio de prueba
         run: |
-          python3 -m http.server 4173 --bind 127.0.0.1 > "$RUNNER_TEMP/http.log" 2>&1 &
+          python3 -m http.server 4173 --bind 127.0.0.1 > "$RUNNER_TEMP/faceless.log" 2>&1 &
           sleep 2
-      - name: Probar inicio, crear, búsqueda, proyectos y editor
+      - name: Probar recorrido Android y editor Hero Video
         run: |
           node <<'JS'
-          const {chromium}=require('playwright'),assert=require('node:assert/strict');
+          const {chromium}=require('playwright');
+          const assert=require('node:assert/strict');
           (async()=>{
             const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
             const page=await browser.newPage({viewport:{width:390,height:844},acceptDownloads:true});
-            const errors=[];
-            page.on('pageerror',e=>errors.push(e.message));
-            await page.goto('http://127.0.0.1:4173/');
-            await page.waitForFunction(()=>window.facelessStudioReady);
-            assert.equal(await page.locator('#home .fcx-category').count(),4);
-            await page.locator('#home [data-fc-category=farandula]').click();
-            assert.equal(await page.locator('#studioGenre').inputValue(),'Farándula');
-            assert.equal(await page.locator('#studioMode').inputValue(),'news');
-            assert.equal(await page.locator('.fc-discover-kicker').isVisible(),true);
-            await page.evaluate(()=>route('create'));
-            assert.equal(await page.locator('.fc-creator-banner').isVisible(),true);
-            assert.equal(await page.locator('#fcOwnIdea').isVisible(),true);
-            assert.equal(await page.locator('.fc-legacy-options').count(),1);
-            await page.locator('#fcOwnIdea').fill('Una historia original sobre Lola y su misterio');
-            await page.locator('#fcStartAi').click();
-            assert.equal(await page.locator('#studioTopic').inputValue(),'Una historia original sobre Lola y su misterio');
-            assert.equal(await page.locator('#studioMode').inputValue(),'fiction');
+            const errors=[];page.on('pageerror',e=>errors.push(e.message));
             await page.route('**/faceless-images.marianitord2020.workers.dev/ideas',route=>route.fulfill({
               status:200,contentType:'application/json',
               body:JSON.stringify({ideas:Array.from({length:10},(_,i)=>({
-                id:'fixture-'+i,title:'El misterio de Lola '+i,
-                synopsis:'Lola descubre una carta misteriosa en su casa.',
-                outline:'Introducción; sorpresa; final',coverPrompt:'Lola fictional dramatic portrait'
+                id:'fixture-'+i,title:'La casa embrujada '+i,
+                synopsis:'Una familia descubre algo extraño en una casa del pueblo.',
+                outline:'Inicio; pistas; revelación',coverPrompt:'Casa misteriosa, fotografia cinematografica'
               }))})
             }));
-            await page.route('**/faceless-images.marianitord2020.workers.dev/images',route=>route.fulfill({status:503,contentType:'application/json',body:'{"error":"Imágenes no disponibles en prueba"}'}));
+            await page.route('**/faceless-images.marianitord2020.workers.dev/images',route=>route.fulfill({
+              status:503,contentType:'application/json',body:'{"error":"Prueba sin proveedor de imágenes"}'
+            }));
             await page.route('**/faceless-images.marianitord2020.workers.dev/script',route=>route.fulfill({
               status:200,contentType:'application/json',
-              body:JSON.stringify({title:'El misterio de Lola 1',mode:'ficcion',provider:'Prueba',
-                scenes:Array.from({length:8},(_,i)=>({text:'Lola descubrió un misterio en su barrio, escena '+i+'.',prompt:'Escena ficcional'})),sources:[]})
+              body:JSON.stringify({title:'La casa embrujada',mode:'ficcion',provider:'Prueba de interfaz',
+                scenes:Array.from({length:8},(_,i)=>({
+                  text:'Una historia misteriosa en una casa del pueblo, escena '+i+'.',
+                  prompt:'Escena cinematografica de terror '+i
+                })),sources:[]})
             }));
-            await page.locator('#studioVideoOptions').evaluate(el=>el.open=true);
-            await page.locator('#studioPass').fill('fixture-project-access-test');
-            await page.locator('#studioGenerate').click();
-            await page.waitForFunction(()=>document.querySelectorAll('#studioCards .studio-card').length===10);
-            await page.locator('#studioCards .studio-card').nth(1).click();
-            assert.equal(await page.locator('.fc-hooks .fc-hook-option').count(),4);
-            await page.locator('.fc-hooks input[type=radio]').nth(2).check();
+            await page.goto('http://127.0.0.1:4173/');
+            await page.waitForFunction(()=>window.facelessStudioReady);
+            assert.equal(await page.locator('#home .final-photo-card').count(),6,'Seis categorias visuales');
+            assert.equal(await page.locator('.fc-bottom button').count(),3,'Navegacion inferior');
+            await page.locator('#home [data-final-category="Relatos"]').click();
+            assert.equal(await page.evaluate(()=>document.body.dataset.screen),'create');
+            await page.locator('#finalTopic').fill('La casa embrujada en el pueblo');
+            assert.equal(await page.locator('#finalGenres .final-photo-card').count(),4,'Cuatro generos');
+            await page.evaluate(()=>{
+              const s=document.getElementById('studioPass');
+              if(s)s.value='fixture-private-test-code';
+            });
+            await page.locator('#finalGenerate').click();
+            await page.waitForFunction(()=>document.querySelectorAll('#studioCards .studio-card').length===10,{timeout:12000});
+            assert.equal(await page.locator('#finalResultTitle').textContent(),'10 propuestas para tu video');
+            await page.locator('#studioCards .studio-card').first().click();
+            await page.waitForFunction(()=>document.querySelector('#discover')?.dataset.finalStage==='ganchos');
+            assert.equal(await page.locator('#studioFeature .fc-hook-option').count(),4,'Cuatro ganchos');
+            await page.locator('#studioFeature .fc-hook-option input').nth(1).check();
             await page.locator('#studioFeature .studio-create').click();
-            await page.waitForFunction(()=>current()?.title==='El misterio de Lola 1');
+            assert.equal(await page.locator('.ref-create-view').isVisible(),true,'Estilos visuales y ajustes');
+            assert.equal(await page.locator('.final-style-grid .final-photo-card').count(),7,'Fotografias de estilos');
+            await page.locator('[data-final-style="anime"]').click();
+            await page.locator('#refSetupContinue').click();
+            await page.waitForFunction(()=>typeof current==='function'&&current()?.title==='La casa embrujada',{timeout:15000});
+            assert.equal(await page.evaluate(()=>current().scenes.length),8);
             assert.equal(await page.evaluate(()=>current().selectedHook),await page.evaluate(()=>current().scenes[0].text));
-            assert.equal(await page.locator('#editor .fc-steps button').count(),4);
-            assert.equal(await page.locator('#editor .fc-steps button').nth(2).textContent().then(s=>s.includes('Subtítulos')),true);
-            assert.equal(await page.locator('#editor .fc-editor-stage').isVisible(),true);
-            assert.equal(await page.locator('#editor #previewCanvas').isVisible(),true);
-            assert.equal(await page.locator('#editor .fc-video-timeline').isVisible(),true);
-            await page.locator('.fc-timeline-scene').first().click();
-            assert.equal(await page.locator('#sceneForm').isVisible(),true);
-            assert.equal(await page.locator('#fcMotionPanel').isVisible(),true);
+            await page.evaluate(()=>document.querySelector('#editor .tabs [data-tab="video"]').click());
+            await page.waitForSelector('#finalHeroPanel');
+            assert.equal(await page.locator('#finalHeroFile').count(),1,'Subir Hero Video');
+            assert.equal(await page.locator('#finalTransitionPanel [data-final-transition]').count(),6,'Seis transiciones');
+            assert.equal(await page.locator('#finalTransitionPanel img').count(),6,'Fotos en GitHub');
+            assert.equal(await page.locator('#editor #previewCanvas').count(),1,'Reproductor');
+            await page.locator('#finalTransitionPanel [data-final-transition="slide"]').click();
+            assert.equal(await page.evaluate(()=>current().transitionType),'slide');
             await page.evaluate(()=>route('projects'));
-            assert.equal(await page.locator('.fc-project-thumb').count(),1);
-            assert.equal(await page.locator('.fc-project-state.ready').count(),1);
-            assert.equal(await page.locator('#fcProjectStatus').count(),1);
+            assert.equal(await page.locator('#projectsList .project').count(),1);
             for(const screen of ['home','create','projects','discover','editor']){
               await page.evaluate(name=>route(name),screen);
               const metrics=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth}));
-              assert.ok(metrics.scroll<=metrics.width+2,screen+' has horizontal overflow '+JSON.stringify(metrics));
+              assert.ok(metrics.scroll<=metrics.width+2,screen+' desborda horizontalmente: '+JSON.stringify(metrics));
             }
-            assert.deepEqual(errors,[]);
-            console.log('PASS: Crear, Explorar, 4 ganchos, reproductor visible, escenas y Mis proyectos');
+            assert.deepEqual(errors,[],'Sin errores de ejecucion');
+            console.log('PASS: seis categorias, diez propuestas, cuatro ganchos, siete estilos, Hero Video y transiciones');
             await browser.close();
           })().catch(error=>{console.error(error);process.exit(1)});
           JS
