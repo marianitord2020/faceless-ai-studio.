@@ -186,7 +186,9 @@ jobs:
             console.log('EXPORT STATUS:',result.status);
             if(!result.videoUrl || !result.filename || !result.filename.includes('.webm'))throw Error('No se creó el video con voz');
             const downloadPromise=page.waitForEvent('download');
+            await page.locator('#bocetoEditorNav [data-boceto-tab="exportar"]').click();
             await page.locator('#downloadArea a').click();
+            await page.locator('#bocetoEditorNav [data-boceto-tab="video"]').click();
             const download=await downloadPromise;
             await download.saveAs('/tmp/faceless-audio-video.webm');
             const bytes=fs.statSync('/tmp/faceless-audio-video.webm').size;
