@@ -77,5 +77,13 @@ jobs:
           console.log('HTTP methods mentioned:',JSON.stringify(methods));
           console.log('Has existing GitHub Pages redirect:',redirectToGithub);
           console.log('Cookie security flags present:',JSON.stringify(cookieFlags));
+          console.log('Existing Worker references Faceless media API:',source.includes('faceless-images.marianitord2020.workers.dev'));
+          console.log('Existing Worker references APP_PASSCODE:',source.includes('APP_PASSCODE'));
+          console.log('Existing Worker references x-app-token:',source.toLowerCase().includes('x-app-token'));
+          console.log('Existing Worker references frontend Github Pages:',source.includes('marianitord2020.github.io'));
+          console.log('Existing Worker calls upstream fetch:',/fetch\s*\(/.test(source));
+          console.log('Existing Worker checks session cookies:',/cookie|session_id|session_token/i.test(source));
+          console.log('Existing Worker has API prefix routing:',source.includes('/api/'));
+
 
           NODE
