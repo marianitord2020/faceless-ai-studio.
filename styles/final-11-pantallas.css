@@ -150,3 +150,9 @@ body .topbar .bar .final-account{flex:0 0 39px;width:39px;height:39px;border-rad
 #discover[data-final-stage="propuestas"] .studio-card-visual{width:98px!important;max-width:98px!important;min-width:98px!important;height:76px!important;min-height:76px!important;flex:0 0 98px!important;overflow:hidden!important}
 #discover[data-final-stage="ganchos"] .studio-results-head,#discover[data-final-stage="ganchos"] #studioBackToMenu{display:none!important}
 #discover[data-final-stage="ganchos"] .studio-feature{display:block!important}
+
+
+/* Portada de categoría veraz cuando aún no existe fotografía generada para el proyecto. */
+#projects .project .final-project-art{grid-column:1!important;grid-row:1/span 4!important;width:100%!important;height:100%!important;min-height:95px!important;max-height:125px!important;object-fit:cover!important;border-radius:11px!important}
+#projects .project:has(.studio-project-cover) .final-project-art{display:none!important}
+#projects .project .final-project-art[hidden]{display:none!important}
