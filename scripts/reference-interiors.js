@@ -81,7 +81,7 @@ function refreshDiscover(){
  const title=menu?.querySelector('.fcx-explore-header strong');
  if(title&&news)title.textContent=genre==='Farándula'?'Farándula de hoy':genre==='Deportes'?'Deportes de hoy':'Noticias de hoy';
  const search=$('studioTopic');
- if(search&&news)search.placeholder='Buscar noticias en RD, Santo Domingo, dólar...';
+ // Conservar el placeholder del generador; la búsqueda visual de noticias tiene su propio campo.
  if(resultsToolbar){resultsToolbar.querySelector('strong').textContent=genre==='Farándula'?'Farándula de hoy':'Noticias de hoy';}
  const resultTitle=$('studioGalleryTitle');
  if(resultTitle&&news&&discover.classList.contains('studio-show-results'))resultTitle.textContent=genre==='Farándula'?'Farándula de hoy':'Noticias de hoy';
