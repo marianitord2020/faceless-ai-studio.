@@ -307,8 +307,10 @@ jobs:
                 date:new Date().toISOString(),scenes:[{time:0,duration:1,text:'Texto completo.',prompt:'A red handbag'}]};
               projects.unshift(p);activeId=p.id;tab='video';resetMedia();route('editor');
             });
+            await page.locator('#bocetoEditorNav [data-boceto-tab="video"]').click();
             await reveal('#productionPass');
             await page.locator('#productionPass').fill('ci-fixture-passcode-only');
+            await reveal('#aiVoiceGenerate');
             await page.locator('#aiVoiceGenerate').click();
             await Promise.race([voiceStarted,new Promise((_,reject)=>{
               voiceTimer=setTimeout(async()=>{
