@@ -89,18 +89,19 @@ $("finalGenerate").onclick=()=>{
  const topic=typedTopic.length>=5?typedTopic:typedTopic?typedTopic+" — "+selectedCategory:selectedCategory;
  const note=$("finalNote");note.textContent="";
  const auth=$("finalAccess"),privateInput=$("finalAccessCode"),serviceInput=$("studioPass");
+ const viaD1=window.FacelessGateway.enabled;
  const token=[serviceInput?.value,window.facelessProductionPasscode,privateInput.value].find(value=>typeof value==="string"&&value.trim().length>=16)?.trim()||"";
- if(token.length<16){
+ if(!viaD1&&token.length<16){
   auth.hidden=false;auth.open=true;
   note.textContent="Para crear propuestas con tus IA, primero autoriza el acceso al servidor.";
   privateInput.focus();return;
  }
- if(serviceInput){
+ if(serviceInput&&!viaD1){
   serviceInput.value=token;
   serviceInput.setCustomValidity("");
   serviceInput.dispatchEvent(new Event("input",{bubbles:true}));
  }
- window.facelessProductionPasscode=token;
+ if(!viaD1)window.facelessProductionPasscode=token;
  auth.open=false;auth.hidden=true;
  window.facelessFlow="ai";document.body.dataset.flow="ai";
  select("studioMode",config.mode);select("studioGenre",config.genre);

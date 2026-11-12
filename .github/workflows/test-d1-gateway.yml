@@ -1,0 +1,47 @@
+name: Probar acceso D1 y generación sin passcode
+on:
+  pull_request:
+    paths:
+      - "scripts/gateway-access.js"
+      - "scripts/ai-photos.js"
+      - "scripts/ai-voice.js"
+      - "scripts/ai-client.js"
+      - "scripts/discover.js"
+      - "scripts/stock-photos.js"
+      - "scripts/editor-layout.js"
+      - "scripts/final-11-pantallas.js"
+      - "index.html"
+      - "styles/d1-gateway.css"
+      - "tests/d1-gateway-ui.cjs"
+      - ".github/workflows/test-d1-gateway.yml"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/gateway-access.js"
+      - "scripts/ai-photos.js"
+      - "scripts/ai-voice.js"
+      - "scripts/ai-client.js"
+      - "scripts/discover.js"
+      - "scripts/stock-photos.js"
+      - "scripts/editor-layout.js"
+      - "scripts/final-11-pantallas.js"
+      - "index.html"
+      - "tests/d1-gateway-ui.cjs"
+      - ".github/workflows/test-d1-gateway.yml"
+permissions:
+  contents: read
+jobs:
+  android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Instalar Playwright Chromium
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install chromium
+      - name: Comprobar inicio de sesión D1 simulado y API real del frontend
+        run: node tests/d1-gateway-ui.cjs

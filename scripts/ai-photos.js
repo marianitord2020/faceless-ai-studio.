@@ -16,7 +16,7 @@ function facelessProjectPhotos(id) {
 async function facelessFetchPhoto(passcode, prompt, format, generationId) {
   let response;
   try {
-    response = await fetch(FACELESS_IMAGE_API, {
+    response = await window.FacelessGateway.request('/images', {
       method: 'POST',
       signal: typeof AbortSignal.timeout==='function'?AbortSignal.timeout(90000):undefined,
       headers: { 'content-type': 'application/json', 'x-app-token': passcode },
@@ -150,14 +150,14 @@ function mountAIPhotoControls(project, updatePreview) {
     // IMPORTANTE: el Worker de guiones y el de fotos tienen códigos distintos.
     // Nunca reutilizar geminiPass ni una clave API de otro servicio.
     const passInput = panel.querySelector('#aiPhotosPasscode');
-    const newPass = passInput.value.trim();
+    const newPass = window.FacelessGateway.enabled?'':passInput.value.trim();
     if (newPass) facelessImagePasscode = newPass;
-    if (!facelessImagePasscode) {
+    if (!window.FacelessGateway.enabled&&!facelessImagePasscode) {
       status.textContent = 'Introduce aquí el valor exacto del secreto APP_PASSCODE que guardaste en GitHub.';
       passInput.focus();
       return;
     }
-    if (facelessImagePasscode.length < 16) {
+    if (!window.FacelessGateway.enabled&&facelessImagePasscode.length < 16) {
       facelessImagePasscode = '';
       status.textContent = 'El código privado de fotos debe tener al menos 16 caracteres. No es una API Key.';
       passInput.focus();
@@ -332,7 +332,7 @@ function mountFacelessProduction(project){
     const retry=()=>{
       if(start.isConnected&&current()?.id===project.id)start.onclick(null,{showProgress:true});
     };
-    if(showProgress&&(!pass||pass.length<16)){
+    if(showProgress&&!window.FacelessGateway.enabled&&(!pass||pass.length<16)){
       const popup=window.facelessOpenVideoProgress(retry);
       popup.requestAccess(code=>{
         panel.querySelector('#productionPass').value=code;
@@ -340,7 +340,7 @@ function mountFacelessProduction(project){
       });
       return;
     }
-    if(!pass||pass.length<16){status.textContent='Introduce tu código privado de mínimo 16 caracteres.';panel.querySelector('#productionPass').focus();return}
+    if(!window.FacelessGateway.enabled&&(!pass||pass.length<16)){status.textContent='Introduce tu código privado de mínimo 16 caracteres.';panel.querySelector('#productionPass').focus();return}
     if(!showProgress&&!safeMime(true)){status.textContent='Este navegador no permite exportar video con voz. Abre la página en Chrome actualizado.';return}
     window.facelessProductionBusy=true;window.facelessProductionCancelled=false;
     const controls=[...document.querySelectorAll('button,input,select,textarea')].filter(el=>el!==stop&&!el.closest('.video-progress')).map(el=>[el,el.disabled]);
