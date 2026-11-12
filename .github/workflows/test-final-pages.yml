@@ -99,7 +99,7 @@ jobs:
             assert.equal(await page.evaluate(()=>current().scenes.length),8);
             assert.equal(await page.evaluate(()=>current().selectedHook),await page.evaluate(()=>current().scenes[0].text));
             await page.evaluate(()=>document.querySelector('#editor .tabs [data-tab="video"]').click());
-            await page.waitForSelector('#finalHeroPanel');
+            await page.waitForSelector('#finalHeroPanel',{state:'attached'});
             assert.equal(await page.locator('#finalHeroFile').count(),1,'Subir Hero Video');
             assert.equal(await page.locator('#finalTransitionPanel [data-final-transition]').count(),6,'Seis transiciones');
             assert.equal(await page.locator('#finalTransitionPanel img').count(),6,'Fotos en GitHub');
