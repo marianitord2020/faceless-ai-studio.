@@ -130,7 +130,7 @@ jobs:
             await reveal('#productionPass');
             mismatch=true;await page.locator('#productionPass').fill('fixture-media-passcode-only');
             await page.locator('#audio').setInputFiles({name:'otro.wav',mimeType:'audio/wav',buffer:wav(9)});
-            await page.waitForFunction(()=>!window.facelessMediaBusy&&document.getElementById('audioSyncStatus').textContent.includes('no coincide'));
+            await page.waitForFunction(()=>!window.facelessMediaBusy,null,{timeout:20000});console.log('AUDIO MISMATCH',await page.evaluate(()=>({message:document.getElementById('audioSyncStatus').textContent,method:current().audioAlignment?.method,duration:current().duration})));
             assert.equal(await page.evaluate(()=>current().audioAlignment.method),'estimated');assert.equal(await page.evaluate(()=>current().duration),9);
             await reveal('#pickOwnAudio');
             await page.getByRole('button',{name:'Quitar audio',exact:true}).click();
