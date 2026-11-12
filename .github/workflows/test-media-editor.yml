@@ -60,6 +60,8 @@ jobs:
             await page.goto('http://127.0.0.1:4173/');
             await page.waitForFunction(()=>window.facelessStudioReady);
             await page.evaluate(()=>{const p={id:'media-fixture',title:'Fotos y voz',topic:'Lola',style:'Misterio',duration:12,platform:'TikTok',format:'9:16',date:new Date().toISOString(),scenes:[{time:0,duration:4,text:'Hola esta es la primera escena.',prompt:'Scene one'},{time:4,duration:4,text:'Ahora contamos una historia sobre Lola.',prompt:'Scene two'},{time:8,duration:4,text:'Al final todos regresan a casa.',prompt:'Scene three'}]};p.narration=p.scenes.map(s=>s.text).join('\n');projects.unshift(p);persist();activeId=p.id;tab='video';route('editor')});
+            await page.waitForSelector('.boceto-editor-workspace');
+            await page.locator('#bocetoEditorNav [data-boceto-tab="exportar"]').click();
             for(const width of [320,360,390,412,768]){
               await page.setViewportSize({width,height:844});
               const bounds=await page.evaluate(()=>{
@@ -82,20 +84,25 @@ jobs:
             const activeBox=await page.locator('#previewVideo').boundingBox();assert.equal(activeBox.y,previewBox.y);assert.equal(activeBox.height,previewBox.height);
             await page.locator('#previewVideo').click();assert.equal(await page.locator('#previewVideo').textContent(),'Vista previa');
             await page.evaluate(()=>window.scrollTo({top:document.documentElement.scrollHeight,behavior:'instant'}));
-            const lastCard=await page.locator('#videoVoiceCard').boundingBox(),barBox=await page.locator('.editor-export-bar').boundingBox();assert.ok(barBox.y+barBox.height<=lastCard.y,'Export actions must appear below player, before optional settings');
+            assert.equal(await page.locator('.editor-export-bar').evaluate(el=>getComputedStyle(el).position),'static','Export actions must not float above the editor');
+            await page.locator('#bocetoEditorNav [data-boceto-tab="video"]').click();
             await page.evaluate(()=>{renderTab();window.scrollTo({top:0,behavior:'instant'})});
             assert.equal(await page.locator('#videoAutoCard,#videoPhotosCard,#videoVoiceCard').count(),3);
             assert.deepEqual(await page.locator('#videoAutoCard h3,#videoPhotosCard h3,#videoVoiceCard h3').allTextContents(),['Video completo con IA','Fotografías automáticas con IA','Narración automática en español']);
             assert.equal(await page.locator('.editor-personalize[open]').count(),0);
             assert.equal(await page.locator('#productionPass').isVisible(),false);
             assert.equal(await page.locator('#aiVoiceOption').isVisible(),false);
+            assert.equal(await page.locator('#renderVideo').isVisible(),false);
+            await page.locator('#bocetoEditorNav [data-boceto-tab="exportar"]').click();
             assert.equal(await page.locator('#renderVideo').isVisible(),true);
+            await page.locator('#bocetoEditorNav [data-boceto-tab="video"]').click();
+            await page.locator('.boceto-ai-more > summary').click();
             await page.locator('#videoPhotosCard summary').first().click();
             await page.locator('#videoVoiceCard summary').first().click();
             await page.waitForTimeout(50);
             assert.equal(await page.locator('.editor-personalize[open]').count(),1);
             await page.locator('#videoVoiceCard summary').first().click();
-            const geometry=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,cards:document.querySelector('.editor-video-cards').getBoundingClientRect().height}));
+            const geometry=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,cards:document.querySelector('.boceto-editor-sidebar').getBoundingClientRect().height}));
             assert.ok(geometry.scroll<=geometry.width);assert.equal(await page.locator(".editor-personalize[open]").count(),0);
             assert.equal(await page.locator('#manualPhotoSlots').isVisible(),false);assert.equal(await page.locator('#audioAttachment').isVisible(),false);
             const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a6d8AAAAASUVORK5CYII=','base64');

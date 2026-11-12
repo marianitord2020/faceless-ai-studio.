@@ -1,0 +1,45 @@
+name: Comprobar editor simplificado del boceto final
+on:
+  pull_request:
+    paths:
+      - "index.html"
+      - "scripts/editor-boceto-simple.js"
+      - "styles/editor-boceto-simple.css"
+      - "tests/editor-boceto-simple.cjs"
+      - ".github/workflows/test-editor-boceto-simple.yml"
+  push:
+    branches: [main]
+    paths:
+      - "index.html"
+      - "scripts/editor-boceto-simple.js"
+      - "styles/editor-boceto-simple.css"
+      - "tests/editor-boceto-simple.cjs"
+      - ".github/workflows/test-editor-boceto-simple.yml"
+permissions:
+  contents: read
+jobs:
+  visual-editor:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Preparar Chromium
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install chromium
+      - name: Iniciar web local para pruebas
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 > "$RUNNER_TEMP/editor-http.log" 2>&1 &
+          sleep 2
+      - name: Probar Android, escritorio, tabs y controles reales
+        run: node tests/editor-boceto-simple.cjs
+      - name: Adjuntar capturas del editor
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: editor-boceto-capturas
+          path: editor-boceto-capturas/
+          if-no-files-found: ignore

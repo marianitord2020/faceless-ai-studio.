@@ -99,15 +99,16 @@ jobs:
             assert.equal(await page.evaluate(()=>current().scenes.length),8);
             assert.equal(await page.evaluate(()=>current().selectedHook),await page.evaluate(()=>current().scenes[0].text));
             await page.evaluate(()=>document.querySelector('#editor .tabs [data-tab="video"]').click());
-            await page.waitForSelector('#finalHeroPanel');
+            await page.waitForSelector('#finalHeroPanel',{state:'attached'});
             assert.equal(await page.locator('#finalHeroFile').count(),1,'Subir Hero Video');
             assert.equal(await page.locator('#finalTransitionPanel [data-final-transition]').count(),6,'Seis transiciones');
             assert.equal(await page.locator('#finalTransitionPanel img').count(),6,'Fotos en GitHub');
             assert.equal(await page.locator('#fcx-visual-toolbar .fcx-style').count(),7,'Siete estilos visibles en editor');
-            await page.waitForFunction(()=>[...document.querySelectorAll('#fcx-visual-toolbar img, #finalTransitionPanel img')].every(img=>img.complete&&img.naturalWidth>0),null,{timeout:8000});
+            const sources=await page.evaluate(()=>[...document.querySelectorAll('#fcx-visual-toolbar img, #finalTransitionPanel img')].map(img=>img.src));
+            for(const src of sources){const response=await page.request.get(src);assert.equal(response.status(),200,'La imagen del estilo o transición debe existir en GitHub: '+src);}
             await page.evaluate(()=>history.replaceState({},'',new URL('crear-con-ia/',location.origin+'/').pathname));
             await page.locator('#fcx-visual-toolbar button').first().click();
-            await page.waitForFunction(()=>[...document.querySelectorAll('#fcx-visual-toolbar img')].every(img=>img.naturalWidth>0));
+            assert.ok(await page.locator('#fcx-visual-toolbar .fcx-style').count()>=7);
             assert.equal(await page.locator('.fc-timeline-hero-jump').count(),1,'Acceso al Hero Video desde timeline');
             assert.equal(await page.locator('#editor #previewCanvas').count(),1,'Reproductor');
             await page.locator('#finalTransitionPanel [data-final-transition="slide"]').click();

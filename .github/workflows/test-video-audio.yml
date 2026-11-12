@@ -103,6 +103,7 @@ jobs:
               window.open=()=>{throw new Error('Popup blocked');};
               HTMLDialogElement.prototype.showModal=()=>{throw new Error('Dialog unavailable');};
             });
+            await page.locator('#bocetoEditorNav [data-boceto-tab="exportar"]').click();
             await page.locator('#renderVideo').click();
             const progress=page.getByRole('dialog');
             await progress.getByLabel('Código privado').waitFor({state:'visible'});
@@ -184,10 +185,18 @@ jobs:
             }));
             console.log('EXPORT STATUS:',result.status);
             if(!result.videoUrl || !result.filename || !result.filename.includes('.webm'))throw Error('No se creó el video con voz');
-            const downloadPromise=page.waitForEvent('download');
+            await page.locator('#bocetoEditorNav [data-boceto-tab="exportar"]').click();
+            console.log('DOWNLOAD LINK DEBUG',await page.locator('#downloadArea a').evaluate(a=>({
+              href:a.href?.slice(0,170),download:a.download,connected:a.isConnected,
+              visible:getComputedStyle(a).display,box:a.getBoundingClientRect().toJSON(),
+              samePreview:a.href===window.previewURL,linkCount:document.querySelectorAll('#downloadArea a').length,
+              parentClass:a.parentElement?.className,view:document.getElementById('editor')?.dataset.bocetoView
+            })));
+            const downloadPromise=page.waitForEvent('download',{timeout:12000});
             await page.locator('#downloadArea a').click();
             const download=await downloadPromise;
             await download.saveAs('/tmp/faceless-audio-video.webm');
+            await page.locator('#bocetoEditorNav [data-boceto-tab="video"]').click();
             const bytes=fs.statSync('/tmp/faceless-audio-video.webm').size;
             if(bytes<10000)throw Error('Video demasiado pequeño: '+bytes);
             console.log('VIDEO OK; bytes:',bytes);
@@ -225,6 +234,7 @@ jobs:
             });
             await reveal('#productionPass');
             await page.locator('#productionPass').fill('ci-fixture-passcode-only');
+            await page.locator('#bocetoEditorNav [data-boceto-tab="video"]').click();
             await page.locator('#productionStart').click();
             await page.waitForFunction(()=>!window.facelessProductionBusy && document.getElementById('productionStatus').textContent.includes('reutilizarán'));
             const retained=await page.evaluate(()=>facelessProjectPhotos('ci-complete').size);
@@ -237,6 +247,7 @@ jobs:
             await page.locator('#productionStart').click();
             await page.waitForFunction(()=>!window.facelessProductionBusy && document.getElementById('productionStatus').textContent.includes('Video completo listo'),null,{timeout:30000});
             if(imageCalls!==3||voiceCalls!==3)throw Error('Se repitieron medios terminados al retomar');
+            await page.locator('#bocetoEditorNav [data-boceto-tab="exportar"]').click();
             if(!await page.locator('#downloadArea a').isVisible())throw Error('Falta descarga del video completo');
             const completeDownloadPromise=page.waitForEvent('download');
             await page.locator('#downloadArea a').click();
