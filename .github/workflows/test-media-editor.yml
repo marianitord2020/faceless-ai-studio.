@@ -123,6 +123,7 @@ jobs:
             await page.waitForFunction(()=>!window.facelessMediaBusy&&facelessProjectPhotos('media-fixture').get(1)?.facelessFilename==='reemplazo.png');
             await page.reload();await page.waitForFunction(()=>window.facelessStudioReady);
             await page.evaluate(()=>{activeId='media-fixture';tab='video';route('editor')});
+            await page.locator('#bocetoEditorNav [data-boceto-tab="video"]').click();
             await page.waitForFunction(()=>facelessProjectPhotos('media-fixture').size===2);
             assert.equal(await page.evaluate(()=>facelessProjectPhotos('media-fixture').get(0).facelessFilename),'nueva.png');
             let mismatch=false,transcriptions=0;
@@ -141,6 +142,7 @@ jobs:
             const aligned=await page.evaluate(()=>({duration:current().duration,times:current().scenes.map(s=>s.time),text:current().narration,captions:FacelessTiming.cues(current()).map(c=>c.text).join(' '),caption:facelessCaptionAt(current(),3.1)}));
             assert.equal(aligned.duration,8);assert.deepEqual(aligned.times,[0,3,5]);assert.equal(aligned.captions,aligned.text.replaceAll('\n',' '));assert.equal(aligned.caption,'Ahora contamos una historia sobre Lola.');assert.equal(transcriptions,1);
             await page.reload();await page.waitForFunction(()=>window.facelessStudioReady);await page.evaluate(()=>{activeId='media-fixture';tab='video';route('editor')});
+            await page.locator('#bocetoEditorNav [data-boceto-tab="video"]').click();
             await page.waitForFunction(()=>audioFile?.facelessManual&&current().audioAlignment?.method==='speech');
             await reveal('#uploadedAudioPlayer');
             assert.equal(await page.locator('#uploadedAudioPlayer').isVisible(),true);
