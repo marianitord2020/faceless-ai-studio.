@@ -75,9 +75,19 @@ $("finalVoice").onchange=e=>config.voice=e.target.value;
 $("finalFormat").onchange=e=>config.format=e.target.value;
 $("finalGenerate").onclick=()=>{
  if(source==="manual"){window.location.href=appRoot+"editar-sin-ia/";return;}
- const topic=config.topic.trim();
+ const categoryTopics={
+  Romance:"Historias de amor y reencuentros",Misterio:"Misterios y secretos de un pueblo",
+  Terror:"Historias de terror y casas embrujadas",Fantasía:"Aventuras en mundos fantásticos",
+  Historia:"Historias y acontecimientos históricos",Curiosidades:"Curiosidades sorprendentes del mundo",
+  Motivación:"Historias inspiradoras de superación",Educativo:"Temas educativos fáciles de aprender",
+  Noticias:"Noticias recientes de República Dominicana",Farándula:"Últimas noticias de farándula",
+  Entretenimiento:"Novedades de entretenimiento",Deportes:"Noticias deportivas recientes"
+ };
+ const selectedCategory=categoryTopics[config.genre]||(config.mode==="news"?"Noticias recientes de República Dominicana":config.mode==="factual"?"Documentales y curiosidades del mundo":"Historias creativas originales");
+ const typedTopic=config.topic.trim();
+ // Un tema vacío usa la categoría seleccionada; un término corto también es válido.
+ const topic=typedTopic.length>=5?typedTopic:typedTopic?typedTopic+" — "+selectedCategory:selectedCategory;
  const note=$("finalNote");note.textContent="";
- if(topic.length<5){note.textContent="Escribe un tema de al menos 5 caracteres.";$("finalTopic").focus();return;}
  const auth=$("finalAccess"),privateInput=$("finalAccessCode"),serviceInput=$("studioPass");
  const token=[serviceInput?.value,window.facelessProductionPasscode,privateInput.value].find(value=>typeof value==="string"&&value.trim().length>=16)?.trim()||"";
  if(token.length<16){
