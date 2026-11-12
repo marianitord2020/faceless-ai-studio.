@@ -455,8 +455,8 @@
   const studioAccess=()=>[$id('studioPass')?.value.trim(),state.pass,window.facelessProductionPasscode,typeof facelessImagePasscode==='string'?facelessImagePasscode:'',typeof facelessVoicePassword==='string'?facelessVoicePassword:''].find(code=>typeof code==='string'&&code.length>=16)||'';
   async function callEndpoint(path,payload){
     const pass=state.pass;
-    if(pass.length<16)throw Error('Introduce el mismo APP_PASSCODE de fotos y voces (mínimo 16 caracteres).');
-    const response=await fetch(API+path,{method:'POST',signal:typeof AbortSignal.timeout==='function'?AbortSignal.timeout(110000):undefined,headers:{'content-type':'application/json','x-app-token':pass},
+    if(!window.FacelessGateway.enabled&&pass.length<16)throw Error('Introduce el mismo APP_PASSCODE de fotos y voces (mínimo 16 caracteres).');
+    const response=await window.FacelessGateway.request(path,{method:'POST',signal:typeof AbortSignal.timeout==='function'?AbortSignal.timeout(110000):undefined,headers:{'content-type':'application/json','x-app-token':pass},
       body:JSON.stringify(payload)});
     let data;
     try{data=await response.json()}catch{throw Error('La API no devolvió una respuesta válida.')}
@@ -508,7 +508,7 @@
     const mode=requestedMode;
     if(topic.length<5){$id('studioTopic').setCustomValidity('Escribe un tema de al menos cinco caracteres.');$id('studioTopic').reportValidity();return}
     $id('studioTopic').setCustomValidity('');
-    if(!local&&studioAccess().length<16){$id('studioVideoOptions').open=true;$id('studioPass').setCustomValidity('Introduce tu código de acceso (mínimo 16 caracteres).');$id('studioPass').reportValidity();return}
+    if(!window.FacelessGateway.enabled&&!local&&studioAccess().length<16){$id('studioVideoOptions').open=true;$id('studioPass').setCustomValidity('Introduce tu código de acceso (mínimo 16 caracteres).');$id('studioPass').reportValidity();return}
     if(local&&mode!=='fiction'){setStatus('Las noticias y los documentales reales requieren IA y fuentes actuales. Cambia el origen a «IA — Gemini».');return}
     window.facelessShowStudioResults();
     state.busy=true;state.epoch++;const epoch=state.epoch;
@@ -551,7 +551,7 @@
     if(state.busy||state.building)return;
     const idea=selectedIdea();if(!idea)return;
     state.pass=studioAccess();
-    if(state.pass.length<16){setStatus('Para crear una historia nueva con IA necesitas el APP_PASSCODE. El texto publicado sigue disponible sin IA.');return}
+    if(!window.FacelessGateway.enabled&&state.pass.length<16){setStatus('Para crear una historia nueva con IA necesitas el APP_PASSCODE. El texto publicado sigue disponible sin IA.');return}
     state.busy=true;state.epoch++;renderFeature();
     try{
       setStatus('Leyendo la fuente para crear ficción nueva con Gemini…');
