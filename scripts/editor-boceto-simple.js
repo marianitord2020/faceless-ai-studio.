@@ -46,7 +46,7 @@
       const button=event.target.closest('[data-boceto-tab]');
       if(button)showView(button.dataset.bocetoTab);
     });
-    const anchor=editor.querySelector('.ref-editor-nav')||editor.querySelector('.fc-steps')||editor.querySelector('.tabs');
+    const anchor=editor.querySelector('.fc-steps')||editor.querySelector('.tabs');
     anchor?.before(navigation);
     showView(currentView,false);
   }
