@@ -63,3 +63,22 @@ body.editor-mode #editor .editor-hero,#editor .tabs,#editor .editor-video-card{b
 #editor .fc-more-tabs .tabs{margin:0;border:0;background:transparent;flex-wrap:wrap}
 #editor .fc-more-tabs .tabs button{min-width:110px;flex:1}
 @media(max-width:760px){#editor .fc-steps{gap:5px}#editor .fc-steps button{font-size:11px;min-height:63px}}
+
+/* Selección de cuatro ganchos verificables en cada propuesta. */
+#discover .fc-hooks{border:1px solid #583475;background:#18102b;border-radius:15px;padding:13px;margin:16px 0}
+#discover .fc-hooks legend{font-weight:850;color:#eee2ff;padding:0 7px;font-size:15px}
+#discover .fc-hook-option{display:flex;align-items:center;gap:10px;border:1px solid #483055;background:#20172d;color:#ece5f3;border-radius:12px;padding:11px 10px;margin:8px 0;cursor:pointer;font-size:13px;line-height:1.4}
+#discover .fc-hook-option.active{border-color:#bb67ee;background:#3e205d;box-shadow:0 0 15px #ab35df23}
+#discover .fc-hook-option input{width:auto;accent-color:#c06aff;flex:0 0 auto}
+#discover .fc-hooks .studio-limit{font-size:11px;color:#ae9fbc;margin:9px 0 0}
+/* Personalización de la animación fotográfica por escena (también afecta a la exportación). */
+#editor .fc-motion-panel{margin-top:18px;padding:18px;border:1px solid #6d428a;border-radius:18px;background:linear-gradient(145deg,#221334,#121125)}
+#editor .fc-motion-panel h3{margin:0 0 6px;color:#f8eeff}
+#editor .fc-motion-panel p{font-size:13px;color:#beb3d1;line-height:1.45}
+#editor .fc-motion-layout{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#editor .fc-motion-panel label{display:block;font-weight:700;color:#e4d5f4;margin:11px 0 5px;font-size:13px}
+#editor .fc-motion-panel select{width:100%;min-width:0;background:#110d20;border:1px solid #6c4281;border-radius:11px;color:#fff;min-height:44px}
+#editor .fc-motion-intensity input{width:100%;accent-color:#a94aff}
+#editor #fcMotionPreview{display:block;max-height:300px;height:auto;width:auto;max-width:100%;aspect-ratio:9 / 16;border-radius:12px;border:1px solid #5a376f;margin:14px auto;background:#0a0717}
+#projects .project[hidden]{display:none!important}
+@media(max-width:560px){#editor .fc-motion-layout{grid-template-columns:1fr}}
