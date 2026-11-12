@@ -156,3 +156,36 @@ body .topbar .bar .final-account{flex:0 0 39px;width:39px;height:39px;border-rad
 #projects .project .final-project-art{grid-column:1!important;grid-row:1/span 4!important;width:100%!important;height:100%!important;min-height:95px!important;max-height:125px!important;object-fit:cover!important;border-radius:11px!important}
 #projects .project:has(.studio-project-cover) .final-project-art{display:none!important}
 #projects .project .final-project-art[hidden]{display:none!important}
+
+
+/* Video 1000157238: editor visual en Android, tarjetas legibles, sin miniaturas rotas. */
+#editor .fcx-editor-style{margin:8px 0 14px!important;padding:12px!important;border-radius:15px!important;}
+#editor .fcx-editor-style h3{margin-bottom:9px!important;font-size:16px!important;}
+#editor .fcx-editor-style .fcx-style-row{
+ display:flex!important;grid-template-columns:none!important;gap:10px!important;
+ overflow-x:auto!important;scroll-snap-type:x mandatory;overscroll-behavior-inline:contain;
+ scrollbar-width:thin;padding:3px 2px 9px!important;
+}
+#editor .fcx-editor-style .fcx-style{
+ flex:0 0 clamp(100px,31vw,130px)!important;width:clamp(100px,31vw,130px)!important;
+ aspect-ratio:1.38!important;scroll-snap-align:start;border-radius:13px!important;
+}
+#editor .fcx-editor-style .fcx-style img{display:block!important;object-fit:cover!important;}
+#editor .fcx-editor-style .fcx-style span{font-size:12px!important;line-height:1.15!important;padding:6px!important;overflow-wrap:normal!important;}
+/* Sólo un carril de escenas visible; herramientas de producción agrupadas en vez de interminables paneles abiertos. */
+#editor .fc-video-timeline{padding:12px!important;margin:8px 0!important;}
+#editor .fc-timeline-head h3{font-size:17px!important;}
+#editor .fc-timeline-track{overflow-x:auto;scrollbar-width:thin;gap:8px!important;}
+#editor .fc-timeline-scene{min-width:75px!important;min-height:62px!important;border-radius:11px!important;}
+#editor .fc-timeline-scene .fc-timeline-number{display:block;font-size:14px;font-weight:850}
+#editor .fc-timeline-scene .fc-timeline-range{display:block;font-size:11px;font-weight:600;opacity:.85;margin-top:4px}
+#editor .fc-timeline-scene.has-hero{box-shadow:0 0 0 2px #d880ff!important;background:linear-gradient(135deg,#a82dec,#53248f)!important;}
+#editor .fc-timeline-scene .fc-timeline-hero{display:block;font-size:10px;font-weight:850}
+#editor .fc-timeline-head .fc-timeline-meta{font-size:12px;color:#c4a6d9}
+#editor .fc-timeline-hint{font-size:11px!important;color:#c3a5db!important;margin:8px 0 0!important;}
+/* Salida visible, pero evita doble llamada a la acción masiva. */
+#editor .editor-video-cards .editor-video-card{padding:15px!important;gap:8px!important;margin:0!important}
+#editor .editor-card-heading{margin-bottom:11px!important}
+#editor .editor-video-cards{gap:9px!important}
+#editor .editor-video-card .editor-personalize{margin-top:8px!important}
+#editor #finalHeroPanel{scroll-margin-top:70px}
