@@ -109,7 +109,8 @@ jobs:
             await page.evaluate(()=>history.replaceState({},'',new URL('crear-con-ia/',location.origin+'/').pathname));
             await page.locator('#fcx-visual-toolbar button').first().click();
             assert.ok(await page.locator('#fcx-visual-toolbar .fcx-style').count()>=7);
-            assert.equal(await page.locator('.fc-timeline-hero-jump').count(),1,'Acceso al Hero Video desde timeline');
+            assert.equal(await page.locator('.fc-timeline-hero-jump').count(),0,'Hero no duplicado en línea de tiempo');
+            assert.equal(await page.locator('.boceto-hero-change').count(),1,'Un único acceso al Hero en su tarjeta');
             assert.equal(await page.locator('#editor #previewCanvas').count(),1,'Reproductor');
             await page.locator('#finalTransitionPanel [data-final-transition="slide"]').click();
             assert.equal(await page.evaluate(()=>current().transitionType),'slide');
