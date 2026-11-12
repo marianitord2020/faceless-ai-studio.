@@ -124,10 +124,12 @@ function updatePanel(){
   duration.value=String(Math.min(Number(duration.max),Number(p.heroDuration)||6));
   trim.max=String(Math.max(0,clip.duration-Number(duration.value)));trim.value=String(p.heroStart||0);
   trim.disabled=Number(trim.max)===0;
+  window.facelessUpdateHeroTimeline?.();
  }else{
   text.textContent='Sube un clip MP4 o WebM de 5 segundos o más. El Hero Video reemplaza la imagen de la primera escena y conserva los subtítulos. Todavía no hay un clip añadido.';
   player.hidden=true;player.removeAttribute('src');player.load();remove.hidden=true;trim.disabled=true;
  }
+ window.facelessUpdateHeroTimeline?.();
 }
 function mount(){
  if(document.body.dataset.screen!=='editor')return;
