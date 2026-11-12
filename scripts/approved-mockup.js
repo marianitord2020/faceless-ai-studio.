@@ -79,7 +79,7 @@ const nav=document.querySelector('.fc-bottom');
 if(nav){
  nav.innerHTML='<button type="button" data-fc-nav="home"><span aria-hidden="true">⌂</span>Inicio</button>'+
  '<button type="button" data-fc-nav="explore"><span aria-hidden="true">⌕</span>Explorar</button>'+
- '<button type="button" data-fc-nav="create" class="fcx-nav-create"><span aria-hidden="true">＋</span>Crear</button>'+
+ '<button type="button" data-fc-nav="create" class="fcx-nav-create"><span aria-hidden="true">+</span>Crear</button>'+
  '<button type="button" data-fc-nav="projects"><span aria-hidden="true">▱</span>Proyectos</button>'+
  '<button type="button" data-fc-nav="profile"><span aria-hidden="true">♙</span>Perfil</button>';
  nav.addEventListener('click',e=>{
@@ -117,6 +117,12 @@ if(discoverMenu){
  });
 }
 // Projects filtering represented only by real project data; avoid inventing "completed" status.
+const storageNotice=projectsPage.querySelector(':scope > .notice');
+if(storageNotice && !projectsPage.querySelector('.fcx-storage-details')){
+  const details=document.createElement('details');details.className='fcx-storage-details';
+  const summary=document.createElement('summary');summary.textContent='ⓘ Privacidad y respaldo de tus proyectos';
+  storageNotice.before(details);details.append(summary,storageNotice);
+}
 const projectsHeading=projectsPage.querySelector('.screen-head h1');if(projectsHeading)projectsHeading.textContent='▱ Mis proyectos';
 const filter=$('fcProjectStatus');
 const pButtons=document.createElement('div');pButtons.className='fcx-project-tabs';
