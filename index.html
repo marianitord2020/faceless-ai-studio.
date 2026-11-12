@@ -106,12 +106,33 @@ $('projectsList').addEventListener('click',e=>{const b=e.target.closest('[data-p
 function resetMedia(){stopPreview();if(micRecorder?.state==='recording')micRecorder.stop();stopMicTracks();imgs=[];audioFile=null;audioFileProjectId=null;previewURL=null;if(micURL){URL.revokeObjectURL(micURL);micURL=null}}
 const canvas=document.createElement('canvas');canvas.width=540;canvas.height=960;const ctx=canvas.getContext('2d');
 function wrapText(t,x,y,maxWidth,lineHeight,maxLines){let lines=[],current='';for(const word of t.split(/\s+/)){const next=current?current+' '+word:word;if(ctx.measureText(next).width>maxWidth && current){lines.push(current);current=word}else current=next}if(current)lines.push(current);lines.slice(0,maxLines).forEach((l,i)=>ctx.fillText(l,x,y+i*lineHeight))}
+// Show the chosen story cover as a real moving image in scene one until an AI photo is ready.
+const coverPreviewImages=new Map();
+function fallbackCoverImage(p){
+ const src=window.facelessCoverCache?.get(p.id);
+ if(typeof src!=='string'||!src)return null;
+ let item=coverPreviewImages.get(p.id);
+ if(!item||item.src!==src){
+  const img=new Image();
+  item={src,img};coverPreviewImages.set(p.id,item);
+  img.onload=()=>{
+   if(current()?.id!==p.id||rendering)return;
+   const view=$('previewCanvas');
+   if(view&&!view.classList.contains('hidden')&&!previewTimer){
+    drawFrame(0,0);view.getContext('2d').drawImage(canvas,0,0,view.width,view.height);
+   }
+  };
+  img.onerror=()=>{if(coverPreviewImages.get(p.id)===item)coverPreviewImages.delete(p.id);};
+  img.src=src;
+ }
+ return item.img.complete&&item.img.naturalWidth?item.img:null;
+}
 function drawFrame(index,seconds=0){
  const p=current();if(!p)return;
  const {width:w,height:h}=FacelessExport.dimensions(p,rendering);
  if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h}
  const photos=window.facelessSceneImages?.get(p.id);
- const getImage=i=>photos?.get(i)||(window.facelessFlow!=='manual'&&photos?.size===1?photos.values().next().value:null)||(imgs.length?imgs[i%imgs.length]:null);
+ const getImage=i=>photos?.get(i)||(window.facelessFlow!=='manual'&&photos?.size===1?photos.values().next().value:null)||(imgs.length?imgs[i%imgs.length]:null)||(i===0?fallbackCoverImage(p):null);
  FacelessCinema.render(ctx,p,index,seconds,getImage,FacelessTiming.cues(p));
 }
 function safeMime(){return window.FacelessExport?FacelessExport.recordingMime(current()||{}):'';}
