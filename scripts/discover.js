@@ -185,7 +185,7 @@
       toast(target==='voices'?'Voces IA: abre Narración automática.':target==='images'?'Imágenes IA: abre Generar fotos automáticamente.':'Video IA: abre el reproductor y la exportación.');
     });
     function updateVideoSummary(){
-      const names={cinematic:'Cinematográfica',hyperreal:'Hiperrealista',anime:'Anime'};
+      const names={cinematic:'Cinematográfica',hyperreal:'Realista',anime:'Anime','3d':'3D','2d':'2D',cartoon:'Caricatura',historical:'Histórica'};
       let text='Ajustes opcional • '+$id('studioDuration').value+'s • '+names[$id('studioImageStyle').value];
       if($id('studioVoice').value!=='automatic')text+=' • Voz '+$id('studioVoice').selectedOptions[0].textContent;
       if(!$id('studioShowSources').checked)text+=' • Sin fuentes';

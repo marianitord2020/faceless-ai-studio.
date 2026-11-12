@@ -1,0 +1,103 @@
+name: Verificar boceto visual aprobado en Android
+on:
+  push:
+    branches: ["design/approved-mockup-exact-20261112"]
+    paths:
+      - index.html
+      - scripts/approved-mockup.js
+      - styles/approved-mockup.css
+      - .github/workflows/test-approved-mockup.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  visual:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Instalar el navegador de pruebas
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install chromium
+      - name: Levantar copia local
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/fc-serve.log 2>&1 &
+          sleep 2
+      - name: Validar flujo y capturas de las cuatro pantallas
+        run: |
+          node <<'JS'
+          const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=require('fs');
+          (async()=>{
+           const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+           fs.mkdirSync('approved-screens',{recursive:true});
+           for(const width of [360,390,412]){
+            const page=await browser.newPage({viewport:{width,height:844},deviceScaleFactor:1});
+            const errors=[];page.on('pageerror',err=>errors.push(String(err.message)));
+            await page.goto('http://127.0.0.1:4173/');
+            await page.waitForFunction(()=>window.facelessStudioReady);
+            assert.equal(await page.locator('.fcx-category').count(),4);
+            assert.equal(await page.locator('.fcx-style-home .fcx-style').count(),5);
+            assert.equal(await page.locator('.fc-bottom [data-fc-nav]').count(),5);
+            assert.equal(await page.locator('body').getAttribute('data-screen'),'home');
+            assert.equal(await page.getByText('Pro',{exact:true}).count(),0);
+            const shots={
+              inicio:()=>page.evaluate(()=>route('home')),
+              explorar:()=>page.evaluate(()=>route('discover')),
+              crear:()=>page.evaluate(()=>route('create')),
+              proyectos:()=>page.evaluate(()=>route('projects'))
+            };
+            for(const [screen,open] of Object.entries(shots)){
+              await open();await page.waitForTimeout(100);
+              await page.screenshot({path:'approved-screens/'+width+'-'+screen+'.png',fullPage:true});
+              const info=await page.evaluate(()=>({
+                viewport:innerWidth,scrollWidth:document.documentElement.scrollWidth,
+                visibleNav:getComputedStyle(document.querySelector('.fc-bottom')).display,
+                offscreen:[...document.querySelectorAll('button,input,select,textarea')].filter(el=>{
+                  const r=el.getBoundingClientRect(),style=getComputedStyle(el);
+                  return style.display!=='none'&&r.width>1&&r.height>1&&r.top<innerHeight&&r.bottom>0&&(r.left< -2||r.right>innerWidth+2)
+                }).map(el=>el.outerHTML.slice(0,90)).slice(0,7)
+              }));
+              assert.ok(info.scrollWidth<=info.viewport+2,screen+' horizontal overflow '+JSON.stringify(info));
+              console.log('VISUAL',width,screen,JSON.stringify(info));
+            }
+            await page.evaluate(()=>route('home'));
+            await page.locator('[data-fcx-style="anime"]').first().click();
+            assert.equal(await page.locator('[data-fcx-style="anime"]').first().getAttribute('aria-pressed'),'true');
+            await page.locator('[data-fcx-open-styles]').click();
+            assert.equal(await page.locator('#fcxStyleModal').isVisible(),true);
+            await page.locator('#fcxStyleModal [data-fcx-close]').last().click();
+            await page.locator('#fcxHomeQuery').fill('El misterio de Lola');
+            await page.locator('#fcxHomeSearch button').click();
+            assert.equal(await page.locator('#studioTopic').inputValue(),'El misterio de Lola');
+            await page.locator('.fc-bottom [data-fc-nav=explore]').click();
+            assert.equal(await page.locator('body').getAttribute('data-screen'),'discover');
+            await page.evaluate(()=>{
+              projects.unshift({id:'approval-sample',title:'Un relato de misterio',topic:'Relato',platform:'TikTok',style:'Misterio',format:'9:16',duration:60,date:new Date().toISOString(),scenes:Array.from({length:6},(_,i)=>({time:i*10,duration:10,text:'Una historia ficticia de misterio y suspense',prompt:'Dark city at night'})),narration:'Una historia ficticia'});
+              activeId='approval-sample';tab='video';route('projects');
+            });
+            await page.waitForTimeout(120);
+            assert.equal(await page.locator('#projects .project').count(),1);
+            await page.locator('#projects [data-project=open]').first().click();
+            assert.equal(await page.locator('body').getAttribute('data-screen'),'editor');
+            await page.evaluate(()=>{tab='video';renderEditor()});
+            await page.waitForTimeout(200);
+            await page.screenshot({path:'approved-screens/'+width+'-editor.png',fullPage:true});
+            assert.equal(await page.locator('#editor .fcx-stepper button').count(),4);
+            assert.equal(await page.locator('#editor #previewCanvas').count(),1);
+            assert.deepEqual(errors,[]);
+            await page.close();
+           }
+           await browser.close();
+           console.log('PASS all four reference screens, style selection and media editor');
+          })().catch(e=>{console.error(e);process.exit(1)});
+          JS
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: faceless-approved-mockup-android
+          path: approved-screens/*.png
+          retention-days: 3

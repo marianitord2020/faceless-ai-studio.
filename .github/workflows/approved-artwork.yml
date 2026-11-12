@@ -1,0 +1,70 @@
+name: Crear miniaturas del boceto aprobado
+on:
+  push:
+    branches: ["design/approved-mockup-exact-20261112"]
+    paths: [".github/workflows/approved-artwork.yml"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  artwork:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Preparar imágenes webp ligeras
+        run: |
+          python3 -m pip install --quiet pillow
+          python3 <<'PY'
+          from pathlib import Path
+          from PIL import Image,ImageOps,ImageDraw,ImageFilter
+          import urllib.request,io,random,colorsys
+          base=Path('assets/mockup');base.mkdir(parents=True,exist_ok=True)
+          photos={
+            'news':('photo-1534528741775-53994a69daeb','#123b79'),
+            'farandula':('photo-1492684223066-81342ee5ff30','#581368'),
+            'relatos':('photo-1518709268805-4e9042af9f23','#051d3a'),
+            'documentales':('photo-1539650116574-75c0c6d73f6e','#68341b'),
+            'cinematic':('photo-1485846234645-a62644f84728','#241737'),
+            'realista':('photo-1506794778202-cad84cf45f1d','#102d54'),
+            'travel':('photo-1507525428034-b723cf961d3e','#135b80'),
+            'ufo':('photo-1462331940025-496dfbfc7564','#121e54'),
+            'mystery':('photo-1519608487953-e999c86e7455','#3a0b52'),
+            'news-sample':('photo-1511818966892-d7d671e672a2','#123f70'),
+            'artist-sample':('photo-1515886657613-9f3515b0c78f','#5d265c'),
+            'history-sample':('photo-1509316785289-025f5b846b35','#70421d')
+          }
+          failures=[]
+          for name,(photo,color) in photos.items():
+            url='https://images.unsplash.com/'+photo+'?w=700&auto=format&fit=crop&q=75'
+            try:
+              req=urllib.request.Request(url,headers={'User-Agent':'FacelessAIStudio/1.0 (static visual assets)'})
+              with urllib.request.urlopen(req,timeout=18) as result:
+                blob=result.read()
+              picture=Image.open(io.BytesIO(blob)).convert('RGB')
+              print(name,'downloaded',picture.size,len(blob))
+            except Exception as ex:
+              failures.append(name); print('Warning:',name,'remote source unavailable',str(ex)[:120])
+              picture=Image.new('RGB',(700,460),color)
+              d=ImageDraw.Draw(picture)
+              for j in range(80):
+                x=random.Random(j*13+len(name)).randint(-80,650); y=random.Random(j*31+len(name)).randint(-80,420)
+                r=random.Random(j*41+len(name)).randint(25,150)
+                d.ellipse((x,y,x+r,y+r),outline='#9e70d3',width=2)
+              picture=picture.filter(ImageFilter.GaussianBlur(1))
+            picture=ImageOps.fit(picture,(520,348),method=Image.Resampling.LANCZOS)
+            picture.save(base/(name+'.webp'),format='WEBP',quality=71,method=6)
+          (base/'CREDITS.txt').write_text('Fotografías de referencia: Unsplash, https://unsplash.com/license\n'+'\n'.join(name+': https://images.unsplash.com/'+photo for name,(photo,col) in photos.items())+'\n',encoding='utf8')
+          print('Generated:',len(photos),'assets; failed:',failures)
+          PY
+      - name: Publicar miniaturas en el repositorio
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/mockup
+          if ! git diff --cached --quiet; then
+            git commit -m "assets: publish local optimized reference thumbnails for final design"
+            git push origin HEAD:design/approved-mockup-exact-20261112
+          fi
