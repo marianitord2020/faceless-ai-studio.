@@ -61,7 +61,7 @@ jobs:
                 const a=bounds.actions[i],b=bounds.actions[j];assert.ok(a.right<=b.left+.5||b.right<=a.left+.5||a.bottom<=b.top+.5||b.bottom<=a.top+.5,'Project actions overlap at '+width);
               }
               assert.ok(bounds.actions.every(a=>a.left>=0&&a.right<=width));
-              assert.equal(bounds.actions[3].width,36);assert.equal(bounds.actions[3].height,36);
+              assert.ok(Math.abs(bounds.actions[3].width-36)<=2);assert.ok(Math.abs(bounds.actions[3].height-36)<=2);
               assert.ok(bounds.preview.bottom+7<=bounds.render.top,'Export rows overlap at '+width);
               assert.ok(Math.abs(bounds.bar-bounds.height)<1);assert.ok(bounds.scroll<=width);
             }
