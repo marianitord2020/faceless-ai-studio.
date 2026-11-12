@@ -84,6 +84,17 @@ jobs:
           console.log('Existing Worker calls upstream fetch:',/fetch\s*\(/.test(source));
           console.log('Existing Worker checks session cookies:',/cookie|session_id|session_token/i.test(source));
           console.log('Existing Worker has API prefix routing:',source.includes('/api/'));
+          // Confirm whether login serves the GitHub Pages frontend or redirects away from it.
+          const gitpos=source.indexOf('marianitord2020.github.io');
+          const githubContext=gitpos<0?'':source.slice(Math.max(0,gitpos-280),gitpos+150);
+          const proxyLikely=/fetch\s*\(/.test(githubContext);
+          const redirectLikely=/redirect\s*\(/i.test(githubContext);
+          const proxyApi=source.includes('x-app-token')&&source.includes('APP_PASSCODE')&&source.includes('/api/');
+          console.log('Frontend fetch/proxy near Github Pages:',proxyLikely);
+          console.log('Frontend redirect near Github Pages:',redirectLikely);
+          console.log('API gateway with server-side APP_PASSCODE likely:',proxyApi);
+          console.log('Access Worker uses Access-Control-Allow-Origin:',/Access-Control-Allow-Origin|access-control-allow-origin/i.test(source));
+
 
 
           NODE
