@@ -136,4 +136,22 @@
  const mode=document.querySelector('#discover .studio-models');
  const settings=get('studioVideoOptions')?.querySelector('.compact-options-body');
  if(mode&&settings)settings.prepend(mode);
+ // Guía visual de cuatro pasos: usa las pestañas originales, sin eliminar herramientas.
+ const editor=get('editor'),oldTabs=editor?.querySelector('.tabs');
+ if(oldTabs){
+  const steps=document.createElement('nav');steps.className='fc-steps';steps.setAttribute('aria-label','Pasos de edición');
+  steps.innerHTML='<button type="button" data-fc-step="narration" class="on"><b>1</b><span>Guion</span></button><button type="button" data-fc-step="scenes"><b>2</b><span>Escenas</span></button><button type="button" data-fc-step="style"><b>3</b><span>Estilo</span></button><button type="button" data-fc-step="video"><b>4</b><span>Generar</span></button>';
+  oldTabs.before(steps);
+  const more=document.createElement('details');more.className='fc-more-tabs';
+  const summary=document.createElement('summary');summary.textContent='Más herramientas: resumen, narración y subtítulos';
+  oldTabs.before(more);more.append(summary,oldTabs);
+  steps.addEventListener('click',e=>{
+   const step=e.target.closest('[data-fc-step]');if(!step)return;
+   const target=step.dataset.fcStep==='style'?'video':step.dataset.fcStep;
+   const tabButton=oldTabs.querySelector('button[data-tab="'+target+'"]');
+   if(tabButton){tabButton.click();steps.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b===step));}
+   if(step.dataset.fcStep==='video')setTimeout(()=>get('renderVideo')?.scrollIntoView({block:'nearest',behavior:'smooth'}),80);
+  });
+ }
+
 })();
