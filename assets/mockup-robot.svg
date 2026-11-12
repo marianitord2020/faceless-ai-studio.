@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 470 470"><defs>
+<radialGradient id="halo"><stop stop-color="#bf2aff" stop-opacity=".8"/><stop offset=".52" stop-color="#7c31ff" stop-opacity=".24"/><stop offset="1" stop-color="#12001b" stop-opacity="0"/></radialGradient>
+<linearGradient id="shell" x1="0" x2=".92" y1="0" y2="1"><stop stop-color="#faf4ff"/><stop offset=".22" stop-color="#b78afa"/><stop offset=".49" stop-color="#4e23ac"/><stop offset=".72" stop-color="#8e49ee"/><stop offset="1" stop-color="#2d176d"/></linearGradient>
+<linearGradient id="face" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#091330"/><stop offset="1" stop-color="#050a22"/></linearGradient>
+<linearGradient id="body" x1="0" y1="0" x2=".83" y2="1"><stop stop-color="#eee4ff"/><stop offset=".36" stop-color="#9846e8"/><stop offset=".7" stop-color="#36278d"/><stop offset="1" stop-color="#201044"/></linearGradient>
+<linearGradient id="clap" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#9a42ec"/><stop offset="1" stop-color="#1e0942"/></linearGradient>
+<filter id="glow"><feGaussianBlur stdDeviation="8"/></filter>
+<filter id="softShadow"><feGaussianBlur stdDeviation="4"/></filter>
+</defs>
+<ellipse cx="269" cy="228" rx="220" ry="218" fill="url(#halo)"/>
+<g stroke="#bc64ff" opacity=".5" stroke-width="2"><circle cx="349" cy="52" r="5"/><circle cx="66" cy="237" r="4"/><path d="M40 200l14 13 14-13-14-13z"/></g>
+<ellipse cx="282" cy="425" rx="155" ry="15" fill="#130326" opacity=".7" filter="url(#glow)"/>
+<!-- antenna -->
+<path d="M253 86L262 49" stroke="#b382ff" stroke-width="12" stroke-linecap="round"/><circle cx="264" cy="45" r="15" fill="#d46fff" stroke="#f0baff" stroke-width="5"/>
+<!-- arms -->
+<path d="M154 299Q112 297 109 340L140 389Q160 403 178 372L164 323Z" fill="url(#body)" stroke="#c88cff" stroke-width="5"/>
+<path d="M337 303Q381 295 399 340L381 385Q357 406 336 373Z" fill="url(#body)" stroke="#cf8bff" stroke-width="5"/>
+<!-- body -->
+<path d="M189 280Q258 260 338 284Q361 326 340 414Q258 453 185 409Q166 332 189 280Z" fill="url(#body)" stroke="#cfa5ff" stroke-width="7"/>
+<rect x="218" y="312" width="94" height="67" rx="17" fill="#070c25" stroke="#9d72fa" stroke-width="4"/>
+<path d="M261 331l29 15-29 16Z" fill="#f1a2ff" stroke="#e770ff" stroke-width="2"/>
+<!-- earphones -->
+<path d="M143 213Q126 95 240 82Q346 71 370 192" fill="none" stroke="#e4b9ff" stroke-width="21" stroke-linecap="round"/>
+<path d="M144 213Q130 104 240 95Q337 89 360 197" fill="none" stroke="#4d36af" stroke-width="12"/>
+<!-- helmet -->
+<path d="M129 168Q143 88 255 89Q345 88 357 183L353 269Q303 303 247 300Q171 297 143 267Z" fill="url(#shell)" stroke="#f1c7ff" stroke-width="7"/>
+<!-- front visor -->
+<rect x="155" y="140" width="181" height="132" rx="56" fill="url(#face)" stroke="#3f2a91" stroke-width="11"/>
+<path d="M176 166Q250 142 313 165" fill="none" stroke="#45e6ff" stroke-width="5" opacity=".5"/>
+<text x="246" y="229" font-family="system-ui,Arial,sans-serif" font-weight="800" font-size="58" text-anchor="middle" fill="#37eaff" filter="url(#glow)">IA</text>
+<text x="246" y="226" font-family="system-ui,Arial,sans-serif" font-weight="800" font-size="56" text-anchor="middle" fill="#a6ffff">IA</text>
+<!-- headphone cups -->
+<rect x="121" y="187" width="38" height="96" rx="18" fill="#6622cc" stroke="#e69aff" stroke-width="7"/><rect x="130" y="207" width="15" height="54" rx="7" fill="#26c9f1"/>
+<rect x="346" y="179" width="42" height="100" rx="20" fill="#6223be" stroke="#f49afc" stroke-width="7"/><rect x="358" y="204" width="15" height="50" rx="7" fill="#32cfff"/>
+<!-- clapperboard -->
+<g transform="translate(125 320) rotate(-8 80 70)">
+<rect x="5" y="23" width="160" height="96" rx="10" fill="url(#clap)" stroke="#d88af9" stroke-width="6"/>
+<rect x="4" y="0" width="162" height="31" rx="6" fill="#140820" stroke="#cb9aff" stroke-width="4"/>
+<g fill="#f4e6ff"><path d="M17 1h24L23 29H0Z"/><path d="M68 1h26L76 29H50Z"/><path d="M119 1h25L127 29h-25Z"/></g>
+<path d="M73 43l40 28-40 29Z" fill="#fa9bff" stroke="#ffb7ff" stroke-width="3"/>
+</g>
+</svg>
