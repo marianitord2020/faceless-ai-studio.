@@ -185,8 +185,14 @@ jobs:
             }));
             console.log('EXPORT STATUS:',result.status);
             if(!result.videoUrl || !result.filename || !result.filename.includes('.webm'))throw Error('No se creó el video con voz');
-            const downloadPromise=page.waitForEvent('download');
             await page.locator('#bocetoEditorNav [data-boceto-tab="exportar"]').click();
+            console.log('DOWNLOAD LINK DEBUG',await page.locator('#downloadArea a').evaluate(a=>({
+              href:a.href?.slice(0,170),download:a.download,connected:a.isConnected,
+              visible:getComputedStyle(a).display,box:a.getBoundingClientRect().toJSON(),
+              samePreview:a.href===window.previewURL,linkCount:document.querySelectorAll('#downloadArea a').length,
+              parentClass:a.parentElement?.className,view:document.getElementById('editor')?.dataset.bocetoView
+            })));
+            const downloadPromise=page.waitForEvent('download',{timeout:12000});
             await page.locator('#downloadArea a').click();
             const download=await downloadPromise;
             await download.saveAs('/tmp/faceless-audio-video.webm');
