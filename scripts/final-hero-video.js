@@ -131,7 +131,7 @@ function updatePanel(){
 function mount(){
  if(document.body.dataset.screen!=='editor')return;
  const p=project(),body=$('tabBody');if(!p||!body)return;
- const stage=body.querySelector('.compact-video-editor');
+ const stage=body.querySelector('.compact-video-editor, .cut-studio');
  if(!stage)return;
  if(body.querySelector('#finalHeroPanel')){loadStored(p);return;}
  const panel=document.createElement('section');panel.className='final-editor-panel final-hero-panel';panel.id='finalHeroPanel';
@@ -178,9 +178,9 @@ function mount(){
 // Reusable actual transition effects; all choices persist in the project.
 function mountTools(){
  if(document.body.dataset.screen!=='editor')return;
- const p=project(),body=$('tabBody');if(!p||!body||!body.querySelector('.compact-video-editor'))return;
+ const p=project(),body=$('tabBody');if(!p||!body||!body.querySelector('.compact-video-editor, .cut-studio'))return;
  if(body.querySelector('#finalTransitionPanel'))return;
- const host=body.querySelector('.compact-video-editor');
+ const host=body.querySelector('.compact-video-editor, .cut-studio');
  const wrap=document.createElement('section');wrap.id='finalTransitionPanel';wrap.className='final-editor-panel';
  const names={fade:'Fundido',slide:'Deslizamiento',zoom:'Zoom',spin:'Giro',light:'Luz',flash:'Flash'};
  wrap.innerHTML='<div class="final-editor-panel-head"><h3>Transiciones</h3><span>Entre escenas</span></div><div class="final-transition-grid">'+
