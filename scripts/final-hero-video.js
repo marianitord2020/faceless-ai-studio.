@@ -145,7 +145,7 @@ function mount(){
   '<button type="button" id="finalHeroAdd">▣ Subir / reemplazar clip</button><button type="button" id="finalHeroRemove" hidden>Eliminar clip</button></div>'+
   '<div class="final-hero-settings"><label>Duración del Hero Video <input id="finalHeroDuration" type="range" min="5" max="8" step=".5" value="6"><output id="finalHeroDurLabel">6 s</output></label>'+
   '<label>Inicio dentro del clip (s) <input id="finalHeroStart" type="range" min="0" max="0" step=".1" value="0"><output id="finalHeroStartLabel">0 s</output></label></div>'+
-  '<small>El clip ocupa la primera escena en la línea de tiempo. La voz del proyecto continúa sincronizada; el audio original del clip está silenciado.</small>';
+  '<small>El Hero ocupa los primeros 5–8 segundos y puede abarcar dos escenas. La narración y los subtítulos mantienen sus tiempos; se silencia el audio original del clip.</small>';
  const anchor=stage.querySelector('.fc-editor-stage')||stage.querySelector('.cut-studio')||stage.firstElementChild;
  if(anchor)anchor.before(panel);else stage.prepend(panel);
  const input=panel.querySelector('#finalHeroFile');
