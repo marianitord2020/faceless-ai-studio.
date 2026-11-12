@@ -59,7 +59,7 @@ function refresh(){
  $("finalGenerate").textContent=source==="manual"?"✎ Editar mis archivos":"✦ Generar 10 propuestas";
 }
 function openCreate(preset){
- if(preset){config.mode=preset[2];config.genre=preset[3];if(preset[2]==="news")config.topic="Noticias de República Dominicana hoy";}
+ if(preset){config.mode=preset[2];config.genre=preset[3];config.topic=preset[2]==="news"?"Noticias de República Dominicana hoy":"";}
  source="ai";refresh();routing("create");
 }
 home.addEventListener("click",e=>{const cat=e.target.closest("[data-final-category]");if(cat){openCreate(pictures.find(x=>x[0]===cat.dataset.finalCategory));return;}if(e.target.closest("[data-final-new]"))openCreate();});
@@ -104,7 +104,7 @@ const projectButton=projects.querySelector(".screen-head [data-route]");if(proje
 const projectSub=projects.querySelector(".screen-head p");if(projectSub)projectSub.textContent="Gestiona, continúa y edita tus videos.";
 const status=document.createElement("p");status.className="final-project-warning";status.textContent="Los proyectos se conservan en este navegador. Utiliza Respaldo para guardarlos.";projects.querySelector(".projects-grid")?.before(status);
 const projectsList=$("projectsList");let scheduled=false;
-const updateCards=()=>projectsList?.querySelectorAll(".project").forEach(card=>{const btn=card.querySelector('[data-project="open"]');if(btn)btn.textContent="▶ Continuar";});
+const updateCards=()=>projectsList?.querySelectorAll(".project").forEach(card=>{const btn=card.querySelector('[data-project="open"]');if(btn)btn.textContent="▶ Continuar";if(!card.querySelector(".final-project-art")){const id=card.dataset.coverProject;const p=typeof window.projects!=="undefined"?window.projects.find(x=>x.id===id):(typeof projects!=="undefined"?projects.find(x=>x.id===id):null);const art=document.createElement("img");art.className="final-project-art";art.loading="lazy";const img=p?.imageStyle==="anime"?"anime.svg":p?.imageStyle==="3d"?"3d.svg":p?.style==="Misterio"||p?.style==="Terror"?"mystery.webp":p?.style==="Historia"?"history-sample.webp":"cinematic.webp";art.src=assets+img;art.alt="Ilustración de categoría; no es una portada generada del proyecto";card.prepend(art);}});
 new MutationObserver(()=>{if(scheduled)return;scheduled=true;queueMicrotask(()=>{scheduled=false;updateCards();});}).observe(projectsList,{childList:true});updateCards();
 window.facelessVisualFinal={assets,styles,config};
 })();
