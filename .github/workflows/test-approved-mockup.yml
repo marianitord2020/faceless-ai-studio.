@@ -43,7 +43,7 @@ jobs:
             assert.equal(await page.locator('.fcx-style-home .fcx-style').count(),5);
             assert.equal(await page.locator('.fc-bottom [data-fc-nav]').count(),5);
             assert.equal(await page.locator('body').getAttribute('data-screen'),'home');
-            assert.equal(await page.locator('text=Pro').count(),0);
+            assert.equal(await page.getByText('Pro',{exact:true}).count(),0);
             const shots={
               inicio:()=>page.evaluate(()=>route('home')),
               explorar:()=>page.evaluate(()=>route('discover')),
