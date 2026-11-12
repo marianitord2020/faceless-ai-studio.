@@ -67,4 +67,15 @@ jobs:
           const flags=['github.com/login/oauth','github','client_id','client_secret','set-cookie','samesite','httponly','session','sqlite','DB.prepare','redirect_uri','github_callback','cors'].filter(x=>source.toLowerCase().includes(x.toLowerCase()));
           console.log('Possible access routes:',JSON.stringify(routes.slice(0,35)));
           console.log('Features present:',JSON.stringify(flags));
+          const paths=[...new Set([...source.matchAll(/\/(?:api|auth|login|register|logout|callback|verify|session)\/?[a-zA-Z0-9_-]*/g)].map(x=>x[0]))];
+          const sqlTables=[...new Set([...source.matchAll(/(?:FROM|INTO|UPDATE|TABLE(?:\s+IF\s+NOT\s+EXISTS)?)\s+["'\`]?([a-z_]{2,30})\b/gi)].map(x=>x[1].toLowerCase()))].filter(x=>!['if','not','exists'].includes(x));
+          const methods=[...new Set([...source.matchAll(/(?:GET|POST|PUT|PATCH|DELETE)\b/g)].map(x=>x[0]))];
+          const redirectToGithub=source.includes('marianitord2020.github.io');
+          const cookieFlags=['Strict','Lax','None','Secure','HttpOnly'].filter(x=>source.includes(x));
+          console.log('Access URL patterns:',JSON.stringify(paths.slice(0,30)));
+          console.log('SQL table names:',JSON.stringify(sqlTables.slice(0,25)));
+          console.log('HTTP methods mentioned:',JSON.stringify(methods));
+          console.log('Has existing GitHub Pages redirect:',redirectToGithub);
+          console.log('Cookie security flags present:',JSON.stringify(cookieFlags));
+
           NODE
