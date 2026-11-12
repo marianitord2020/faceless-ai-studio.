@@ -358,16 +358,16 @@ route('home');
     const status = document.getElementById('geminiStatus');
     const button = document.getElementById('geminiButton');
     const topic = document.getElementById('topic').value.trim();
-    const pass = document.getElementById('geminiPass').value.trim();
+    const pass = window.FacelessGateway.enabled?'':document.getElementById('geminiPass').value.trim();
     const mode = document.getElementById('scriptMode').value;
     if (topic.length < 5) { status.textContent = 'Escribe primero una consulta específica.'; return; }
-    if (pass.length < 16) { status.textContent = 'Escribe el mismo APP_PASSCODE que utilizas para fotos y voces.'; return; }
+    if (!window.FacelessGateway.enabled&&pass.length < 16) { status.textContent = 'Escribe el mismo APP_PASSCODE que utilizas para fotos y voces.'; return; }
     button.disabled = true;
     status.textContent = mode==='ficcion'
       ? 'Preparando la historia ficticia…'
       : 'Buscando fuentes reales sobre: «'+topic+'». Comprobando fechas y datos…';
     try {
-      const response = await fetch('https://faceless-images.marianitord2020.workers.dev/script', {
+      const response = await window.FacelessGateway.request('/script', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-app-token': pass },
         body: JSON.stringify({
@@ -413,5 +413,5 @@ route('home');
   };
 })();;
  
-</script><script src="scripts/video-progress.js?v=6"></script><script src="scripts/ai-photos.js?v=17"></script><script src="scripts/ai-voice.js?v=12"></script><script src="scripts/written-stories.js?v=1"></script><script src="scripts/cinematic-video.js?v=7"></script><script src="scripts/media-timing.js?v=4"></script><script src="scripts/manual-timing.js?v=2"></script><script src="scripts/local-speech.js?v=2"></script><script src="scripts/ai-client.js?v=1"></script><script src="scripts/stock-photos.js?v=4"></script><script src="scripts/media-editor.js?v=15"></script><script src="scripts/studio-menus.js?v=2"></script><script src="scripts/editor-layout.js?v=10"></script><script src="scripts/url-reader.js?v=2"></script><script src="scripts/discover.js?v=22"></script><script src="scripts/vendor/fix-webm-duration.js?v=1"></script><script src="scripts/video-export.js?v=4"></script><script src="scripts/own-video.js?v=4"></script><script src="scripts/scene-edit.js?v=1"></script><script src="scripts/manual-studio.js?v=2"></script><script src="scripts/flows.js?v=4"></script><script src="scripts/faceless-final.js?v=3"></script><script src="scripts/scene-motion.js?v=1"></script><script src="scripts/faceless-pages.js?v=2"></script><script src="scripts/approved-mockup.js?v=2"></script><script src="scripts/reference-interiors.js?v=2"></script><script src="scripts/boceto-pantallas.js?v=3"></script><script src="scripts/final-11-pantallas.js?v=5"></script><script src="scripts/final-hero-video.js?v=5"></script></body></html>
+</script><script src="scripts/gateway-access.js?v=1"></script><script src="scripts/video-progress.js?v=6"></script><script src="scripts/ai-photos.js?v=17"></script><script src="scripts/ai-voice.js?v=12"></script><script src="scripts/written-stories.js?v=1"></script><script src="scripts/cinematic-video.js?v=7"></script><script src="scripts/media-timing.js?v=4"></script><script src="scripts/manual-timing.js?v=2"></script><script src="scripts/local-speech.js?v=2"></script><script src="scripts/ai-client.js?v=1"></script><script src="scripts/stock-photos.js?v=4"></script><script src="scripts/media-editor.js?v=15"></script><script src="scripts/studio-menus.js?v=2"></script><script src="scripts/editor-layout.js?v=10"></script><script src="scripts/url-reader.js?v=2"></script><script src="scripts/discover.js?v=22"></script><script src="scripts/vendor/fix-webm-duration.js?v=1"></script><script src="scripts/video-export.js?v=4"></script><script src="scripts/own-video.js?v=4"></script><script src="scripts/scene-edit.js?v=1"></script><script src="scripts/manual-studio.js?v=2"></script><script src="scripts/flows.js?v=4"></script><script src="scripts/faceless-final.js?v=3"></script><script src="scripts/scene-motion.js?v=1"></script><script src="scripts/faceless-pages.js?v=2"></script><script src="scripts/approved-mockup.js?v=2"></script><script src="scripts/reference-interiors.js?v=2"></script><script src="scripts/boceto-pantallas.js?v=3"></script><script src="scripts/final-11-pantallas.js?v=5"></script><script src="scripts/final-hero-video.js?v=5"></script></body></html>
 
