@@ -109,6 +109,16 @@
     if(b.dataset.refTab==='subs')b.textContent='AA';
    });
  }
+ // El boceto muestra solo Guion y Escenas; las demás funciones siguen en Más herramientas.
+ if(editorTabs&&!editor.querySelector('.boceto-extra-tools')){
+  const details=document.createElement('details');details.className='boceto-extra-tools';
+  details.innerHTML='<summary>⚙ Más herramientas: Video y Subtítulos</summary>';
+  editorTabs.after(details);
+  for(const id of ['video','subs']){
+   const btn=editorTabs.querySelector('[data-ref-tab="'+id+'"]');
+   if(btn)details.append(btn);
+  }
+ }
  const hookVariants=(p)=>{
   const title=String(p.title||'').trim().replace(/[.!?]+$/,'').slice(0,115);
   return [
@@ -139,6 +149,11 @@
   });
   const old=tabBody.querySelector('.detail');
   old?.before(container);
+  if(old&&!old.closest('.boceto-script-advanced')){
+   const details=document.createElement('details');details.className='boceto-script-advanced';
+   const summary=document.createElement('summary');summary.textContent='✎ Editar la narración completa';
+   details.append(summary);old.before(details);details.append(old);
+  }
   const apply=()=>{
    const i=Number(container.querySelector('input:checked')?.value||0);
    const chosen=choices[i];p.selectedHook=chosen;p.hook=chosen;if(p.scenes[0])p.scenes[0].text=chosen;
@@ -163,8 +178,35 @@
   if(picture&&!picture.querySelector('.boceto-video-controls')){
    const bar=document.createElement('div');bar.className='boceto-video-controls';
    bar.innerHTML='<button type="button" aria-label="Abrir vista previa">▶</button><span></span><small>'+('0:00 / '+Math.floor(p.duration/60)+':'+String(Math.floor(p.duration%60)).padStart(2,'0'))+'</small>';
-   bar.querySelector('button').onclick=()=>nativeTabs?.querySelector('[data-tab="video"]')?.click();
+   bar.querySelector('button').onclick=()=>{
+    nativeTabs?.querySelector('[data-tab="video"]')?.click();
+    requestAnimationFrame(()=>el('previewVideo')?.click());
+   };
    picture.append(bar);
+   // Un fotograma REAL del motor de video: no sustituirlo por un cartel simulado.
+   const preview=document.createElement('canvas');preview.className='boceto-scene-preview';
+   preview.width=640;preview.height=360;
+   preview.setAttribute('aria-label','Fotograma del montaje del proyecto');
+   picture.prepend(preview);
+   const redraw=()=>{
+    const index=Number(scene.querySelector('.ref-scene-thumb.active')?.dataset.index||0);
+    const item=p.scenes[index];if(!item)return;
+    try{
+     if(typeof drawFrame!=='function'||typeof canvas==='undefined')return;
+     drawFrame(index,item.time+Math.min(1,item.duration*.25));
+     const c=preview.getContext('2d');if(!c)return;
+     c.fillStyle='#0b0719';c.fillRect(0,0,preview.width,preview.height);
+     const scale=Math.min(preview.width/canvas.width,preview.height/canvas.height);
+     const w=canvas.width*scale,h=canvas.height*scale;
+     c.drawImage(canvas,(preview.width-w)/2,(preview.height-h)/2,w,h);
+     const empty=picture.querySelector('.ref-media-empty');
+     const still=picture.querySelector('img');
+     if(empty)empty.hidden=true;if(still)still.hidden=true;
+     preview.dataset.ready='true';
+    }catch{}
+   };
+   scene.querySelector('.ref-timeline')?.addEventListener('click',()=>queueMicrotask(redraw));
+   redraw();
   }
  }
  function updateProjectCards(){
