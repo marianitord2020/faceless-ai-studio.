@@ -150,7 +150,7 @@ jobs:
             });
             await page.evaluate(bytes=>{audioFile=new File([new Uint8Array(bytes)],'voz-cinema.wav',{type:'audio/wav'});audioFileProjectId='cinema-fixture';updateAudioAttachmentUI();},Array.from(wav(3)));
             await page.locator('#renderVideo').click();
-            await page.waitForFunction(()=>!rendering&&document.querySelector('#downloadArea a'),{timeout:25000});
+            await page.waitForFunction(()=>!rendering&&document.querySelector('#downloadArea a'),null,{timeout:25000}).catch(async error=>{console.log('CINEMA EXPORT DIAGNOSTIC',await page.evaluate(()=>({status:document.getElementById('renderStatus')?.textContent,rendering,alignment:current()?.audioAlignment,source:document.getElementById('videoResult')?.src,mediaBusy:window.facelessMediaBusy,download:document.getElementById('downloadArea')?.textContent})));throw error;});
             const cinemaDownload=page.waitForEvent('download');await page.locator('#downloadArea a').click();await (await cinemaDownload).saveAs('/tmp/faceless-cinema.webm');
             assert.deepEqual(errors,[]);
             console.log('PASS: actual canvas photo motion and short video export with narration');
