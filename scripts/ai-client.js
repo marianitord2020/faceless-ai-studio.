@@ -3,7 +3,8 @@
  'use strict';
  const base='https://faceless-images.marianitord2020.workers.dev';
  async function call(path,token,body,signal,type='application/json'){
-  if(typeof token!=='string'||token.length<16)throw Error('Introduce el código privado de la aplicación, no una API Key.');
+  token=window.facelessAccess?.current()||token;
+   if(typeof token!=='string'||token.length<16)throw Error('Autoriza Faceless una vez desde Crear para utilizar los servicios de IA.');
   const response=await fetch(base+path,{method:'POST',headers:{'content-type':type,'x-app-token':token},body:type==='application/json'?JSON.stringify(body):body,signal});
   let result;try{result=await response.json()}catch{throw Error('El servidor devolvió una respuesta no válida.');}
   if(!response.ok){const error=Error(result.error||'No se pudo completar la petición.');error.status=response.status;throw error;}
