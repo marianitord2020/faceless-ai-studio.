@@ -4,7 +4,8 @@
 const $=id=>document.getElementById(id);
 const discover=$('discover'),editor=$('editor'),projectsPage=$('projects'),create=$('create');
 if(!discover||!editor||!projectsPage||!create)return;
-const mock=name=>'assets/mockup/'+name;
+const assetRoot=new URL('../assets/mockup/',document.currentScript.src).pathname;
+const mock=name=>assetRoot+name;
 const prefersMotion=()=>!window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const selectChange=(el,val)=>{
  if(!el||!Array.from(el.options||[]).some(o=>o.value===val))return;
