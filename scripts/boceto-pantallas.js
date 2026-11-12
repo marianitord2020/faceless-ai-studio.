@@ -80,6 +80,8 @@
   filters.innerHTML='<label><span>▦ &nbsp; Período</span><select id="bocetoNewsPeriod"><option value="24">Últimas 24 horas</option><option value="72">Últimos 3 días</option><option value="168">Últimos 7 días</option></select></label>'+
   '<label><span>≡ &nbsp; Orden</span><select id="bocetoNewsOrder"><option value="recent">Más recientes</option><option value="relevant">Más relevantes</option></select></label>';
   const after=newsMenu.querySelector('.ref-news-categories');
+  const topicField=newsMenu.querySelector('.compact-story');
+  if(after&&topicField)after.before(topicField); // Buscador antes de los temas, igual que el boceto.
   if(after)after.after(filters);else newsMenu.append(filters);
   const realTopic=el('studioTopic');
   const submit=el('studioGenerate');
