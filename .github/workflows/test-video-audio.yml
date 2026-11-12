@@ -1,5 +1,14 @@
 name: Probar video con voz integrada
 on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'scripts/faceless-pages.js'
+      - 'scripts/final-11-pantallas.js'
+      - 'scripts/final-hero-video.js'
+      - 'styles/final-11-pantallas.css'
+      - 'scripts/approved-mockup.js'
+      - '.github/workflows/test-video-audio.yml'
   workflow_dispatch:
   push:
     branches: [main]
