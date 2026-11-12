@@ -91,3 +91,5 @@ body.editor-mode #editor .editor-hero,#editor .tabs,#editor .editor-video-card{b
   body[data-screen="discover"] .main,
   body[data-screen="editor"] .main{padding-bottom:86px}
 }
+
+#discover .fc-news-more{display:block;grid-column:1/-1;width:100%;min-height:52px;border:1px solid #944fea;border-radius:14px;background:#32174d;color:#f8eeff;font-size:14px;font-weight:850;cursor:pointer;margin:10px 0 25px}#discover .fc-news-more:disabled{opacity:.7;cursor:wait}
