@@ -216,7 +216,7 @@ body .topbar .bar .final-account{flex:0 0 39px;width:39px;height:39px;border-rad
   width:min(530px,calc(100% - 16px))!important;
   bottom:70px!important;
   grid-template-rows:44px 48px!important;
-  gap:3px!important;
+  gap:8px!important;
   padding:5px 10px 7px!important;
   border:1px solid #6b3f86!important;
   border-radius:16px!important;
