@@ -24,7 +24,7 @@
   const credits=el('div','', 'stock-credits'),copyButton=el('button','Copiar créditos de las fotos','btn small');copyButton.type='button';
   root.append(status,grid,more,note,copyButton,credits);slots.after(root);
   let page=1,ticket=0,controller,loading=false;
-  const token=()=>pass.value.trim()||document.getElementById('productionPass')?.value.trim()||(typeof facelessImagePasscode!=='undefined'?facelessImagePasscode:'')||(typeof facelessVoicePassword!=='undefined'?facelessVoicePassword:'');
+  const token=()=>window.facelessAccess?.current()||pass.value.trim()||document.getElementById('productionPass')?.value.trim()||(typeof facelessImagePasscode!=='undefined'?facelessImagePasscode:'')||(typeof facelessVoicePassword!=='undefined'?facelessVoicePassword:'');
   function textCredits(){return project.scenes.flatMap((s,i)=>s.stockCredit?['Escena '+(i+1)+': '+(s.stockCredit.title||'Foto')+' — '+(s.stockCredit.author||'Autor no indicado')+' · '+s.stockCredit.provider+' · '+s.stockCredit.sourceURL+' · '+s.stockCredit.license+' '+s.stockCredit.licenseURL]:[]).join('\n');}
   function refreshCredits(){credits.replaceChildren();project.scenes.forEach((s,i)=>{if(!s.stockCredit)return;const c=s.stockCredit,p=el('p');p.append(document.createTextNode('Escena '+(i+1)+' · '+(c.author||'Autor no indicado')+' · '),link(c.provider,c.sourceURL),document.createTextNode(' · '),link(c.license,c.licenseURL));credits.append(p);});copyButton.disabled=!textCredits();}
   copyButton.onclick=()=>copy(textCredits());refreshCredits();window.facelessRefreshStockCredits=()=>{if(root.isConnected)refreshCredits();};
