@@ -137,3 +137,16 @@ body .footer{display:none!important}
  #projects .screen-head .btn{max-width:120px}
 }
 @media(prefers-reduced-motion:reduce){.final-primary{transition:none}}
+
+
+/* Ajustes finales del boceto: marca, perfil y pantallas de propuestas separadas. */
+body .topbar .brand{display:flex;align-items:center;gap:9px}
+body .topbar .brand .final-brand-icon{width:36px;height:36px;display:block;object-fit:contain;filter:drop-shadow(0 0 8px #b42afe78)}
+body .topbar .bar .final-account{flex:0 0 39px;width:39px;height:39px;border-radius:50%;background:linear-gradient(120deg,#3b2457,#241332);border:1px solid #644384;font-size:24px;color:#fff;display:grid;place-items:center;padding:0}
+#discover[data-final-stage="propuestas"] .studio-feature{display:none!important}
+#discover[data-final-stage="propuestas"] .studio-results-layout{display:block!important}
+#discover[data-final-stage="propuestas"] #studioCards{display:flex!important;flex-direction:column;gap:8px}
+#discover[data-final-stage="propuestas"] .studio-card{display:flex!important;align-items:center!important;gap:12px!important;padding:8px!important}
+#discover[data-final-stage="propuestas"] .studio-card-visual{width:98px!important;max-width:98px!important;min-width:98px!important;height:76px!important;min-height:76px!important;flex:0 0 98px!important;overflow:hidden!important}
+#discover[data-final-stage="ganchos"] .studio-results-head,#discover[data-final-stage="ganchos"] #studioBackToMenu{display:none!important}
+#discover[data-final-stage="ganchos"] .studio-feature{display:block!important}
