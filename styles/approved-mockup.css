@@ -165,3 +165,11 @@ body .fc-bottom button[aria-current=page]{color:#fff!important;background:linear
 
 /* The standard legacy return control is redundant with the new explorer arrow. */
 body.studio-mode #discoverFlowBack{display:none!important}
+
+/* El Guardar redondo nunca baja a una segunda línea en Android. */
+@media(max-width:760px){
+ #editor .editor-top .actions{display:flex!important;flex-wrap:nowrap!important;gap:5px!important;width:100%;align-items:center}
+ #editor .editor-top .actions .btn{flex:1 1 0;min-width:0!important;font-size:10px!important;padding:7px 2px!important;white-space:nowrap!important;text-align:center;min-height:38px!important}
+ #editor .editor-top .actions #saveProject{flex:0 0 37px!important;width:37px!important;max-width:37px!important;min-width:37px!important;height:37px!important;border-radius:100px!important;background:#168958!important;border:1px solid #70dfad!important;box-shadow:0 0 11px #1cba787a!important}
+ #editor .fcx-editor-style{margin-top:8px}
+}
