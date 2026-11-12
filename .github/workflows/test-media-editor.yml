@@ -1,5 +1,14 @@
 name: Verificar fotos individuales y sincronización de audio
 on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'scripts/faceless-pages.js'
+      - 'scripts/final-11-pantallas.js'
+      - 'scripts/final-hero-video.js'
+      - 'styles/final-11-pantallas.css'
+      - 'scripts/approved-mockup.js'
+      - '.github/workflows/test-media-editor.yml'
   workflow_dispatch:
   push:
     branches: [main]
