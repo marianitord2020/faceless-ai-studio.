@@ -257,3 +257,32 @@ body[data-screen="projects"] .main{padding-bottom:98px!important}
 @media(prefers-reduced-motion:reduce){
  #discover button,#editor button,#create button,#projects button{transition:none}
 }
+
+/* Lista de noticias: buscador y filtros también visibles después de la búsqueda. */
+#discover .ref-news-results-toolbar{display:none}
+#discover.ref-news .ref-news-results-toolbar{display:block;margin-bottom:12px}
+#discover.ref-news[data-ref-detail="true"] .ref-news-results-toolbar{display:none!important}
+#discover.ref-news .studio-results-head{display:none!important}
+#discover .ref-news-results-title{display:grid;grid-template-columns:35px 1fr 80px;align-items:center;gap:6px;padding:5px 0 13px}
+#discover .ref-news-results-title button{font-size:33px;color:white;background:none;border:0}
+#discover .ref-news-results-title strong{font-size:23px;font-weight:850;text-align:center}
+#discover .ref-news-results-title small{font-size:10px;color:#cca3e5;font-weight:760;text-align:right}
+#discover .ref-news-results-search{display:flex;gap:8px;align-items:center;background:#332a41;border:1px solid #614d75;border-radius:13px;padding:4px 8px;min-height:48px}
+#discover .ref-news-results-search span{color:#d9c3e9;font-size:25px;line-height:1}
+#discover .ref-news-results-search input{flex:1;min-width:0;background:transparent;color:white;border:0;outline:0;padding:7px 0;font-size:12px}
+#discover .ref-news-results-search button{background:linear-gradient(135deg,#a62dea,#6c1fc1);border:1px solid #bb71fa;border-radius:9px;color:#fff;padding:8px;font-size:11px}
+#discover .ref-news-results-tags{display:flex;flex-wrap:wrap;gap:6px;margin:11px 0 16px}
+#discover .ref-news-results-tags button{background:#181324;border:1px solid #554071;border-radius:22px;color:#ecddfa;font-size:11px;padding:8px 11px}
+#discover .ref-news-results-tags button:active{background:linear-gradient(120deg,#a02adb,#5129a5)}
+#discover.ref-news .studio-card-text small:not(.ref-card-meta){display:none}
+#discover.ref-news .studio-card-text .chip{display:none!important}
+#discover.ref-news .studio-card-text small.ref-card-meta{display:block!important;color:#a99bb7!important;font-size:11px!important;line-height:1.35!important}
+#projects .project:has(.studio-project-cover) .fc-project-thumb{display:none!important}
+#projects .project .studio-project-cover{
+ grid-column:1;grid-row:1/span 5;width:100%!important;height:100%!important;
+ min-height:103px!important;margin:0!important;max-height:none!important;
+ border-radius:11px!important;object-fit:cover}
+@media(max-width:370px){
+ #discover .ref-news-results-title strong{font-size:19px}
+ #discover .ref-news-results-tags button{padding:7px 9px;font-size:10px}
+}
