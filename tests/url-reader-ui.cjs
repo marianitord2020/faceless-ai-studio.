@@ -10,7 +10,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
   return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({title:'El relato original',author:'Autor original',language:'es',text:original,characters:original.length,sourceURL:input.url})});
  });
  await page.goto('http://127.0.0.1:4173/');await page.waitForFunction(()=>window.facelessStudioReady);
- await page.locator('#home [data-flow="ai"]').click();
+ await page.evaluate(()=>{route('discover');window.facelessShowStudioMenu?.();});
  await page.locator('#studioSource').selectOption('local');
  await page.locator('#studioWrittenUrl').fill('https://example.org/story');
  await page.locator('#studioUrlAccess').waitFor({state:'visible'});
