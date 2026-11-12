@@ -48,3 +48,23 @@ jobs:
           console.log('Cloudflare D1 database list accessible:',d.success===true);
           console.log('D1 database names:',JSON.stringify(databases.map(b=>b.name).filter(Boolean).slice(0,35)));
           NODE
+
+      - name: Identificar rutas y mecanismo de inicio de sesion sin revelar el codigo
+        shell: bash
+        run: |
+          if [ -z "$CLOUDFLARE_ACCOUNT_ID" ] || [ -z "$CLOUDFLARE_API_TOKEN" ]; then exit 0; fi
+          HOST="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID"
+          code=$(curl --silent --max-time 20 --output /tmp/access-source.raw \
+            --write-out '%{http_code}' \
+            --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "$HOST/workers/scripts/faceless-access-prueba") || code=network_error
+          echo "Access Worker source retrieval HTTP $code"
+          if [ "$code" != 200 ]; then exit 0; fi
+          node <<'NODE'
+          const fs=require('node:fs');
+          const source=fs.readFileSync('/tmp/access-source.raw','utf8');
+          const routes=[...new Set([...source.matchAll(/['"](\/(?:login|logout|auth|callback|session|api|verify|health|github|register|signin|signup)[-a-zA-Z0-9_\/]*)(?:\?[^'"]*)?['"]/g)].map(x=>x[1]))];
+          const flags=['github.com/login/oauth','github','client_id','client_secret','set-cookie','samesite','httponly','session','sqlite','DB.prepare','redirect_uri','github_callback','cors'].filter(x=>source.toLowerCase().includes(x.toLowerCase()));
+          console.log('Possible access routes:',JSON.stringify(routes.slice(0,35)));
+          console.log('Features present:',JSON.stringify(flags));
+          NODE
