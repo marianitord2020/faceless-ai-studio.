@@ -1,0 +1,50 @@
+name: Diagnostico seguro del acceso Cloudflare y D1
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/inspect-access-worker.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Estado HTTP sin mostrar contenidos o credenciales
+        shell: bash
+        run: |
+          HOST='https://faceless-access-prueba.marianitord2020.workers.dev'
+          for route in / /auth/session /login /health; do
+            result=$(curl --silent --output /dev/null --max-time 10 --write-out '%{http_code}' "$HOST$route" || true)
+            echo "Access Worker endpoint $route returned HTTP $result"
+          done
+      - name: Consultar metadatos de Worker y enlaces D1 (solo lectura)
+        shell: bash
+        run: |
+          if [ -z "$CLOUDFLARE_ACCOUNT_ID" ] || [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "Cloudflare GitHub Actions credentials unavailable"
+            exit 0
+          fi
+          HOST="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID"
+          curl --silent --max-time 20 --output /tmp/worker-settings.json \
+            --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "$HOST/workers/scripts/faceless-access-prueba/settings" || true
+          curl --silent --max-time 20 --output /tmp/d1-metadata.json \
+            --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "$HOST/d1/database?per_page=100" || true
+          node <<'NODE'
+          const fs=require('node:fs');
+          const read=f=>{try{return JSON.parse(fs.readFileSync(f,'utf8'))}catch{return {}}};
+          const w=read('/tmp/worker-settings.json');
+          const bindings=Array.isArray(w.result?.bindings)?w.result.bindings:[];
+          const d=read('/tmp/d1-metadata.json');
+          const databases=Array.isArray(d.result)?d.result:[];
+          console.log('Access Worker settings accessible:',w.success===true);
+          console.log('D1 binding names:',JSON.stringify(bindings.filter(b=>b.type==='d1').map(b=>b.name)));
+          console.log('Cloudflare D1 database list accessible:',d.success===true);
+          console.log('D1 database names:',JSON.stringify(databases.map(b=>b.name).filter(Boolean).slice(0,35)));
+          NODE
