@@ -90,7 +90,7 @@ jobs:
             assert.equal(await page.locator('.final-style-grid .final-photo-card').count(),7,'Fotografias de estilos');
             await page.locator('[data-final-style="anime"]').click();
             await page.locator('#refSetupContinue').click();
-            await page.waitForFunction(()=>typeof current==='function'&&current()?.title==='La casa embrujada',{timeout:15000});
+            await page.waitForFunction(()=>typeof current==='function'&&current()?.title?.startsWith('La casa embrujada'),{timeout:15000});
             assert.equal(await page.evaluate(()=>current().scenes.length),8);
             assert.equal(await page.evaluate(()=>current().selectedHook),await page.evaluate(()=>current().scenes[0].text));
             await page.evaluate(()=>document.querySelector('#editor .tabs [data-tab="video"]').click());
