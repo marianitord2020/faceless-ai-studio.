@@ -295,7 +295,7 @@ jobs:
                 reject(new Error('La prueba no inició la petición de voz en 15 segundos'));
               },15000);
             })]);clearTimeout(voiceTimer);
-            await page.locator('[data-fc-nav="projects"]').first().click();
+            await page.evaluate(()=>route('projects'));
             await page.evaluate(()=>document.querySelector('[data-tab="scenes"]').click());
             if(await page.evaluate(()=>document.querySelector('.screen:not(.hidden)').id!=='editor'||tab!=='video'))
               throw Error('La navegación interrumpió una generación de voz activa');
