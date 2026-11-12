@@ -63,12 +63,14 @@ window.facelessCompactVideoEditor = function (project) {
   const tooltip=document.createElement('span');tooltip.className='editor-tooltip';tooltip.hidden=true;tooltip.id='editorPhotoHelp';tooltip.textContent='Una imagen por escena. Se usa la cuota disponible del proveedor conectado. Los retratos históricos son recreaciones. Guarda una copia de tus fotos.';
   help.setAttribute('aria-controls',tooltip.id);help.title=tooltip.textContent;help.onclick=()=>{tooltip.hidden=!tooltip.hidden;help.setAttribute('aria-expanded',String(!tooltip.hidden));};panels[1].querySelector('.editor-card-heading').append(help);panels[1].querySelector('.editor-card-heading').after(tooltip);
   const code=byId('productionPass');
-  code.value=window.facelessProductionPasscode||(typeof facelessImagePasscode==='string'?facelessImagePasscode:'')||(typeof facelessVoicePassword==='string'?facelessVoicePassword:'')||'';
+  code.value=window.facelessAccess?.current()||window.facelessProductionPasscode||(typeof facelessImagePasscode==='string'?facelessImagePasscode:'')||(typeof facelessVoicePassword==='string'?facelessVoicePassword:'')||'';
   const shareCode=()=>{['aiPhotosPasscode','aiVoicePasscode'].forEach(id=>{byId(id).value=code.value;});};code.addEventListener('input',shareCode);shareCode();
   ['productionStart','aiPhotosStart','aiVoiceGenerate'].forEach(id=>{
     const button=byId(id), original=button.onclick;
     button.onclick=async function(event,options){
+      const saved=window.facelessAccess?.current();if(saved&&code.value!==saved)code.value=saved;
       shareCode();
+      if(!saved&&code.value.trim().length>=16)void window.facelessAccess?.authorize(code.value.trim()).catch(()=>{});
       if(!options?.showProgress&&code.value.trim().length<16){custom[0].open=true;advanced.open=true;code.focus();byId('productionStatus').textContent='Introduce tu código privado.';return;}
       return original.call(this,event,options);
     };
