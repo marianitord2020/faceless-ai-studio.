@@ -46,7 +46,7 @@ newScreen.innerHTML='<h1>Tu próximo video</h1><div class="final-number"><b>1</b
 '<label>Duración<select id="finalDuration"><option value="30">30 segundos</option><option value="60">60 segundos</option><option value="120">120 segundos</option></select></label>'+
 '<label>Voz<select id="finalVoice"><option value="automatic">Automática</option><option value="female">Femenina</option><option value="male">Masculina</option></select></label>'+
 '<label>Formato<select id="finalFormat"><option value="9:16">Vertical 9:16</option><option value="16:9">Horizontal 16:9</option></select></label></details>'+
-'<details id="finalAccess" class="final-access" hidden><summary>Acceso seguro para generar con IA</summary><p>Tu servidor solicita un código privado. Introdúcelo aquí una sola vez por sesión; nunca lo guardaremos en GitHub ni en el almacenamiento local.</p><label for="finalAccessCode">Código privado de Cloudflare</label><input type="password" id="finalAccessCode" autocomplete="off" minlength="16" placeholder="Código de acceso (16 caracteres o más)"></details>'+'<button type="button" class="final-primary" id="finalGenerate">✦ Generar 10 propuestas</button><p class="final-note" id="finalNote" aria-live="polite"></p>';
+'<details id="finalAccess" class="final-access" hidden><summary>Acceso seguro para generar con IA</summary><p>Tu servidor solicita un código privado. Introdúcelo una sola vez en este dispositivo. Cloudflare guardará la clave maestra; el navegador conservará únicamente una autorización temporal y renovable.</p><label for="finalAccessCode">Código privado de Cloudflare</label><input type="password" id="finalAccessCode" autocomplete="off" minlength="16" placeholder="Código de acceso (16 caracteres o más)"></details>'+'<button type="button" class="final-primary" id="finalGenerate">✦ Generar 10 propuestas</button><p class="final-note" id="finalNote" aria-live="polite"></p>';
 create.prepend(newScreen);
 let source="ai";
 function refresh(){
@@ -73,7 +73,7 @@ $("finalTopic").addEventListener("input",e=>config.topic=e.target.value);
 $("finalDuration").onchange=e=>{config.duration=Number(e.target.value);refresh();};
 $("finalVoice").onchange=e=>config.voice=e.target.value;
 $("finalFormat").onchange=e=>config.format=e.target.value;
-$("finalGenerate").onclick=()=>{
+$("finalGenerate").onclick=async()=>{
  if(source==="manual"){window.location.href=appRoot+"editar-sin-ia/";return;}
  const categoryTopics={
   Romance:"Historias de amor y reencuentros",Misterio:"Misterios y secretos de un pueblo",
@@ -89,18 +89,30 @@ $("finalGenerate").onclick=()=>{
  const topic=typedTopic.length>=5?typedTopic:typedTopic?typedTopic+" — "+selectedCategory:selectedCategory;
  const note=$("finalNote");note.textContent="";
  const auth=$("finalAccess"),privateInput=$("finalAccessCode"),serviceInput=$("studioPass");
- const token=[serviceInput?.value,window.facelessProductionPasscode,privateInput.value].find(value=>typeof value==="string"&&value.trim().length>=16)?.trim()||"";
- if(token.length<16){
+ const activeSession=window.facelessAccess?.current()||"";
+ const entered=activeSession||privateInput.value.trim()||serviceInput?.value.trim()||window.facelessProductionPasscode||"";
+ if(entered.length<16){
   auth.hidden=false;auth.open=true;
-  note.textContent="Para crear propuestas con tus IA, primero autoriza el acceso al servidor.";
+  note.textContent="Autoriza el acceso una sola vez en este dispositivo; la sesión se reutilizará para fotos, audio y guiones.";
   privateInput.focus();return;
  }
+ const start=$("finalGenerate");start.disabled=true;
+ let token;
+ try{
+  token=await window.facelessAccess.authorize(entered);
+ }catch(error){
+  auth.hidden=false;auth.open=true;
+  note.textContent=String(error?.message||error);
+  start.disabled=false;return;
+ }
+ start.disabled=false;
+ privateInput.value="";
+ window.facelessAccess.distribute(token);
  if(serviceInput){
   serviceInput.value=token;
   serviceInput.setCustomValidity("");
   serviceInput.dispatchEvent(new Event("input",{bubbles:true}));
  }
- window.facelessProductionPasscode=token;
  auth.open=false;auth.hidden=true;
  window.facelessFlow="ai";document.body.dataset.flow="ai";
  select("studioMode",config.mode);select("studioGenre",config.genre);
