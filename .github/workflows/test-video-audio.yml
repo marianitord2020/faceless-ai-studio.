@@ -103,6 +103,7 @@ jobs:
               window.open=()=>{throw new Error('Popup blocked');};
               HTMLDialogElement.prototype.showModal=()=>{throw new Error('Dialog unavailable');};
             });
+            await page.locator('#bocetoEditorNav [data-boceto-tab="exportar"]').click();
             await page.locator('#renderVideo').click();
             const progress=page.getByRole('dialog');
             await progress.getByLabel('Código privado').waitFor({state:'visible'});
@@ -225,6 +226,7 @@ jobs:
             });
             await reveal('#productionPass');
             await page.locator('#productionPass').fill('ci-fixture-passcode-only');
+            await page.locator('#bocetoEditorNav [data-boceto-tab="video"]').click();
             await page.locator('#productionStart').click();
             await page.waitForFunction(()=>!window.facelessProductionBusy && document.getElementById('productionStatus').textContent.includes('reutilizarán'));
             const retained=await page.evaluate(()=>facelessProjectPhotos('ci-complete').size);
