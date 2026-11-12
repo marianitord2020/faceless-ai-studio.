@@ -186,7 +186,7 @@
       '<header><h3>Exportar video</h3><p>Elige el formato y descarga el montaje completo.</p></header>');
     exportCard.append(settings,tools);
     if(status)exportCard.append(status);
-    const download=root.querySelector('#downloadArea');if(download)exportCard.append(download);
+    const download=$('downloadArea');if(download)exportCard.append(download);
     const extras=document.createElement('details');
     extras.className='boceto-extra-media';
     extras.innerHTML='<summary>＋ Añadir mis fotos, audio o recursos</summary>';
