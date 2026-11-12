@@ -175,6 +175,7 @@ jobs:
             await page.evaluate(bytes=>{audioFile=new File([new Uint8Array(bytes)],'voz-cinema.wav',{type:'audio/wav'});audioFileProjectId='cinema-fixture';const p=current();Object.assign(p,FacelessTiming.estimated(p,3));p.audioAlignment.method='tts-estimated';audioFile.facelessSignature=facelessVoiceSignature(p);updateAudioAttachmentUI();},Array.from(wav(3)));
             await page.evaluate(()=>renderVideo({format:'webm'}));
             await page.waitForFunction(()=>!rendering&&document.querySelector('#downloadArea a'),null,{timeout:25000}).catch(async error=>{console.log('CINEMA EXPORT DIAGNOSTIC',await page.evaluate(()=>({status:document.getElementById('renderStatus')?.textContent,rendering,alignment:current()?.audioAlignment,source:document.getElementById('videoResult')?.src,mediaBusy:window.facelessMediaBusy,download:document.getElementById('downloadArea')?.textContent})));throw error;});
+            await page.locator('#bocetoEditorNav [data-boceto-tab="exportar"]').click();
             const cinemaDownload=page.waitForEvent('download');await page.locator('#downloadArea a').click();await (await cinemaDownload).saveAs('/tmp/faceless-cinema.webm');
             assert.deepEqual(errors,[]);
             console.log('PASS: actual canvas photo motion and short video export with narration');
@@ -185,6 +186,7 @@ jobs:
               facelessRequestVoice=async text=>({dataURI:'data:audio/wav;base64,'+clips[text.startsWith('Hola')?0:1],provider:'Test fixture'});
               window.facelessRecognizeLocal=async()=>[{word:'Hola',start:.1,end:.4},{word:'Lola',start:.5,end:.9},{word:'Grace',start:1.1,end:1.8},{word:'vuelve',start:2,end:2.8}];
             },[wav(1).toString('base64'),wav(2).toString('base64')]);
+            await page.locator('#bocetoEditorNav [data-boceto-tab="video"]').click();
             await reveal('#aiVoiceGenerate');
             await page.evaluate(()=>{document.getElementById('productionPass').value='fixture-passcode-for-ui';document.getElementById('aiVoicePasscode').value='fixture-passcode-for-ui';});
             await page.locator('#aiVoiceGenerate').click();
