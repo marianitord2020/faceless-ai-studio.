@@ -33,7 +33,14 @@ body[data-screen="editor"] .topbar .bar{max-width:1160px!important}
 #editor .boceto-editor-main{grid-area:main;min-width:0;display:flex;flex-direction:column;gap:13px}
 #editor .boceto-editor-sidebar{grid-area:aside;min-width:0;display:flex;flex-direction:column;gap:13px}
 #editor .boceto-export-card{grid-area:export;min-width:0;display:none;gap:12px;flex-direction:column}
-#editor .boceto-workspace-hidden{display:none!important}
+#editor .boceto-extra-media{margin-top:0;border:1px solid #684382;border-radius:14px;background:#1d122c;padding:9px 12px}
+#editor .boceto-extra-media>summary{list-style:none;cursor:pointer;font-size:12px;font-weight:750;color:#d7b7e8;padding:8px 3px}
+#editor .boceto-extra-media>summary:after{content:" ▾"}
+#editor .boceto-extra-media[open]>summary:after{content:" ▴"}
+#editor .boceto-extra-media #manualInfrastructure{display:block!important;position:static!important}
+#editor .boceto-extra-media #manualInfrastructure[hidden]{display:none!important}
+#editor .boceto-extra-media #manualInfrastructure .media-upload-group{margin:9px 0}
+#editor .boceto-extra-media #manualInfrastructure button{max-width:100%}
 #editor .boceto-player,#editor .boceto-timeline-card,#editor .boceto-hero-card,
 #editor .boceto-ai-card,#editor .boceto-style-card,#editor .boceto-voice-card,
 #editor .boceto-subtitle-card,#editor .boceto-transitions-card,#editor .boceto-export-card{
