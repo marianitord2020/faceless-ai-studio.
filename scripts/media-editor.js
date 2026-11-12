@@ -92,7 +92,7 @@
     id('aiVoiceAudioArea')?.replaceChildren();
     if(!p.audioBaseTimeline)p.audioBaseTimeline={duration:p.duration,scenes:p.scenes.map(s=>({time:s.time,duration:s.duration}))};
     if(p.scenes.every(scene=>String(scene.text||'').trim()))applyTiming(p,FacelessTiming.estimated(p,decoded.duration));
-    delete p.subtitleTextSignature;delete p.audioAlignment;await saveAudio(p,file);updatePreview();
+    /* Conservar los tiempos estimados hasta que el reconocimiento confirme una alineación exacta. */ await saveAudio(p,file);updatePreview();
     status.textContent='Audio añadido. Preparando reconocimiento con IA…';
     try{await sync(file,decoded)}catch(error){status.textContent=String(error.message||error)+' El audio está guardado. Pulsa Sincronizar con IA local para reintentar antes de exportar.'}
    }catch(error){status.textContent=String(error.message||error)}finally{busy(false);photoRefresh(p.id);updateAudioAttachmentUI();id('audio').value=''}
