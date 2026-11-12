@@ -93,6 +93,14 @@ jobs:
           console.log('Frontend fetch/proxy near Github Pages:',proxyLikely);
           console.log('Frontend redirect near Github Pages:',redirectLikely);
           console.log('API gateway with server-side APP_PASSCODE likely:',proxyApi);
+          for (const [first,last] of [[94,110],[133,150]]){
+            for(let j=first-1;j<Math.min(last,source.split('\n').length);j++){
+              const original=source.split('\n')[j].trim();
+              const safe=original.replace(/(["'\x60])[^"'\x60]{30,}\1/g,"'[redacted literal]'");
+              console.log('GATEWAY_STRUCTURE',j+1,safe.slice(0,240));
+            }
+          }
+
           console.log('Access Worker uses Access-Control-Allow-Origin:',/Access-Control-Allow-Origin|access-control-allow-origin/i.test(source));
           const pathLines=source.split('\n');
           // Only show structural lines of access/redirect logic, with sensitive SQL and tokens omitted.
