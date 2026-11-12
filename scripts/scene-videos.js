@@ -122,7 +122,7 @@
      const saved=await facelessMediaGet(key(p.id,index));
      if(!saved?.blob)continue;
      const item=await prepare(saved.blob);
-     if(!p.scenes[index]||m.has(index)){dispose(item);continue;}
+     if(!p.scenes[index]?.clipName||m.has(index)){dispose(item);continue;}
      m.set(index,item);
     }catch(error){console.warn('Restaurar clip de escena '+(index+1)+': '+error.message);}
    }
