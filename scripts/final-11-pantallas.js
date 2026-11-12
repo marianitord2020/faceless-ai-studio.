@@ -26,6 +26,12 @@ home.innerHTML='<section class="final-home-hero"><div><h1>Crea videos increíble
 '<button type="button" class="final-primary final-home-button" data-final-new>✦ Crear video nuevo <span aria-hidden="true">→</span></button>'+
 '<div class="final-section-title"><h2>Explora categorías</h2><button type="button" data-final-new>Ver todas ›</button></div>'+
 '<div class="final-home-categories">'+pictures.map(p=>card(p[0],p[1],"data-final-category",p[0])).join("")+'</div>';
+const toolbar=document.querySelector(".topbar .bar");
+if(toolbar&&!toolbar.querySelector(".final-account")){
+ const brand=toolbar.querySelector(".brand");
+ if(brand)brand.innerHTML='<img class="final-brand-icon" src="assets/final/clapper.svg" alt="" width="36" height="36"><span>Faceless <span>AI Studio</span></span>';
+ const profile=document.createElement("button");profile.type="button";profile.className="final-account";profile.dataset.fcNav="profile";profile.setAttribute("aria-label","Abrir perfil y configuración");profile.textContent="♙";toolbar.append(profile);
+}
 const bottom=document.querySelector(".fc-bottom");
 if(bottom){bottom.innerHTML='<button type="button" data-fc-nav="home"><span>⌂</span>Inicio</button><button type="button" data-fc-nav="create"><span>▣</span>Crear</button><button type="button" data-fc-nav="projects"><span>▱</span>Proyectos</button>';
 const update=()=>bottom.querySelectorAll("button").forEach(b=>{const page=document.body.dataset.screen;b.toggleAttribute("aria-current",b.dataset.fcNav===(page==="discover"?"create":page==="editor"?"projects":page));});new MutationObserver(update).observe(document.body,{attributes:true,attributeFilter:["data-screen"]});update();}
@@ -84,6 +90,7 @@ bar.innerHTML='<button type="button" id="finalResultBack" aria-label="Volver">�
 results?.prepend(bar);
 let stage="propuestas";
 const stageSet=s=>{stage=s;discover.dataset.finalStage=s;$("finalResultTitle").textContent=s==="ganchos"?"Elige un gancho del video":"10 propuestas para tu video";$("finalResultHelp").textContent=s==="ganchos"?"Selecciona el gancho que más atrape a tu audiencia.":"Elige la historia que más te guste.";};
+if(results)new MutationObserver(()=>{if(!results.hidden)stageSet("propuestas");}).observe(results,{attributes:true,attributeFilter:["hidden"]});
 $("finalResultBack").onclick=()=>{if(stage==="ganchos"){stageSet("propuestas");return;}window.facelessShowStudioMenu?.();routing("create");};
 discover.addEventListener("click",e=>{if(e.target.closest(".studio-card"))queueMicrotask(()=>stageSet("ganchos"));});
 const setup=discover.querySelector(".ref-create-view");
