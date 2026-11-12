@@ -35,10 +35,10 @@ jobs:
       - name: Recuperar la versión actual del Worker y preparar solamente archivos públicos
         run: node tools/prepare-access-assets.mjs
       - name: Comprobar el paquete sin cambiar Cloudflare
-        run: npx --yes wrangler@4 deploy --dry-run --config .access-build/wrangler.json --outdir .access-build/dist
+        run: npx --yes wrangler@4 deploy --keep-vars --dry-run --config .access-build/wrangler.json --outdir .access-build/dist
       - name: Actualizar assets del Worker D1 conservando código, SQL y servicio MEDIA
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-        run: npx --yes wrangler@4 deploy --config .access-build/wrangler.json
+        run: npx --yes wrangler@4 deploy --keep-vars --config .access-build/wrangler.json
       - name: Confirmar que la página de login sigue protegida
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         run: |
