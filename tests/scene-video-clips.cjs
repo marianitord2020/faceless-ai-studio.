@@ -26,10 +26,19 @@ const assert=require('node:assert/strict');
  await page.waitForFunction(()=>window.FacelessSceneVideos?.record(current(),1)?.video.readyState>=2);
  assert.equal(await page.evaluate(()=>current().scenes[1].clipName),'scene-blue.webm');
  assert.equal(await page.locator('.scene-clip-panel').count(),1);
- const colors=await page.evaluate(()=>{
+ const colors=await page.evaluate(async()=>{
   const p=current(),a=window.FacelessSceneVideos;
-  const pixel=i=>{drawFrame(i,i===0?.6:2.6);const d=ctx.getImageData(canvas.width/2,canvas.height/2,1,1).data;return [...d];};
-  return {red:pixel(0),blue:pixel(1),distinct:a.record(p,0).video!==a.record(p,1).video,
+  const pixel=async i=>{
+   const time=i===0?.6:2.6,v=a.record(p,i).video;
+   drawFrame(i,time);
+   if(v.seeking||v.readyState<2)await new Promise((resolve,reject)=>{
+    const timeout=setTimeout(()=>reject(Error('No se decodificó el clip')),9000);
+    v.addEventListener('seeked',()=>{clearTimeout(timeout);resolve();},{once:true});
+   });
+   drawFrame(i,time);
+   const d=ctx.getImageData(canvas.width/2,canvas.height/2,1,1).data;return [...d];
+  };
+  return {red:await pixel(0),blue:await pixel(1),distinct:a.record(p,0).video!==a.record(p,1).video,
    stored:p.scenes.map(s=>s.clipName)};
  });
  assert.ok(colors.distinct,'No se deben compartir videos entre escenas');
