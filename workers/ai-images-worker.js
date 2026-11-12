@@ -4,6 +4,7 @@ import {imageRouter,hordeStart,hordePoll} from './free-image-providers.js';
 import {hfEnabled,hfImage,hfSpeech,analyzeAudio,easyVoice,withFallback} from './media-providers.js';
 import { generateVerifiedScript } from './script-generator.js';
 import { generateCoverIdeas } from './ideas-generator.js';
+import {issueSession, validateSession} from './session-auth.js';
 /**
  * Faceless AI Studio - generador de fotografías seguro.
  *
@@ -244,14 +245,22 @@ export default {
     };
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
     const path = new URL(request.url).pathname;
-    if (request.method !== 'POST' || !['/images','/voice','/script','/ideas','/transcribe','/analyze','/stock/search','/stock/import','/read-url'].includes(path)) {
+    if (request.method !== 'POST' || !['/images','/voice','/script','/ideas','/transcribe','/analyze','/stock/search','/stock/import','/read-url','/auth/session'].includes(path)) {
       return reply({ error: 'Ruta no encontrada' }, 404, cors);
     }
     if (!env.APP_PASSCODE || env.APP_PASSCODE.length < 16) {
       return reply({ error: 'Configura APP_PASSCODE en Cloudflare (mínimo 16 caracteres).' }, 503, cors);
     }
-    if (request.headers.get('x-app-token') !== env.APP_PASSCODE) {
-      return reply({ error: 'Código privado incorrecto.' }, 401, cors);
+    const provided = request.headers.get('x-app-token') || '';
+    const authorized = provided === env.APP_PASSCODE ||
+      await validateSession(provided, env.APP_PASSCODE, allowed);
+    if (!authorized) {
+      return reply({ error: 'Sesión no autorizada o caducada. Autoriza Faceless una vez desde Crear.' }, 401, cors);
+    }
+    if (path === '/auth/session') {
+      // Initial one-time authorization or rolling renewal of an existing signed session.
+      const session = await issueSession(env.APP_PASSCODE, allowed);
+      return reply(session, 200, cors);
     }
     try {
 
