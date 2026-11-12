@@ -94,6 +94,17 @@ jobs:
           console.log('Frontend redirect near Github Pages:',redirectLikely);
           console.log('API gateway with server-side APP_PASSCODE likely:',proxyApi);
           console.log('Access Worker uses Access-Control-Allow-Origin:',/Access-Control-Allow-Origin|access-control-allow-origin/i.test(source));
+          const pathLines=source.split('\n');
+          // Only show structural lines of access/redirect logic, with sensitive SQL and tokens omitted.
+          for(let j=108;j<Math.min(153,pathLines.length);j++){
+            const row=pathLines[j].trim();
+            if (/password|pepper|passcode|token|cookie|sql|prepare|bind|fetch|header|response\.json|body|secret/i.test(row)){
+              console.log('ACCESS_FLOW_LINE',j+1,'[private operation; omitted]');
+            }else{
+              console.log('ACCESS_FLOW_LINE',j+1,row.slice(0,210));
+            }
+          }
+
           // Print ONLY structural route fragments with string/secret literals redacted.
           const lines=source.split('\n');
           for(let i=0;i<lines.length;i++){
